@@ -1,0 +1,786 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Html5Qrcode } from "html5-qrcode";
+
+const initialProducts = [
+  {
+    id: 1,
+    code: "DON-000001",
+    name: "Espejo redondo LED 60 cm",
+    category: "Espejos",
+    cost: 271.15,
+    price: 449,
+    stock: 5,
+  },
+  {
+    id: 2,
+    code: "DON-000002",
+    name: "Mesa auxiliar moderna",
+    category: "Muebles",
+    cost: 380,
+    price: 699,
+    stock: 3,
+  },
+];
+
+function money(value) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(Number(value || 0));
+}
+
+function margin(price, cost) {
+  if (!price) return 0;
+  return ((price - cost) / price) * 100;
+}
+
+function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
+  return (
+    <button
+      type={type}
+      className={`btn ${variant === "secondary" ? "btn-secondary" : "btn-primary"}`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Card({ children, className = "" }) {
+  return <div className={`card ${className}`}>{children}</div>;
+}
+
+export default function VentasDonatelloPOS() {
+  const [products, setProducts] = useState(() => {
+    const saved = localStorage.getItem("donatello_products_v1");
+    return saved ? JSON.parse(saved) : initialProducts;
+  });
+  const [cart, setCart] = useState([]);
+  const [tab, setTab] = useState("sale");
+  const [query, setQuery] = useState("");
+  const [manualCode, setManualCode] = useState("");
+  const [received, setReceived] = useState("");
+  const [scanStatus, setScanStatus] = useState("Scanner apagado");
+  const [scannerOn, setScannerOn] = useState(false);
+  const scannerRef = useRef(null);
+  const scannerId = "donatello-qr-reader";
+
+  useEffect(() => {
+    localStorage.setItem("donatello_products_v1", JSON.stringify(products));
+  }, [products]);
+
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart]);
+  const profit = useMemo(() => cart.reduce((sum, item) => sum + (item.price - item.cost) * item.qty, 0), [cart]);
+  const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
+  const change = Number(received || 0) - subtotal;
+
+  const filteredProducts = products.filter((p) => {
+    const text = `${p.code} ${p.name} ${p.category}`.toLowerCase();
+    return text.includes(query.toLowerCase());
+  });
+
+  function addToCartByCode(code) {
+    const cleanCode = String(code || "").trim().toUpperCase();
+    if (!cleanCode) return;
+
+    const product = products.find((p) => p.code.toUpperCase() === cleanCode);
+    if (!product) {
+      setScanStatus(`No encontré producto: ${cleanCode}`);
+      return;
+    }
+    addToCart(product);
+  }
+
+  function addToCart(product) {
+    if (product.stock <= 0) {
+      setScanStatus("Producto sin stock disponible");
+      return;
+    }
+
+    setCart((prev) => {
+      const existing = prev.find((item) => item.id === product.id);
+      const qtyInCart = existing ? existing.qty : 0;
+
+      if (qtyInCart + 1 > product.stock) {
+        setScanStatus("No puedes agregar más piezas que el stock disponible");
+        return prev;
+      }
+
+      if (existing) {
+        return prev.map((item) =>
+          item.id === product.id ? { ...item, qty: item.qty + 1 } : item
+        );
+      }
+      return [...prev, { ...product, qty: 1 }];
+    });
+
+    setScanStatus(`Agregado: ${product.name}`);
+  }
+
+  function removeFromCart(id) {
+    setCart((prev) => prev.filter((item) => item.id !== id));
+  }
+
+  function clearCart() {
+    setCart([]);
+    setReceived("");
+    setScanStatus("Carrito vacío");
+  }
+
+  function checkout() {
+    if (Number(received || 0) < subtotal) return;
+
+    setProducts((prev) =>
+      prev.map((product) => {
+        const sold = cart.find((item) => item.id === product.id);
+        if (!sold) return product;
+        return { ...product, stock: product.stock - sold.qty };
+      })
+    );
+
+    setScanStatus(`Venta cobrada: ${money(subtotal)} | Cambio: ${money(change)}`);
+    clearCart();
+  }
+
+  async function startScanner() {
+    try {
+      setScannerOn(true);
+      setScanStatus("Iniciando cámara trasera...");
+
+      const scanner = new Html5Qrcode(scannerId);
+      scannerRef.current = scanner;
+
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 240, height: 240 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          addToCartByCode(decodedText);
+        },
+        () => {}
+      );
+
+      setScanStatus("Scanner activo. Apunta al QR del producto.");
+    } catch (error) {
+      setScannerOn(false);
+      setScanStatus("No pude abrir la cámara trasera. Revisa permisos del navegador.");
+      console.error(error);
+    }
+  }
+
+  async function stopScanner() {
+    try {
+      if (scannerRef.current) {
+        await scannerRef.current.stop();
+        await scannerRef.current.clear();
+        scannerRef.current = null;
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    setScannerOn(false);
+    setScanStatus("Scanner apagado");
+  }
+
+  useEffect(() => {
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+      }
+    };
+  }, []);
+
+  return (
+    <div className="app">
+      <style>{styles}</style>
+
+      <main className="shell">
+        <header className="brand-header">
+          <div className="brand-logo">🛒</div>
+          <div>
+            <h1>Ventas Donatello POS</h1>
+            <p>Venta rápida, QR, inventario y utilidad</p>
+          </div>
+        </header>
+
+        <nav className="nav-grid">
+          <button className={`nav-btn ${tab === "sale" ? "active" : ""}`} onClick={() => setTab("sale")}>🛒 Venta</button>
+          <button className={`nav-btn ${tab === "inventory" ? "active" : ""}`} onClick={() => setTab("inventory")}>📦 Inventario</button>
+          <button className={`nav-btn ${tab === "add" ? "active" : ""}`} onClick={() => setTab("add")}>➕ Agregar</button>
+          <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
+        </nav>
+
+        {tab === "sale" && (
+          <section className="sale-layout">
+            <div className="left-panel">
+              <div className="metrics-grid">
+                <Card>
+                  <span className="metric-label">Total</span>
+                  <strong className="metric-value">{money(subtotal)}</strong>
+                </Card>
+                <Card>
+                  <span className="metric-label">Piezas</span>
+                  <strong className="metric-value">{itemsCount}</strong>
+                </Card>
+                <Card>
+                  <span className="metric-label">Utilidad</span>
+                  <strong className="metric-value">{money(profit)}</strong>
+                </Card>
+              </div>
+
+              <Card className="scanner-card">
+                <div className="section-title-row">
+                  <div>
+                    <h2>Escanear QR</h2>
+                    <p>Usa cámara trasera o lector Bluetooth.</p>
+                  </div>
+                  <span className="big-icon">📷</span>
+                </div>
+
+                <div id={scannerId} className="scanner-box">
+                  {!scannerOn && <span>Scanner apagado</span>}
+                </div>
+
+                <div className="scanner-actions">
+                  {!scannerOn ? (
+                    <Button onClick={startScanner}>Abrir cámara trasera</Button>
+                  ) : (
+                    <Button variant="secondary" onClick={stopScanner}>Cerrar cámara</Button>
+                  )}
+                  <div className="status-box">{scanStatus}</div>
+                </div>
+
+                <div className="manual-row">
+                  <input
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    placeholder="DON-000001"
+                  />
+                  <Button onClick={() => { addToCartByCode(manualCode); setManualCode(""); }}>
+                    Agregar
+                  </Button>
+                </div>
+              </Card>
+            </div>
+
+            <div className="right-panel">
+              <Card>
+                <h2>Carrito</h2>
+                {cart.length === 0 ? (
+                  <p className="muted">Carrito vacío.</p>
+                ) : (
+                  <div className="cart-list">
+                    {cart.map((item) => (
+                      <div className="cart-item" key={item.id}>
+                        <div>
+                          <strong>{item.name}</strong>
+                          <span>{item.code} · x{item.qty}</span>
+                        </div>
+                        <div className="cart-price">
+                          <strong>{money(item.price * item.qty)}</strong>
+                          <button onClick={() => removeFromCart(item.id)}>🗑️ Quitar</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+
+              <Card>
+                <h2>Cobro</h2>
+                <input
+                  type="number"
+                  value={received}
+                  onChange={(e) => setReceived(e.target.value)}
+                  placeholder="Monto recibido"
+                />
+
+                <div className="pay-grid">
+                  <div>
+                    <span>Cambio</span>
+                    <strong>{change >= 0 ? money(change) : money(0)}</strong>
+                  </div>
+                  <div>
+                    <span>Falta</span>
+                    <strong>{change < 0 ? money(Math.abs(change)) : money(0)}</strong>
+                  </div>
+                </div>
+
+                <Button disabled={cart.length === 0 || Number(received || 0) < subtotal} onClick={checkout}>
+                  💳 Cobrar venta
+                </Button>
+              </Card>
+            </div>
+          </section>
+        )}
+
+        {tab === "inventory" && (
+          <section className="inventory-section">
+            <div className="search-box">
+              <span>🔎</span>
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar producto" />
+            </div>
+
+            <div className="products-grid">
+              {filteredProducts.map((p) => (
+                <Card key={p.id}>
+                  <div className="product-card">
+                    <div>
+                      <h3>{p.name}</h3>
+                      <p>{p.code} · {p.category}</p>
+                      <p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p>
+                      <p>Margen: <b>{margin(p.price, p.cost).toFixed(1)}%</b></p>
+                    </div>
+                    <div className="stock-pill">
+                      <span>Stock</span>
+                      <strong>{p.stock}</strong>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {tab === "add" && <AddProduct products={products} setProducts={setProducts} />}
+      </main>
+    </div>
+  );
+}
+
+function AddProduct({ products, setProducts }) {
+  const [form, setForm] = useState({
+    name: "",
+    category: "",
+    cost: "",
+    price: "",
+    stock: "",
+  });
+
+  function saveProduct() {
+    if (!form.name.trim()) return;
+    const nextId = products.length ? Math.max(...products.map((p) => p.id)) + 1 : 1;
+    const code = `DON-${String(nextId).padStart(6, "0")}`;
+
+    setProducts((prev) => [
+      ...prev,
+      {
+        id: nextId,
+        code,
+        name: form.name,
+        category: form.category || "General",
+        cost: Number(form.cost || 0),
+        price: Number(form.price || 0),
+        stock: Number(form.stock || 0),
+      },
+    ]);
+
+    setForm({ name: "", category: "", cost: "", price: "", stock: "" });
+  }
+
+  return (
+    <Card>
+      <h2>Agregar producto</h2>
+      <div className="form-grid">
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre" />
+        <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Categoría" />
+        <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Costo" />
+        <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
+        <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
+      </div>
+      <Button onClick={saveProduct}>Guardar producto</Button>
+    </Card>
+  );
+}
+
+const styles = `
+  :root {
+    --orange: #fc4a1a;
+    --gold: #f7b733;
+    --dark: #24180d;
+    --brown: #4b2f14;
+    --cream: #fff7e8;
+    --card: #fffdf8;
+    --border: #ead6ad;
+    --muted: #6d604d;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+  }
+
+  .app {
+    min-height: 100vh;
+    padding: 14px;
+    background: radial-gradient(circle at top right, #ffe0a6 0, transparent 30%), var(--cream);
+  }
+
+  .shell {
+    width: min(1160px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .brand-header {
+    background: linear-gradient(135deg, #251f17 0%, #5a3a16 52%, #f7b733 100%);
+    color: white;
+    border-radius: 26px;
+    padding: 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 14px 30px rgba(80, 45, 8, 0.18);
+  }
+
+  .brand-logo {
+    width: 62px;
+    height: 62px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+  }
+
+  h1, h2, h3, p { margin: 0; }
+
+  h1 {
+    font-size: clamp(1.4rem, 4vw, 2.4rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  .brand-header p {
+    opacity: 0.92;
+    margin-top: 4px;
+    font-size: 0.9rem;
+  }
+
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .nav-btn, .btn {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 12px 14px;
+    font-weight: 800;
+    cursor: pointer;
+    background: var(--card);
+    color: var(--dark);
+    box-shadow: 0 4px 12px rgba(80, 45, 8, 0.08);
+    transition: 0.18s ease;
+  }
+
+  .nav-btn:hover, .btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--orange);
+  }
+
+  .nav-btn.active, .btn-primary {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--orange) 100%);
+    color: white;
+    border: none;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: var(--dark);
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .sale-layout {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 16px;
+  }
+
+  .left-panel, .right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 6px 18px rgba(80, 45, 8, 0.08);
+  }
+
+  .metric-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    display: block;
+  }
+
+  .metric-value {
+    font-size: clamp(1.35rem, 4vw, 2rem);
+    display: block;
+    margin-top: 4px;
+  }
+
+  .scanner-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .section-title-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .section-title-row h2,
+  .card h2 {
+    font-size: 1.25rem;
+    font-weight: 900;
+  }
+
+  .section-title-row p, .muted {
+    color: var(--muted);
+    margin-top: 4px;
+    font-size: 0.9rem;
+  }
+
+  .big-icon { font-size: 30px; }
+
+  .scanner-box {
+    min-height: 290px;
+    border-radius: 22px;
+    background: #111;
+    overflow: hidden;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+
+  .scanner-box video {
+    border-radius: 22px;
+  }
+
+  .scanner-actions {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 10px;
+  }
+
+  .status-box {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 10px 12px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+  }
+
+  .manual-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 10px;
+  }
+
+  input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 12px 14px;
+    font: inherit;
+    background: white;
+    color: var(--dark);
+    outline: none;
+  }
+
+  input:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(252, 74, 26, 0.12);
+  }
+
+  .cart-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .cart-item {
+    background: var(--cream);
+    border-radius: 18px;
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .cart-item span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 3px;
+  }
+
+  .cart-price {
+    text-align: right;
+  }
+
+  .cart-price button {
+    margin-top: 5px;
+    border: 0;
+    background: transparent;
+    color: #c0392b;
+    cursor: pointer;
+    font-weight: 700;
+    font-size: 0.78rem;
+  }
+
+  .pay-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0;
+  }
+
+  .pay-grid div {
+    background: var(--cream);
+    border-radius: 18px;
+    padding: 12px;
+  }
+
+  .pay-grid span {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+
+  .pay-grid strong {
+    font-size: 1.25rem;
+    display: block;
+    margin-top: 4px;
+  }
+
+  .inventory-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .search-box {
+    position: relative;
+  }
+
+  .search-box span {
+    position: absolute;
+    left: 14px;
+    top: 13px;
+  }
+
+  .search-box input {
+    padding-left: 42px;
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .product-card {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .product-card h3 {
+    font-weight: 900;
+    margin-bottom: 4px;
+  }
+
+  .product-card p {
+    color: var(--muted);
+    font-size: 0.88rem;
+    margin-top: 4px;
+  }
+
+  .stock-pill {
+    min-width: 70px;
+    background: var(--cream);
+    border-radius: 18px;
+    padding: 10px;
+    text-align: center;
+    align-self: start;
+  }
+
+  .stock-pill span {
+    font-size: 0.76rem;
+    color: var(--muted);
+  }
+
+  .stock-pill strong {
+    display: block;
+    font-size: 1.8rem;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 14px 0;
+  }
+
+  @media (max-width: 820px) {
+    .app { padding: 10px; }
+    .brand-header {
+      padding: 12px;
+      border-radius: 20px;
+    }
+    .brand-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 15px;
+      font-size: 24px;
+    }
+    .brand-header p { font-size: 0.72rem; }
+    .nav-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sale-layout { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .card { padding: 12px; border-radius: 20px; }
+    .scanner-box { min-height: 260px; }
+    .scanner-actions { grid-template-columns: 1fr; }
+    .manual-row { grid-template-columns: 1fr; }
+    .products-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+`;
+
