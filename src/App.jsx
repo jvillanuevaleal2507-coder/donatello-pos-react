@@ -34,6 +34,67 @@ function margin(price, cost) {
   return ((price - cost) / price) * 100;
 }
 
+function parseCSV(text) {
+  const rows = [];
+  let current = "";
+  let row = [];
+  let insideQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const next = text[i + 1];
+
+    if (char === '"' && insideQuotes && next === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') {
+      insideQuotes = !insideQuotes;
+    } else if (char === "," && !insideQuotes) {
+      row.push(current.trim());
+      current = "";
+    } else if ((char === "
+" || char === "
+") && !insideQuotes) {
+      if (current || row.length) {
+        row.push(current.trim());
+        rows.push(row);
+        row = [];
+        current = "";
+      }
+      if (char === "
+" && next === "
+") i++;
+    } else {
+      current += char;
+    }
+  }
+
+  if (current || row.length) {
+    row.push(current.trim());
+    rows.push(row);
+  }
+
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map((h) => h.trim());
+  return rows.slice(1).map((values) => {
+    const obj = {};
+    headers.forEach((header, index) => {
+      obj[header] = values[index] ?? "";
+    });
+    return obj;
+  });
+}
+
+function numberFromCSV(value, fallback = 0) {
+  const clean = String(value ?? "")
+    .replace(/\$/g, "")
+    .replace(/,/g, "")
+    .trim();
+  const parsed = Number(clean);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
   return (
     <button
@@ -254,6 +315,7 @@ export default function VentasDonatelloPOS() {
           <button className={`nav-btn ${tab === "sale" ? "active" : ""}`} onClick={() => setTab("sale")}>🛒 Venta</button>
           <button className={`nav-btn ${tab === "inventory" ? "active" : ""}`} onClick={() => setTab("inventory")}>📦 Inventario</button>
           <button className={`nav-btn ${tab === "add" ? "active" : ""}`} onClick={() => setTab("add")}>➕ Agregar</button>
+          <button className={`nav-btn ${tab === "import" ? "active" : ""}`} onClick={() => setTab("import")}>⬆️ Importar CSV</button>
           <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
         </nav>
 
@@ -392,8 +454,106 @@ export default function VentasDonatelloPOS() {
         )}
 
         {tab === "add" && <AddProduct products={products} setProducts={setProducts} />}
+
+        {tab === "import" && <ImportCSV products={products} setProducts={setProducts} />}
       </main>
     </div>
+  );
+}
+
+function ImportCSV({ products, setProducts }) {
+  const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario de prueba.");
+  const [preview, setPreview] = useState([]);
+
+  function handleFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = String(e.target?.result || "");
+      const rows = parseCSV(text);
+
+      if (!rows.length) {
+        setMessage("No pude leer productos del CSV.");
+        setPreview([]);
+        return;
+      }
+
+      const existingCodes = new Set(products.map((p) => String(p.code).toUpperCase()));
+      const imported = [];
+      let skipped = 0;
+
+      rows.forEach((row, index) => {
+        const code = String(row.codigo || row.code || "").trim().toUpperCase();
+        const name = String(row.nombre || row.name || "").trim();
+
+        if (!code || !name || existingCodes.has(code)) {
+          skipped += 1;
+          return;
+        }
+
+        const cost = numberFromCSV(row.costo_real || row.cost || row.costo_base, 0);
+        const price = numberFromCSV(row.precio_venta || row.price || row.precio, 0);
+        const stock = numberFromCSV(row.stock, 0);
+
+        imported.push({
+          id: Date.now() + index,
+          code,
+          name,
+          category: String(row.categoria || row.category || "General").trim() || "General",
+          cost,
+          price,
+          stock,
+        });
+        existingCodes.add(code);
+      });
+
+      if (!imported.length) {
+        setMessage(`No se importaron productos. Omitidos: ${skipped}. Puede que ya existan o falten código/nombre.`);
+        setPreview([]);
+        return;
+      }
+
+      setProducts((prev) => [...prev, ...imported]);
+      setPreview(imported.slice(0, 10));
+      setMessage(`Importación lista. Productos importados: ${imported.length}. Omitidos: ${skipped}.`);
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  return (
+    <Card>
+      <h2>Importar productos CSV</h2>
+      <p className="muted" style={{ marginTop: 6 }}>
+        Usa el CSV exportado del sistema anterior. Se cargarán código, nombre, categoría, costo real, precio y stock.
+      </p>
+
+      <div className="import-box">
+        <input type="file" accept=".csv" onChange={handleFile} />
+        <p>{message}</p>
+      </div>
+
+      {preview.length > 0 && (
+        <div className="products-grid" style={{ marginTop: 14 }}>
+          {preview.map((p) => (
+            <Card key={p.id}>
+              <div className="product-card">
+                <div>
+                  <h3>{p.name}</h3>
+                  <p>{p.code} · {p.category}</p>
+                  <p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p>
+                </div>
+                <div className="stock-pill">
+                  <span>Stock</span>
+                  <strong>{p.stock}</strong>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -811,6 +971,20 @@ const styles = `
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin: 14px 0;
+  }
+
+  .import-box {
+    margin-top: 14px;
+    border: 1px dashed var(--border);
+    background: var(--cream);
+    border-radius: 20px;
+    padding: 16px;
+  }
+
+  .import-box p {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 0.92rem;
   }
 
   @media (max-width: 820px) {
