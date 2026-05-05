@@ -1,26 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
-const initialProducts = [
-  {
-    id: 1,
-    code: "DON-000001",
-    name: "Espejo redondo LED 60 cm",
-    category: "Espejos",
-    cost: 271.15,
-    price: 449,
-    stock: 5,
-  },
-  {
-    id: 2,
-    code: "DON-000002",
-    name: "Mesa auxiliar moderna",
-    category: "Muebles",
-    cost: 380,
-    price: 699,
-    stock: 3,
-  },
-];
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+const initialProducts = [];
 
 function money(value) {
   return new Intl.NumberFormat("es-MX", {
@@ -111,10 +97,8 @@ function Card({ children, className = "" }) {
 }
 
 export default function VentasDonatelloPOS() {
-  const [products, setProducts] = useState(() => {
-    const saved = localStorage.getItem("donatello_products_v1");
-    return saved ? JSON.parse(saved) : initialProducts;
-  });
+  const [products, setProducts] = useState(initialProducts);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState([]);
   const [tab, setTab] = useState("sale");
   const [query, setQuery] = useState("");
@@ -128,8 +112,24 @@ export default function VentasDonatelloPOS() {
   const scanTimerRef = useRef(null);
 
   useEffect(() => {
-    localStorage.setItem("donatello_products_v1", JSON.stringify(products));
-  }, [products]);
+    loadProducts();
+  }, []);
+
+  async function loadProducts() {
+    setLoadingProducts(true);
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, code, name, category, cost, price, stock")
+      .order("id", { ascending: false });
+
+    if (error) {
+      setScanStatus(`Error cargando inventario: ${error.message}`);
+      setProducts([]);
+    } else {
+      setProducts(data || []);
+    }
+    setLoadingProducts(false);
+  }
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart]);
   const profit = useMemo(() => cart.reduce((sum, item) => sum + (item.price - item.cost) * item.qty, 0), [cart]);
@@ -189,19 +189,34 @@ export default function VentasDonatelloPOS() {
     setScanStatus("Carrito vacío");
   }
 
-  function checkout() {
+  async function checkout() {
     if (Number(received || 0) < subtotal) return;
 
-    setProducts((prev) =>
-      prev.map((product) => {
-        const sold = cart.find((item) => item.id === product.id);
-        if (!sold) return product;
-        return { ...product, stock: product.stock - sold.qty };
-      })
-    );
+    for (const item of cart) {
+      const current = products.find((p) => p.id === item.id);
+      if (!current || Number(current.stock || 0) < Number(item.qty || 0)) {
+        setScanStatus(`Stock insuficiente para ${item.name}`);
+        return;
+      }
+    }
+
+    for (const item of cart) {
+      const current = products.find((p) => p.id === item.id);
+      const newStock = Number(current.stock || 0) - Number(item.qty || 0);
+      const { error } = await supabase
+        .from("products")
+        .update({ stock: newStock })
+        .eq("id", item.id);
+
+      if (error) {
+        setScanStatus(`Error actualizando stock: ${error.message}`);
+        return;
+      }
+    }
 
     setScanStatus(`Venta cobrada: ${money(subtotal)} | Cambio: ${money(change)}`);
     clearCart();
+    await loadProducts();
   }
 
   async function startScanner() {
@@ -315,7 +330,10 @@ export default function VentasDonatelloPOS() {
           <button className={`nav-btn ${tab === "add" ? "active" : ""}`} onClick={() => setTab("add")}>➕ Agregar</button>
           <button className={`nav-btn ${tab === "import" ? "active" : ""}`} onClick={() => setTab("import")}>⬆️ Importar CSV</button>
           <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
+          <button className="nav-btn" onClick={loadProducts}>🔃 Actualizar</button>
         </nav>
+
+        {loadingProducts && <Card><p className="muted">Cargando inventario desde Supabase...</p></Card>}
 
         {tab === "sale" && (
           <section className="sale-layout">
@@ -451,19 +469,19 @@ export default function VentasDonatelloPOS() {
           </section>
         )}
 
-        {tab === "add" && <AddProduct products={products} setProducts={setProducts} />}
+        {tab === "add" && <AddProduct products={products} setProducts={setProducts} loadProducts={loadProducts} />}
 
-        {tab === "import" && <ImportCSV products={products} setProducts={setProducts} />}
+        {tab === "import" && <ImportCSV products={products} setProducts={setProducts} loadProducts={loadProducts} />}
       </main>
     </div>
   );
 }
 
-function ImportCSV({ products, setProducts }) {
+function ImportCSV({ products, setProducts, loadProducts }) {
   const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario de prueba.");
   const [preview, setPreview] = useState([]);
 
-  function handleFile(event) {
+  async function handleFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -513,9 +531,26 @@ function ImportCSV({ products, setProducts }) {
         return;
       }
 
-      setProducts((prev) => [...prev, ...imported]);
+      const rowsToInsert = imported.map((p) => ({
+        code: p.code,
+        name: p.name,
+        category: p.category,
+        cost: p.cost,
+        price: p.price,
+        stock: p.stock,
+      }));
+
+      const { error } = await supabase.from("products").insert(rowsToInsert);
+
+      if (error) {
+        setMessage(`Error importando a Supabase: ${error.message}`);
+        setPreview([]);
+        return;
+      }
+
       setPreview(imported.slice(0, 10));
       setMessage(`Importación lista. Productos importados: ${imported.length}. Omitidos: ${skipped}.`);
+      await loadProducts();
     };
     reader.readAsText(file, "UTF-8");
   }
@@ -555,7 +590,7 @@ function ImportCSV({ products, setProducts }) {
   );
 }
 
-function AddProduct({ products, setProducts }) {
+function AddProduct({ products, setProducts, loadProducts }) {
   const [form, setForm] = useState({
     name: "",
     category: "",
@@ -564,25 +599,29 @@ function AddProduct({ products, setProducts }) {
     stock: "",
   });
 
-  function saveProduct() {
+  async function saveProduct() {
     if (!form.name.trim()) return;
-    const nextId = products.length ? Math.max(...products.map((p) => p.id)) + 1 : 1;
+    const nextId = products.length ? Math.max(...products.map((p) => Number(p.id))) + 1 : 1;
     const code = `DON-${String(nextId).padStart(6, "0")}`;
 
-    setProducts((prev) => [
-      ...prev,
-      {
-        id: nextId,
-        code,
-        name: form.name,
-        category: form.category || "General",
-        cost: Number(form.cost || 0),
-        price: Number(form.price || 0),
-        stock: Number(form.stock || 0),
-      },
-    ]);
+    const newProduct = {
+      code,
+      name: form.name,
+      category: form.category || "General",
+      cost: Number(form.cost || 0),
+      price: Number(form.price || 0),
+      stock: Number(form.stock || 0),
+    };
+
+    const { error } = await supabase.from("products").insert([newProduct]);
+
+    if (error) {
+      alert(`Error guardando producto: ${error.message}`);
+      return;
+    }
 
     setForm({ name: "", category: "", cost: "", price: "", stock: "" });
+    await loadProducts();
   }
 
   return (
