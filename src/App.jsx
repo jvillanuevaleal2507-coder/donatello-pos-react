@@ -43,6 +43,8 @@ function parseCSV(text) {
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     const next = text[i + 1];
+    const code = char.charCodeAt(0);
+    const nextCode = next ? next.charCodeAt(0) : null;
 
     if (char === '"' && insideQuotes && next === '"') {
       current += '"';
@@ -52,18 +54,14 @@ function parseCSV(text) {
     } else if (char === "," && !insideQuotes) {
       row.push(current.trim());
       current = "";
-    } else if ((char === "
-" || char === "
-") && !insideQuotes) {
+    } else if ((code === 10 || code === 13) && !insideQuotes) {
       if (current || row.length) {
         row.push(current.trim());
         rows.push(row);
         row = [];
         current = "";
       }
-      if (char === "
-" && next === "
-") i++;
+      if (code === 13 && nextCode === 10) i++;
     } else {
       current += char;
     }
