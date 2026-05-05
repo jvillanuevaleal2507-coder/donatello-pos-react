@@ -486,7 +486,7 @@ function ImportCSV({ products, setProducts, loadProducts }) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       const text = String(e.target?.result || "");
       const rows = parseCSV(text);
 
