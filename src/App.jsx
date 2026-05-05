@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+// Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
 const initialProducts = [
   {
@@ -63,8 +63,10 @@ export default function VentasDonatelloPOS() {
   const [received, setReceived] = useState("");
   const [scanStatus, setScanStatus] = useState("Scanner apagado");
   const [scannerOn, setScannerOn] = useState(false);
-  const scannerRef = useRef(null);
-  const scannerId = "donatello-qr-reader";
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const scanTimerRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem("donatello_products_v1", JSON.stringify(products));
@@ -145,39 +147,81 @@ export default function VentasDonatelloPOS() {
 
   async function startScanner() {
     try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setScanStatus("Este navegador no permite acceso directo a cámara.");
+        return;
+      }
+
+      if (!("BarcodeDetector" in window)) {
+        setScanStatus("Tu navegador no soporta lectura QR nativa. Usa el campo manual o un lector Bluetooth.");
+        return;
+      }
+
       setScannerOn(true);
-      setScanStatus("Iniciando cámara trasera...");
+      setScanStatus("Abriendo cámara trasera...");
 
-      const scanner = new Html5Qrcode(scannerId);
-      scannerRef.current = scanner;
-
-      await scanner.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 240, height: 240 },
-          aspectRatio: 1.0,
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
         },
-        (decodedText) => {
-          addToCartByCode(decodedText);
-        },
-        () => {}
-      );
+        audio: false,
+      });
 
-      setScanStatus("Scanner activo. Apunta al QR del producto.");
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", "true");
+        await videoRef.current.play();
+      }
+
+      const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      setScanStatus("Cámara activa. Apunta al QR del producto.");
+
+      scanTimerRef.current = window.setInterval(async () => {
+        try {
+          const video = videoRef.current;
+          const canvas = canvasRef.current;
+          if (!video || !canvas || video.readyState < 2) return;
+
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          const codes = await detector.detect(canvas);
+          if (codes && codes.length > 0) {
+            const value = codes[0].rawValue;
+            if (value) {
+              addToCartByCode(value);
+              setScanStatus(`QR detectado: ${value}`);
+            }
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }, 700);
     } catch (error) {
       setScannerOn(false);
-      setScanStatus("No pude abrir la cámara trasera. Revisa permisos del navegador.");
+      setScanStatus("No pude abrir la cámara. Revisa permisos o prueba en Chrome actualizado.");
       console.error(error);
     }
   }
 
   async function stopScanner() {
     try {
-      if (scannerRef.current) {
-        await scannerRef.current.stop();
-        await scannerRef.current.clear();
-        scannerRef.current = null;
+      if (scanTimerRef.current) {
+        window.clearInterval(scanTimerRef.current);
+        scanTimerRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
       }
     } catch (error) {
       console.error(error);
@@ -188,9 +232,8 @@ export default function VentasDonatelloPOS() {
 
   useEffect(() => {
     return () => {
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-      }
+      if (scanTimerRef.current) window.clearInterval(scanTimerRef.current);
+      if (streamRef.current) streamRef.current.getTracks().forEach((track) => track.stop());
     };
   }, []);
 
@@ -241,8 +284,10 @@ export default function VentasDonatelloPOS() {
                   <span className="big-icon">📷</span>
                 </div>
 
-                <div id={scannerId} className="scanner-box">
+                <div className="scanner-box">
                   {!scannerOn && <span>Scanner apagado</span>}
+                  <video ref={videoRef} className="scanner-video" muted playsInline />
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
                 </div>
 
                 <div className="scanner-actions">
@@ -585,8 +630,17 @@ const styles = `
     font-weight: 700;
   }
 
-  .scanner-box video {
+  .scanner-video {
+    width: 100%;
+    height: 100%;
+    min-height: 290px;
+    object-fit: cover;
     border-radius: 22px;
+    display: block;
+  }
+
+  .scanner-box span + .scanner-video {
+    display: none;
   }
 
   .scanner-actions {
@@ -783,4 +837,3 @@ const styles = `
     .form-grid { grid-template-columns: 1fr; }
   }
 `;
-
