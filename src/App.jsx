@@ -149,6 +149,8 @@ export default function VentasDonatelloPOS() {
   const [received, setReceived] = useState("");
   const [scanStatus, setScanStatus] = useState("Scanner apagado");
   const [scannerOn, setScannerOn] = useState(false);
+  const [sales, setSales] = useState([]);
+  const [loadingSales, setLoadingSales] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -157,6 +159,7 @@ export default function VentasDonatelloPOS() {
 
   useEffect(() => {
     loadProducts();
+    loadSales();
   }, []);
 
   async function loadProducts() {
@@ -173,6 +176,23 @@ export default function VentasDonatelloPOS() {
       setProducts(data || []);
     }
     setLoadingProducts(false);
+  }
+
+  async function loadSales() {
+    setLoadingSales(true);
+    const { data, error } = await supabase
+      .from("sales")
+      .select("id, sale_date, total, profit, received, change_amount, items_count, sale_items(code, name, qty, price, subtotal, profit)")
+      .order("sale_date", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      setScanStatus(`Error cargando ventas: ${error.message}`);
+      setSales([]);
+    } else {
+      setSales(data || []);
+    }
+    setLoadingSales(false);
   }
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
@@ -244,6 +264,44 @@ export default function VentasDonatelloPOS() {
       }
     }
 
+    const salePayload = {
+      total: subtotal,
+      profit,
+      received: Number(received || 0),
+      change_amount: change,
+      items_count: itemsCount,
+    };
+
+    const { data: saleData, error: saleError } = await supabase
+      .from("sales")
+      .insert([salePayload])
+      .select("id")
+      .single();
+
+    if (saleError) {
+      setScanStatus(`Error guardando venta: ${saleError.message}`);
+      return;
+    }
+
+    const saleItems = cart.map((item) => ({
+      sale_id: saleData.id,
+      product_id: item.id,
+      code: item.code,
+      name: item.name,
+      qty: item.qty,
+      cost: Number(item.cost || 0),
+      price: Number(item.price || 0),
+      subtotal: Number(item.price || 0) * item.qty,
+      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
+    }));
+
+    const { error: itemsError } = await supabase.from("sale_items").insert(saleItems);
+
+    if (itemsError) {
+      setScanStatus(`Venta creada, pero falló el detalle: ${itemsError.message}`);
+      return;
+    }
+
     for (const item of cart) {
       const current = products.find((p) => p.id === item.id);
       const newStock = Number(current.stock || 0) - Number(item.qty || 0);
@@ -261,6 +319,7 @@ export default function VentasDonatelloPOS() {
     setScanStatus(`Venta cobrada: ${money(subtotal)} | Cambio: ${money(change)}`);
     clearCart();
     await loadProducts();
+    await loadSales();
   }
 
   async function startScanner() {
@@ -378,6 +437,7 @@ export default function VentasDonatelloPOS() {
           <button className={`nav-btn ${tab === "inventory" ? "active" : ""}`} onClick={() => setTab("inventory")}>📦 Inventario</button>
           <button className={`nav-btn ${tab === "add" ? "active" : ""}`} onClick={() => setTab("add")}>➕ Agregar</button>
           <button className={`nav-btn ${tab === "qr" ? "active" : ""}`} onClick={() => setTab("qr")}>🏷️ QR</button>
+          <button className={`nav-btn ${tab === "sales" ? "active" : ""}`} onClick={() => setTab("sales")}>📜 Ventas</button>
           <button className={`nav-btn ${tab === "import" ? "active" : ""}`} onClick={() => setTab("import")}>⬆️ CSV</button>
           <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
           <button className="nav-btn" onClick={loadProducts}>🔃 Actualizar</button>
@@ -499,6 +559,8 @@ export default function VentasDonatelloPOS() {
         {tab === "add" && <AddProduct products={products} loadProducts={loadProducts} />}
 
         {tab === "qr" && <QRSection products={products} />}
+
+        {tab === "sales" && <SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
 
         {tab === "import" && <ImportCSV products={products} loadProducts={loadProducts} />}
       </main>
@@ -685,6 +747,83 @@ function QRSection({ products }) {
         </div>
       )}
     </Card>
+  );
+}
+
+function SalesSection({ sales, loadingSales, loadSales }) {
+  const totalSold = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
+  const totalProfit = sales.reduce((sum, sale) => sum + Number(sale.profit || 0), 0);
+  const totalItems = sales.reduce((sum, sale) => sum + Number(sale.items_count || 0), 0);
+
+  return (
+    <section className="inventory-section">
+      <div className="sales-header">
+        <div>
+          <h2>Historial de ventas</h2>
+          <p className="muted">Últimas 50 ventas registradas.</p>
+        </div>
+        <Button onClick={loadSales}>Actualizar ventas</Button>
+      </div>
+
+      <div className="metrics-grid">
+        <Card>
+          <span className="metric-label">Total vendido</span>
+          <strong className="metric-value">{money(totalSold)}</strong>
+        </Card>
+        <Card>
+          <span className="metric-label">Utilidad estimada</span>
+          <strong className="metric-value">{money(totalProfit)}</strong>
+        </Card>
+        <Card>
+          <span className="metric-label">Piezas vendidas</span>
+          <strong className="metric-value">{totalItems}</strong>
+        </Card>
+      </div>
+
+      {loadingSales ? (
+        <Card><p className="muted">Cargando ventas...</p></Card>
+      ) : sales.length === 0 ? (
+        <Card><p className="muted">Todavía no hay ventas registradas.</p></Card>
+      ) : (
+        <div className="sales-list">
+          {sales.map((sale) => (
+            <Card key={sale.id}>
+              <div className="sale-card-header">
+                <div>
+                  <h3>Venta #{sale.id}</h3>
+                  <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
+                </div>
+                <div className="sale-total-box">
+                  <span>Total</span>
+                  <strong>{money(sale.total)}</strong>
+                </div>
+              </div>
+
+              <div className="sale-summary-grid">
+                <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
+                <div><span>Recibido</span><b>{money(sale.received)}</b></div>
+                <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
+                <div><span>Piezas</span><b>{sale.items_count}</b></div>
+              </div>
+
+              {sale.sale_items?.length > 0 && (
+                <div className="sale-items-list">
+                  {sale.sale_items.map((item, index) => (
+                    <div className="sale-item-row" key={`${sale.id}-${item.code}-${index}`}>
+                      <div>
+                        <strong>{item.name}</strong>
+                        <span>{item.code} · x{item.qty}</span>
+                      </div>
+                      <b>{money(item.subtotal)}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -1308,6 +1447,88 @@ const styles = `
     font-size: 0.92rem;
   }
 
+  .sales-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sales-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sale-card-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: start;
+  }
+
+  .sale-card-header p {
+    color: var(--muted);
+    font-size: 0.86rem;
+    margin-top: 4px;
+  }
+
+  .sale-total-box {
+    background: var(--cream);
+    border-radius: 18px;
+    padding: 10px 12px;
+    min-width: 120px;
+    text-align: right;
+  }
+
+  .sale-total-box span,
+  .sale-summary-grid span {
+    color: var(--muted);
+    font-size: 0.78rem;
+    display: block;
+  }
+
+  .sale-total-box strong {
+    display: block;
+    font-size: 1.2rem;
+    margin-top: 4px;
+  }
+
+  .sale-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .sale-summary-grid div {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 10px;
+  }
+
+  .sale-items-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .sale-item-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+  }
+
+  .sale-item-row span {
+    display: block;
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 3px;
+  }
+
   .qr-layout {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
@@ -1390,5 +1611,9 @@ const styles = `
     .product-card.with-image { grid-template-columns: auto 1fr; }
     .stock-pill { grid-column: 1 / -1; }
     .qr-layout { grid-template-columns: 1fr; }
+    .sales-header { flex-direction: column; align-items: stretch; }
+    .sale-card-header { flex-direction: column; }
+    .sale-total-box { width: 100%; text-align: left; }
+    .sale-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 `;
