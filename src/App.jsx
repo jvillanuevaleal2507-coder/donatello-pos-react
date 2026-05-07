@@ -218,8 +218,7 @@ export default function VentasDonatelloPOS() {
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
   const change = Number(received || 0) - subtotal;
 
-    });
-
+   
   function addToCartByCode(code) {
     const cleanCode = String(code || "").trim().toUpperCase();
     if (!cleanCode) return;
