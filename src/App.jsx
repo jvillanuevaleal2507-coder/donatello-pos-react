@@ -1122,7 +1122,7 @@ const styles = `
 
   .brand-logo {
   width: 92px;
-  height: 892px;
+  height: 92px;
   min-width: 92px;
   border-radius: 24px;
   background: rgba(255,255,255,0.16);
@@ -1137,6 +1137,7 @@ const styles = `
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform: scale(1.12);
   }
   
   h1, h2, h3, p { margin: 0; }
