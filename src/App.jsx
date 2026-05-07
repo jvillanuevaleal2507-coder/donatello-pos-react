@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import QRCode from "qrcode";
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -17,7 +18,7 @@ function money(value) {
 
 function margin(price, cost) {
   if (!price) return 0;
-  return ((price - cost) / price) * 100;
+  return ((Number(price || 0) - Number(cost || 0)) / Number(price || 1)) * 100;
 }
 
 function parseCSV(text) {
@@ -83,7 +84,7 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
   return (
     <button
       type={type}
-      className={`btn ${variant === "secondary" ? "btn-secondary" : "btn-primary"}`}
+      className={`btn ${variant === "secondary" ? "btn-secondary" : variant === "danger" ? "btn-danger" : "btn-primary"}`}
       disabled={disabled}
       onClick={onClick}
     >
@@ -94,6 +95,23 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
 
 function Card({ children, className = "" }) {
   return <div className={`card ${className}`}>{children}</div>;
+}
+
+function ProductImage({ src, alt = "Producto", small = false }) {
+  if (!src) {
+    return <div className={small ? "product-img small placeholder" : "product-img placeholder"}>📦</div>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={small ? "product-img small" : "product-img"}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  );
 }
 
 export default function VentasDonatelloPOS() {
@@ -110,6 +128,7 @@ export default function VentasDonatelloPOS() {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
+  const lastScannedRef = useRef({ value: "", time: 0 });
 
   useEffect(() => {
     loadProducts();
@@ -119,7 +138,7 @@ export default function VentasDonatelloPOS() {
     setLoadingProducts(true);
     const { data, error } = await supabase
       .from("products")
-      .select("id, code, name, category, cost, price, stock")
+      .select("id, code, name, category, cost, price, stock, image_url")
       .order("id", { ascending: false });
 
     if (error) {
@@ -131,8 +150,8 @@ export default function VentasDonatelloPOS() {
     setLoadingProducts(false);
   }
 
-  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.qty, 0), [cart]);
-  const profit = useMemo(() => cart.reduce((sum, item) => sum + (item.price - item.cost) * item.qty, 0), [cart]);
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
+  const profit = useMemo(() => cart.reduce((sum, item) => sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty, 0), [cart]);
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
   const change = Number(received || 0) - subtotal;
 
@@ -145,7 +164,7 @@ export default function VentasDonatelloPOS() {
     const cleanCode = String(code || "").trim().toUpperCase();
     if (!cleanCode) return;
 
-    const product = products.find((p) => p.code.toUpperCase() === cleanCode);
+    const product = products.find((p) => String(p.code || "").toUpperCase() === cleanCode);
     if (!product) {
       setScanStatus(`No encontré producto: ${cleanCode}`);
       return;
@@ -154,7 +173,7 @@ export default function VentasDonatelloPOS() {
   }
 
   function addToCart(product) {
-    if (product.stock <= 0) {
+    if (Number(product.stock || 0) <= 0) {
       setScanStatus("Producto sin stock disponible");
       return;
     }
@@ -163,7 +182,7 @@ export default function VentasDonatelloPOS() {
       const existing = prev.find((item) => item.id === product.id);
       const qtyInCart = existing ? existing.qty : 0;
 
-      if (qtyInCart + 1 > product.stock) {
+      if (qtyInCart + 1 > Number(product.stock || 0)) {
         setScanStatus("No puedes agregar más piezas que el stock disponible");
         return prev;
       }
@@ -227,7 +246,7 @@ export default function VentasDonatelloPOS() {
       }
 
       if (!("BarcodeDetector" in window)) {
-        setScanStatus("Tu navegador no soporta lectura QR nativa. Usa el campo manual o un lector Bluetooth.");
+        setScanStatus("Tu navegador no soporta lectura QR nativa. Usa Chrome en Android, el campo manual o un lector Bluetooth.");
         return;
       }
 
@@ -267,10 +286,15 @@ export default function VentasDonatelloPOS() {
 
           const codes = await detector.detect(canvas);
           if (codes && codes.length > 0) {
-            const value = codes[0].rawValue;
+            const value = String(codes[0].rawValue || "").trim();
             if (value) {
-              addToCartByCode(value);
-              setScanStatus(`QR detectado: ${value}`);
+              const now = Date.now();
+              const isSameRecent = lastScannedRef.current.value === value && now - lastScannedRef.current.time < 1800;
+              if (!isSameRecent) {
+                lastScannedRef.current = { value, time: now };
+                addToCartByCode(value);
+                setScanStatus(`QR detectado: ${value}`);
+              }
             }
           }
         } catch (err) {
@@ -328,7 +352,8 @@ export default function VentasDonatelloPOS() {
           <button className={`nav-btn ${tab === "sale" ? "active" : ""}`} onClick={() => setTab("sale")}>🛒 Venta</button>
           <button className={`nav-btn ${tab === "inventory" ? "active" : ""}`} onClick={() => setTab("inventory")}>📦 Inventario</button>
           <button className={`nav-btn ${tab === "add" ? "active" : ""}`} onClick={() => setTab("add")}>➕ Agregar</button>
-          <button className={`nav-btn ${tab === "import" ? "active" : ""}`} onClick={() => setTab("import")}>⬆️ Importar CSV</button>
+          <button className={`nav-btn ${tab === "qr" ? "active" : ""}`} onClick={() => setTab("qr")}>🏷️ QR</button>
+          <button className={`nav-btn ${tab === "import" ? "active" : ""}`} onClick={() => setTab("import")}>⬆️ CSV</button>
           <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
           <button className="nav-btn" onClick={loadProducts}>🔃 Actualizar</button>
         </nav>
@@ -357,7 +382,7 @@ export default function VentasDonatelloPOS() {
                 <div className="section-title-row">
                   <div>
                     <h2>Escanear QR</h2>
-                    <p>Usa cámara trasera o lector Bluetooth.</p>
+                    <p>Usa Chrome en Android para escanear con cámara trasera.</p>
                   </div>
                   <span className="big-icon">📷</span>
                 </div>
@@ -399,12 +424,13 @@ export default function VentasDonatelloPOS() {
                   <div className="cart-list">
                     {cart.map((item) => (
                       <div className="cart-item" key={item.id}>
-                        <div>
+                        <ProductImage src={item.image_url} alt={item.name} small />
+                        <div className="cart-info">
                           <strong>{item.name}</strong>
                           <span>{item.code} · x{item.qty}</span>
                         </div>
                         <div className="cart-price">
-                          <strong>{money(item.price * item.qty)}</strong>
+                          <strong>{money(Number(item.price || 0) * item.qty)}</strong>
                           <button onClick={() => removeFromCart(item.id)}>🗑️ Quitar</button>
                         </div>
                       </div>
@@ -442,43 +468,179 @@ export default function VentasDonatelloPOS() {
         )}
 
         {tab === "inventory" && (
-          <section className="inventory-section">
-            <div className="search-box">
-              <span>🔎</span>
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar producto" />
-            </div>
-
-            <div className="products-grid">
-              {filteredProducts.map((p) => (
-                <Card key={p.id}>
-                  <div className="product-card">
-                    <div>
-                      <h3>{p.name}</h3>
-                      <p>{p.code} · {p.category}</p>
-                      <p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p>
-                      <p>Margen: <b>{margin(p.price, p.cost).toFixed(1)}%</b></p>
-                    </div>
-                    <div className="stock-pill">
-                      <span>Stock</span>
-                      <strong>{p.stock}</strong>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </section>
+          <InventorySection products={filteredProducts} query={query} setQuery={setQuery} loadProducts={loadProducts} />
         )}
 
-        {tab === "add" && <AddProduct products={products} setProducts={setProducts} loadProducts={loadProducts} />}
+        {tab === "add" && <AddProduct products={products} loadProducts={loadProducts} />}
 
-        {tab === "import" && <ImportCSV products={products} setProducts={setProducts} loadProducts={loadProducts} />}
+        {tab === "qr" && <QRSection products={products} />}
+
+        {tab === "import" && <ImportCSV products={products} loadProducts={loadProducts} />}
       </main>
     </div>
   );
 }
 
-function ImportCSV({ products, setProducts, loadProducts }) {
-  const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario de prueba.");
+function InventorySection({ products, query, setQuery, loadProducts }) {
+  const [editingId, setEditingId] = useState(null);
+
+  return (
+    <section className="inventory-section">
+      <div className="search-box">
+        <span>🔎</span>
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar producto" />
+      </div>
+
+      <div className="products-grid">
+        {products.map((p) => (
+          <Card key={p.id}>
+            <div className="product-card with-image">
+              <ProductImage src={p.image_url} alt={p.name} />
+              <div className="product-main">
+                <h3>{p.name}</h3>
+                <p>{p.code} · {p.category}</p>
+                <p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p>
+                <p>Margen: <b>{margin(p.price, p.cost).toFixed(1)}%</b></p>
+                <button className="text-btn" onClick={() => setEditingId(editingId === p.id ? null : p.id)}>
+                  ✏️ {editingId === p.id ? "Cerrar edición" : "Editar producto"}
+                </button>
+              </div>
+              <div className="stock-pill">
+                <span>Stock</span>
+                <strong>{p.stock}</strong>
+              </div>
+            </div>
+            {editingId === p.id && <EditProduct product={p} onSaved={async () => { setEditingId(null); await loadProducts(); }} />}
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function EditProduct({ product, onSaved }) {
+  const [form, setForm] = useState({
+    name: product.name || "",
+    category: product.category || "",
+    cost: product.cost || 0,
+    price: product.price || 0,
+    stock: product.stock || 0,
+    image_url: product.image_url || "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function saveChanges() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: form.name,
+        category: form.category,
+        cost: Number(form.cost || 0),
+        price: Number(form.price || 0),
+        stock: Number(form.stock || 0),
+        image_url: form.image_url,
+      })
+      .eq("id", product.id);
+
+    setSaving(false);
+
+    if (error) {
+      alert(`Error actualizando producto: ${error.message}`);
+      return;
+    }
+
+    await onSaved();
+  }
+
+  return (
+    <div className="edit-box">
+      <h3>Editar producto</h3>
+      <div className="form-grid">
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre" />
+        <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Categoría" />
+        <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Costo" />
+        <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
+        <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
+        <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
+      </div>
+      <Button onClick={saveChanges} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</Button>
+    </div>
+  );
+}
+
+function QRSection({ products }) {
+  const [selectedId, setSelectedId] = useState(products[0]?.id || "");
+  const [qrDataUrl, setQrDataUrl] = useState("");
+
+  const selectedProduct = products.find((p) => String(p.id) === String(selectedId)) || products[0];
+
+  useEffect(() => {
+    async function generateQR() {
+      if (!selectedProduct?.code) {
+        setQrDataUrl("");
+        return;
+      }
+      const dataUrl = await QRCode.toDataURL(selectedProduct.code, {
+        width: 520,
+        margin: 2,
+        errorCorrectionLevel: "M",
+      });
+      setQrDataUrl(dataUrl);
+    }
+    generateQR();
+  }, [selectedProduct?.code]);
+
+  return (
+    <Card>
+      <h2>Etiquetas QR</h2>
+      <p className="muted" style={{ marginTop: 6 }}>
+        Selecciona un producto y descarga su código QR para imprimirlo o pegarlo en el producto.
+      </p>
+
+      {products.length === 0 ? (
+        <p className="muted" style={{ marginTop: 12 }}>No hay productos cargados.</p>
+      ) : (
+        <div className="qr-layout">
+          <div className="qr-controls">
+            <label>Producto</label>
+            <select value={selectedProduct?.id || ""} onChange={(e) => setSelectedId(e.target.value)}>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
+              ))}
+            </select>
+
+            {selectedProduct && (
+              <div className="qr-product-box">
+                <ProductImage src={selectedProduct.image_url} alt={selectedProduct.name} />
+                <h3>{selectedProduct.name}</h3>
+                <p>{selectedProduct.code}</p>
+                <p>Precio: <b>{money(selectedProduct.price)}</b></p>
+                <p>Stock: <b>{selectedProduct.stock}</b></p>
+              </div>
+            )}
+          </div>
+
+          <div className="qr-preview">
+            {qrDataUrl ? (
+              <>
+                <img src={qrDataUrl} alt={`QR ${selectedProduct?.code}`} />
+                <a className="download-btn" href={qrDataUrl} download={`QR_${selectedProduct?.code}.png`}>
+                  Descargar QR
+                </a>
+              </>
+            ) : (
+              <p className="muted">Generando QR...</p>
+            )}
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ImportCSV({ products, loadProducts }) {
+  const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario.");
   const [preview, setPreview] = useState([]);
 
   async function handleFile(event) {
@@ -500,7 +662,7 @@ function ImportCSV({ products, setProducts, loadProducts }) {
       const imported = [];
       let skipped = 0;
 
-      rows.forEach((row, index) => {
+      rows.forEach((row) => {
         const code = String(row.codigo || row.code || "").trim().toUpperCase();
         const name = String(row.nombre || row.name || "").trim();
 
@@ -512,15 +674,16 @@ function ImportCSV({ products, setProducts, loadProducts }) {
         const cost = numberFromCSV(row.costo_real || row.cost || row.costo_base, 0);
         const price = numberFromCSV(row.precio_venta || row.price || row.precio, 0);
         const stock = numberFromCSV(row.stock, 0);
+        const imageUrl = String(row.image_url || row.imagen_url || row.imagen || "").trim();
 
         imported.push({
-          id: Date.now() + index,
           code,
           name,
           category: String(row.categoria || row.category || "General").trim() || "General",
           cost,
           price,
           stock,
+          image_url: imageUrl,
         });
         existingCodes.add(code);
       });
@@ -531,16 +694,7 @@ function ImportCSV({ products, setProducts, loadProducts }) {
         return;
       }
 
-      const rowsToInsert = imported.map((p) => ({
-        code: p.code,
-        name: p.name,
-        category: p.category,
-        cost: p.cost,
-        price: p.price,
-        stock: p.stock,
-      }));
-
-      const { error } = await supabase.from("products").insert(rowsToInsert);
+      const { error } = await supabase.from("products").insert(imported);
 
       if (error) {
         setMessage(`Error importando a Supabase: ${error.message}`);
@@ -559,7 +713,7 @@ function ImportCSV({ products, setProducts, loadProducts }) {
     <Card>
       <h2>Importar productos CSV</h2>
       <p className="muted" style={{ marginTop: 6 }}>
-        Usa el CSV exportado del sistema anterior. Se cargarán código, nombre, categoría, costo real, precio y stock.
+        Usa el CSV exportado del sistema anterior. Se cargarán código, nombre, categoría, costo real, precio, stock e imagen URL.
       </p>
 
       <div className="import-box">
@@ -570,9 +724,10 @@ function ImportCSV({ products, setProducts, loadProducts }) {
       {preview.length > 0 && (
         <div className="products-grid" style={{ marginTop: 14 }}>
           {preview.map((p) => (
-            <Card key={p.id}>
-              <div className="product-card">
-                <div>
+            <Card key={p.code}>
+              <div className="product-card with-image">
+                <ProductImage src={p.image_url} alt={p.name} />
+                <div className="product-main">
                   <h3>{p.name}</h3>
                   <p>{p.code} · {p.category}</p>
                   <p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p>
@@ -590,13 +745,14 @@ function ImportCSV({ products, setProducts, loadProducts }) {
   );
 }
 
-function AddProduct({ products, setProducts, loadProducts }) {
+function AddProduct({ products, loadProducts }) {
   const [form, setForm] = useState({
     name: "",
     category: "",
     cost: "",
     price: "",
     stock: "",
+    image_url: "",
   });
 
   async function saveProduct() {
@@ -611,6 +767,7 @@ function AddProduct({ products, setProducts, loadProducts }) {
       cost: Number(form.cost || 0),
       price: Number(form.price || 0),
       stock: Number(form.stock || 0),
+      image_url: form.image_url,
     };
 
     const { error } = await supabase.from("products").insert([newProduct]);
@@ -620,7 +777,7 @@ function AddProduct({ products, setProducts, loadProducts }) {
       return;
     }
 
-    setForm({ name: "", category: "", cost: "", price: "", stock: "" });
+    setForm({ name: "", category: "", cost: "", price: "", stock: "", image_url: "" });
     await loadProducts();
   }
 
@@ -633,6 +790,7 @@ function AddProduct({ products, setProducts, loadProducts }) {
         <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Costo" />
         <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
         <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
+        <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
       </div>
       <Button onClick={saveProduct}>Guardar producto</Button>
     </Card>
@@ -742,6 +900,12 @@ const styles = `
   .btn-secondary {
     background: white;
     color: var(--dark);
+  }
+
+  .btn-danger {
+    background: #c0392b;
+    color: white;
+    border: none;
   }
 
   .btn:disabled {
@@ -863,7 +1027,7 @@ const styles = `
     gap: 10px;
   }
 
-  input {
+  input, select {
     width: 100%;
     border: 1px solid var(--border);
     border-radius: 18px;
@@ -874,7 +1038,7 @@ const styles = `
     outline: none;
   }
 
-  input:focus {
+  input:focus, select:focus {
     border-color: var(--orange);
     box-shadow: 0 0 0 3px rgba(252, 74, 26, 0.12);
   }
@@ -890,12 +1054,13 @@ const styles = `
     background: var(--cream);
     border-radius: 18px;
     padding: 12px;
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
     gap: 10px;
   }
 
-  .cart-item span {
+  .cart-info span {
     display: block;
     color: var(--muted);
     font-size: 0.78rem;
@@ -906,14 +1071,19 @@ const styles = `
     text-align: right;
   }
 
-  .cart-price button {
+  .cart-price button, .text-btn {
     margin-top: 5px;
     border: 0;
     background: transparent;
     color: #c0392b;
     cursor: pointer;
-    font-weight: 700;
-    font-size: 0.78rem;
+    font-weight: 800;
+    font-size: 0.82rem;
+  }
+
+  .text-btn {
+    color: var(--orange);
+    padding: 0;
   }
 
   .pay-grid {
@@ -973,15 +1143,45 @@ const styles = `
     gap: 12px;
   }
 
+  .product-card.with-image {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: start;
+  }
+
+  .product-main h3,
   .product-card h3 {
     font-weight: 900;
     margin-bottom: 4px;
   }
 
+  .product-main p,
   .product-card p {
     color: var(--muted);
     font-size: 0.88rem;
     margin-top: 4px;
+  }
+
+  .product-img {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+    border-radius: 18px;
+    background: var(--cream);
+    border: 1px solid var(--border);
+  }
+
+  .product-img.small {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+  }
+
+  .product-img.placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
   }
 
   .stock-pill {
@@ -1010,7 +1210,7 @@ const styles = `
     margin: 14px 0;
   }
 
-  .import-box {
+  .import-box, .edit-box {
     margin-top: 14px;
     border: 1px dashed var(--border);
     background: var(--cream);
@@ -1022,6 +1222,63 @@ const styles = `
     margin-top: 10px;
     color: var(--muted);
     font-size: 0.92rem;
+  }
+
+  .qr-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 18px;
+    margin-top: 16px;
+  }
+
+  .qr-controls label {
+    display: block;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+
+  .qr-product-box {
+    margin-top: 14px;
+    background: var(--cream);
+    border-radius: 20px;
+    padding: 14px;
+  }
+
+  .qr-product-box h3 {
+    margin-top: 10px;
+  }
+
+  .qr-product-box p {
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .qr-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--cream);
+    border-radius: 22px;
+    padding: 18px;
+  }
+
+  .qr-preview img {
+    width: min(320px, 100%);
+    border-radius: 18px;
+    background: white;
+    padding: 10px;
+  }
+
+  .download-btn {
+    display: inline-block;
+    margin-top: 12px;
+    text-decoration: none;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--orange) 100%);
+    color: white;
+    font-weight: 900;
+    padding: 12px 16px;
+    border-radius: 16px;
   }
 
   @media (max-width: 820px) {
@@ -1046,5 +1303,8 @@ const styles = `
     .manual-row { grid-template-columns: 1fr; }
     .products-grid { grid-template-columns: 1fr; }
     .form-grid { grid-template-columns: 1fr; }
+    .product-card.with-image { grid-template-columns: auto 1fr; }
+    .stock-pill { grid-column: 1 / -1; }
+    .qr-layout { grid-template-columns: 1fr; }
   }
 `;
