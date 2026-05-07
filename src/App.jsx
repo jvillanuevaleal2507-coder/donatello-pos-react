@@ -218,10 +218,7 @@ export default function VentasDonatelloPOS() {
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
   const change = Number(received || 0) - subtotal;
 
-  const filteredProducts = products.filter((p) => {
-    const text = `${p.code} ${p.name} ${p.category}`.toLowerCase();
-    return text.includes(query.toLowerCase());
-  });
+    });
 
   function addToCartByCode(code) {
     const cleanCode = String(code || "").trim().toUpperCase();
