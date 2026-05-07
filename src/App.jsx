@@ -80,6 +80,31 @@ function numberFromCSV(value, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+async function uploadProductImage(file) {
+  if (!file) return "";
+
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+  const filePath = `products/${safeName}`;
+
+  const { error } = await supabase.storage
+    .from("product-images")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { data } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
+
 function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
   return (
     <button
@@ -528,6 +553,22 @@ function EditProduct({ product, onSaved }) {
     image_url: product.image_url || "",
   });
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function handleImageFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const publicUrl = await uploadProductImage(file);
+      setForm((prev) => ({ ...prev, image_url: publicUrl }));
+    } catch (error) {
+      alert(`Error subiendo imagen: ${error.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   async function saveChanges() {
     setSaving(true);
@@ -563,6 +604,14 @@ function EditProduct({ product, onSaved }) {
         <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
         <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
         <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
+          <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
+        </label>
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
+          <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
+        </label>
       </div>
       <Button onClick={saveChanges} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</Button>
     </div>
@@ -754,6 +803,22 @@ function AddProduct({ products, loadProducts }) {
     stock: "",
     image_url: "",
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function handleImageFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const publicUrl = await uploadProductImage(file);
+      setForm((prev) => ({ ...prev, image_url: publicUrl }));
+    } catch (error) {
+      alert(`Error subiendo imagen: ${error.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  }
 
   async function saveProduct() {
     if (!form.name.trim()) return;
@@ -1216,6 +1281,25 @@ const styles = `
     background: var(--cream);
     border-radius: 20px;
     padding: 16px;
+  }
+
+  .file-upload-box {
+    width: 100%;
+    border: 1px dashed var(--orange);
+    border-radius: 18px;
+    padding: 12px 14px;
+    background: #fff4df;
+    color: var(--dark);
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .file-upload-box input {
+    display: none;
   }
 
   .import-box p {
