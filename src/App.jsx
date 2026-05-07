@@ -151,6 +151,7 @@ export default function VentasDonatelloPOS() {
   const [scannerOn, setScannerOn] = useState(false);
   const [sales, setSales] = useState([]);
   const [loadingSales, setLoadingSales] = useState(false);
+  const [lastReceipt, setLastReceipt] = useState(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -316,6 +317,18 @@ export default function VentasDonatelloPOS() {
       }
     }
 
+    const receipt = {
+      id: saleData.id,
+      sale_date: new Date().toISOString(),
+      total: subtotal,
+      profit,
+      received: Number(received || 0),
+      change_amount: change,
+      items_count: itemsCount,
+      sale_items: saleItems,
+    };
+
+    setLastReceipt(receipt);
     setScanStatus(`Venta cobrada: ${money(subtotal)} | Cambio: ${money(change)}`);
     clearCart();
     await loadProducts();
@@ -562,6 +575,8 @@ export default function VentasDonatelloPOS() {
 
         {tab === "sales" && <SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
 
+        {lastReceipt && <ReceiptModal sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
+
         {tab === "import" && <ImportCSV products={products} loadProducts={loadProducts} />}
       </main>
     </div>
@@ -750,7 +765,59 @@ function QRSection({ products }) {
   );
 }
 
+function ReceiptModal({ sale, onClose }) {
+  function printReceipt() {
+    window.print();
+  }
+
+  return (
+    <div className="receipt-overlay">
+      <div className="receipt-panel">
+        <div className="receipt-actions no-print">
+          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
+          <Button onClick={printReceipt}>Imprimir / Guardar PDF</Button>
+        </div>
+
+        <div className="ticket-print-area">
+          <div className="ticket-header">
+            <div className="ticket-logo">🛒</div>
+            <h2>Ventas Donatello</h2>
+            <p>Ticket de venta</p>
+          </div>
+
+          <div className="ticket-meta">
+            <p><b>Venta:</b> #{sale.id}</p>
+            <p><b>Fecha:</b> {new Date(sale.sale_date).toLocaleString("es-MX")}</p>
+          </div>
+
+          <div className="ticket-items">
+            {sale.sale_items?.map((item, index) => (
+              <div className="ticket-item" key={`${item.code}-${index}`}>
+                <div>
+                  <b>{item.name}</b>
+                  <span>{item.code} · x{item.qty}</span>
+                </div>
+                <strong>{money(item.subtotal)}</strong>
+              </div>
+            ))}
+          </div>
+
+          <div className="ticket-totals">
+            <div><span>Piezas</span><b>{sale.items_count}</b></div>
+            <div><span>Total</span><b>{money(sale.total)}</b></div>
+            <div><span>Recibido</span><b>{money(sale.received)}</b></div>
+            <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
+          </div>
+
+          <p className="ticket-footer">Gracias por tu compra.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SalesSection({ sales, loadingSales, loadSales }) {
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const totalSold = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
   const totalProfit = sales.reduce((sum, sale) => sum + Number(sale.profit || 0), 0);
   const totalItems = sales.reduce((sum, sale) => sum + Number(sale.items_count || 0), 0);
@@ -796,6 +863,7 @@ function SalesSection({ sales, loadingSales, loadSales }) {
                 <div className="sale-total-box">
                   <span>Total</span>
                   <strong>{money(sale.total)}</strong>
+                  <button className="text-btn" onClick={() => setSelectedReceipt(sale)}>Ticket</button>
                 </div>
               </div>
 
@@ -823,6 +891,7 @@ function SalesSection({ sales, loadingSales, loadSales }) {
           ))}
         </div>
       )}
+      {selectedReceipt && <ReceiptModal sale={selectedReceipt} onClose={() => setSelectedReceipt(null)} />}
     </section>
   );
 }
@@ -1527,6 +1596,146 @@ const styles = `
     color: var(--muted);
     font-size: 0.78rem;
     margin-top: 3px;
+  }
+
+  .receipt-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .receipt-panel {
+    width: min(440px, 100%);
+    background: white;
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: 0 18px 60px rgba(0,0,0,0.25);
+  }
+
+  .receipt-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .ticket-print-area {
+    background: white;
+    color: #111;
+    border: 1px solid #eee;
+    border-radius: 18px;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+  }
+
+  .ticket-header {
+    text-align: center;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .ticket-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: #fff4df;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  .ticket-header h2 {
+    font-size: 1.3rem;
+    margin: 0;
+  }
+
+  .ticket-header p,
+  .ticket-meta p,
+  .ticket-footer {
+    font-size: 0.86rem;
+    color: #444;
+    margin-top: 4px;
+  }
+
+  .ticket-meta {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .ticket-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .ticket-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .ticket-item span {
+    display: block;
+    font-size: 0.78rem;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .ticket-totals {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .ticket-totals div {
+    background: #f7f7f7;
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .ticket-totals span {
+    display: block;
+    font-size: 0.75rem;
+    color: #666;
+  }
+
+  .ticket-totals b {
+    display: block;
+    margin-top: 2px;
+  }
+
+  .ticket-footer {
+    text-align: center;
+    border-top: 1px dashed #aaa;
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+
+  @media print {
+    body * { visibility: hidden !important; }
+    .ticket-print-area, .ticket-print-area * { visibility: visible !important; }
+    .ticket-print-area {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      border: none;
+      border-radius: 0;
+      padding: 12px;
+    }
+    .no-print { display: none !important; }
   }
 
   .qr-layout {
