@@ -592,7 +592,8 @@ export default function VentasDonatelloPOS() {
             setCategoryFilter={setCategoryFilter}
             categories={categories}
             loadProducts={loadProducts}
-          />}
+          />
+      )}
 
         {tab === "qr" && <QRSection products={products} />}
 
