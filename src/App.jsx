@@ -1121,16 +1121,16 @@ const styles = `
   }
 
   .brand-logo {
-  width: 92px;
-  height: 92px;
-  min-width: 92px;
+  width: 88px;
+  height: 88px;
+  min-width: 88px;
   border-radius: 24px;
   background: rgba(255,255,255,0.16);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: 4px;
+  padding: 5px;
 }
 
 .brand-logo img {
