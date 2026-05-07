@@ -440,6 +440,7 @@ export default function VentasDonatelloPOS() {
         <header className="brand-header">
           <div className="brand-logo">
             <img src="/logo-donatello.png" alt="Ventas Donatello" />
+            </div>
           <div>
             <h1>Ventas Donatello POS</h1>
             <p>Venta rápida, QR, inventario y utilidad</p>
