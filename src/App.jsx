@@ -782,7 +782,9 @@ function ReceiptModal({ sale, onClose }) {
 
         <div className="ticket-print-area">
           <div className="ticket-header">
-            <div className="ticket-logo">🛒</div>
+            <div className="ticket-logo">
+              <img src="/logo-donatello.png" alt="Ventas Donatello" />
+              </div>
             <h2>Ventas Donatello</h2>
             <p>Ticket de venta</p>
           </div>
