@@ -1649,16 +1649,23 @@ const styles = `
   }
 
   .ticket-logo {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
-    background: #fff4df;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    margin-bottom: 6px;
-  }
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: #fff4df;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 4px;
+  margin-bottom: 8px;
+}
+
+.ticket-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 
   .ticket-header h2 {
     font-size: 1.3rem;
