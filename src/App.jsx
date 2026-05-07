@@ -149,6 +149,8 @@ export default function VentasDonatelloPOS() {
   const [received, setReceived] = useState("");
   const [scanStatus, setScanStatus] = useState("Scanner apagado");
   const [scannerOn, setScannerOn] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [sales, setSales] = useState([]);
   const [loadingSales, setLoadingSales] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
@@ -195,6 +197,21 @@ export default function VentasDonatelloPOS() {
     }
     setLoadingSales(false);
   }
+
+  const categories = [
+    "all",
+    ...new Set(products.map((p) => (p.category || "Sin categoría").trim()))
+  ];
+
+  const filteredProducts = products.filter((product) => {
+    const text = `${product.name || ""} ${product.code || ""} ${product.category || ""}`.toLowerCase();
+    const matchesSearch = text.includes(searchTerm.toLowerCase());
+    const matchesCategory =
+      categoryFilter === "all" ||
+      (product.category || "Sin categoría") === categoryFilter;
+
+    return matchesSearch && matchesCategory;
+  });
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
   const profit = useMemo(() => cart.reduce((sum, item) => sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty, 0), [cart]);
@@ -438,9 +455,7 @@ export default function VentasDonatelloPOS() {
 
       <main className="shell">
         <header className="brand-header">
-          <div className="brand-logo">
-            <img src="/logo-donatello.png" alt="Ventas Donatello" />
-            </div>
+          <div className="brand-logo">🛒</div>
           <div>
             <h1>Ventas Donatello POS</h1>
             <p>Venta rápida, QR, inventario y utilidad</p>
@@ -568,10 +583,16 @@ export default function VentasDonatelloPOS() {
         )}
 
         {tab === "inventory" && (
-          <InventorySection products={filteredProducts} query={query} setQuery={setQuery} loadProducts={loadProducts} />
-        )}
-
-        {tab === "add" && <AddProduct products={products} loadProducts={loadProducts} />}
+          <InventorySection
+            products={filteredProducts}
+            allProducts={products}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            categoryFilter={categoryFilter}
+            setCategoryFilter={setCategoryFilter}
+            categories={categories}
+            loadProducts={loadProducts}
+          />}
 
         {tab === "qr" && <QRSection products={products} />}
 
@@ -585,11 +606,45 @@ export default function VentasDonatelloPOS() {
   );
 }
 
-function InventorySection({ products, query, setQuery, loadProducts }) {
+function InventorySection({
+  products,
+  allProducts,
+  searchTerm,
+  setSearchTerm,
+  categoryFilter,
+  setCategoryFilter,
+  categories,
+  loadProducts,
+}) {
   const [editingId, setEditingId] = useState(null);
 
   return (
     <section className="inventory-section">
+      <div className="catalog-toolbar">
+        <input
+          className="search-input"
+          type="text"
+          placeholder="Buscar por nombre, código o categoría..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+
+        <div className="category-pills">
+          {categories.map((category) => (
+            <button
+              key={category}
+              className={`category-pill ${categoryFilter === category ? "active" : ""}`}
+              onClick={() => setCategoryFilter(category)}
+            >
+              {category === "all" ? "✨ Todos" : category}
+            </button>
+          ))}
+        </div>
+
+        <p className="catalog-counter">
+          Mostrando {products.length} de {allProducts.length} productos
+        </p>
+      </div>
       <div className="search-box">
         <span>🔎</span>
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar producto" />
@@ -782,9 +837,7 @@ function ReceiptModal({ sale, onClose }) {
 
         <div className="ticket-print-area">
           <div className="ticket-header">
-            <div className="ticket-logo">
-              <img src="/logo-donatello.png" alt="Ventas Donatello" />
-              </div>
+            <div className="ticket-logo">🛒</div>
             <h2>Ventas Donatello</h2>
             <p>Ticket de venta</p>
           </div>
@@ -1121,25 +1174,16 @@ const styles = `
   }
 
   .brand-logo {
-  width: 88px;
-  height: 88px;
-  min-width: 88px;
-  border-radius: 24px;
-  background: rgba(255,255,255,0.16);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 5px;
-}
-
-.brand-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  transform: scale(1.12);
+    width: 62px;
+    height: 62px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
   }
-  
+
   h1, h2, h3, p { margin: 0; }
 
   h1 {
@@ -1529,6 +1573,61 @@ const styles = `
     font-size: 0.92rem;
   }
 
+  .catalog-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .search-input {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 14px 16px;
+    background: white;
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--dark);
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 4px rgba(247, 183, 51, 0.18);
+  }
+
+  .category-pills {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .category-pill {
+    border: none;
+    background: #f3ede3;
+    color: var(--dark);
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-weight: 800;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: 0.2s ease;
+  }
+
+  .category-pill.active {
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: white;
+    box-shadow: 0 10px 20px rgba(249, 115, 22, 0.25);
+  }
+
+  .catalog-counter {
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+
   .sales-header {
     display: flex;
     justify-content: space-between;
@@ -1654,23 +1753,15 @@ const styles = `
   }
 
   .ticket-logo {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 10px auto;
-  border-radius: 18px;
-  background: #fff4df;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 4px;
-}
-
-.ticket-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: #fff4df;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    margin-bottom: 6px;
   }
 
   .ticket-header h2 {
