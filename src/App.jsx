@@ -140,7 +140,7 @@ function ProductImage({ src, alt = "Producto", small = false }) {
   );
 }
 
-export default function VentasDonatelloPOS() {
+function VentasDonatelloPOSApp() {
   const [products, setProducts] = useState(initialProducts);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState([]);
@@ -1942,3 +1942,10 @@ const styles = `
     .sale-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 `;
+  export default function VentasDonatelloPOS() {
+  return (
+    <BrowserRouter>
+      <VentasDonatelloPOSApp />
+    </BrowserRouter>
+  );
+}
