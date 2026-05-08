@@ -590,6 +590,13 @@ export default function VentasDonatelloPOS() {
           />
       )}
 
+        {tab === "add" && (
+  <AddProduct
+    products={products}
+    loadProducts={loadProducts}
+  />
+)}
+
         {tab === "qr" && <QRSection products={products} />}
 
         {tab === "sales" && <SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
