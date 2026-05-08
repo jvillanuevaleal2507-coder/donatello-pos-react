@@ -482,9 +482,10 @@ function VentasDonatelloPOSApp() {
         </nav>
 
         {loadingProducts && <Card><p className="muted">Cargando inventario desde Supabase...</p></Card>}
-
-        {tab === "sale" && (
-          <section className="sale-layout">
+<Routes>
+  <Route path="/" element={
+    <>
+                 <section className="sale-layout">
             <div className="left-panel">
               <div className="metrics-grid">
                 <Card>
@@ -588,7 +589,9 @@ function VentasDonatelloPOSApp() {
               </Card>
             </div>
           </section>
-        )}
+               </>
+  } />
+</Routes>
 
         {tab === "inventory" && (
           <InventorySection
