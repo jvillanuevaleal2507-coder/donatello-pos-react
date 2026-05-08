@@ -643,7 +643,7 @@ function InventorySection({
       </div>
       <div className="search-box">
         <span>🔎</span>
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar producto" />
+        <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar producto" />
       </div>
 
       <div className="products-grid">
