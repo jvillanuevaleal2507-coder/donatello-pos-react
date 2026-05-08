@@ -458,25 +458,17 @@ function VentasDonatelloPOSApp() {
           </div>
         </header>
 
-        <nav className="nav-grid">
-          <Link to="/">
-  <button className="nav-btn">🛒 Venta</button>
-</Link>
-          <Link to="/">
-  <button className="nav-btn">🛒 Venta</button>
-</Link>
-          <Link to="/agregar">
-  <button className="nav-btn">➕ Agregar</button>
-</Link>
-          <Link to="/qr">
-  <button className="nav-btn">📌 QR</button>
-</Link>
-          <Link to="/historial">
-  <button className="nav-btn">📜 Ventas</button>
-</Link>
-          <Link to="/csv">
-  <button className="nav-btn">⬆️ CSV</button>
-</Link>
+       <nav className="nav-grid">
+  <Link to="/" className="nav-btn">🛒 Venta</Link>
+  <Link to="/inventario" className="nav-btn">📦 Inventario</Link>
+  <Link to="/agregar" className="nav-btn">➕ Agregar</Link>
+  <Link to="/qr" className="nav-btn">🏷️ QR</Link>
+  <Link to="/historial" className="nav-btn">📜 Ventas</Link>
+  <Link to="/csv" className="nav-btn">⬆️ CSV</Link>
+
+  <button className="nav-btn" onClick={clearCart}>🧹 Limpiar</button>
+  <button className="nav-btn" onClick={loadProducts}>🔄 Actualizar</button>
+</nav>
           <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
           <button className="nav-btn" onClick={loadProducts}>🔃 Actualizar</button>
         </nav>
