@@ -459,12 +459,24 @@ function VentasDonatelloPOSApp() {
         </header>
 
         <nav className="nav-grid">
-          <button className={`nav-btn ${tab === "sale" ? "active" : ""}`} onClick={() => setTab("sale")}>🛒 Venta</button>
-          <button className={`nav-btn ${tab === "inventory" ? "active" : ""}`} onClick={() => setTab("inventory")}>📦 Inventario</button>
-          <button className={`nav-btn ${tab === "add" ? "active" : ""}`} onClick={() => setTab("add")}>➕ Agregar</button>
-          <button className={`nav-btn ${tab === "qr" ? "active" : ""}`} onClick={() => setTab("qr")}>🏷️ QR</button>
-          <button className={`nav-btn ${tab === "sales" ? "active" : ""}`} onClick={() => setTab("sales")}>📜 Ventas</button>
-          <button className={`nav-btn ${tab === "import" ? "active" : ""}`} onClick={() => setTab("import")}>⬆️ CSV</button>
+          <Link to="/">
+  <button className="nav-btn">🛒 Venta</button>
+</Link>
+          <Link to="/">
+  <button className="nav-btn">🛒 Venta</button>
+</Link>
+          <Link to="/agregar">
+  <button className="nav-btn">➕ Agregar</button>
+</Link>
+          <Link to="/qr">
+  <button className="nav-btn">📌 QR</button>
+</Link>
+          <Link to="/historial">
+  <button className="nav-btn">📜 Ventas</button>
+</Link>
+          <Link to="/csv">
+  <button className="nav-btn">⬆️ CSV</button>
+</Link>
           <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
           <button className="nav-btn" onClick={loadProducts}>🔃 Actualizar</button>
         </nav>
