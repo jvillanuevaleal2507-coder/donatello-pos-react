@@ -144,7 +144,6 @@ export default function VentasDonatelloPOS() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState([]);
   const [tab, setTab] = useState("sale");
-  const [query, setQuery] = useState("");
   const [manualCode, setManualCode] = useState("");
   const [received, setReceived] = useState("");
   const [scanStatus, setScanStatus] = useState("Scanner apagado");
