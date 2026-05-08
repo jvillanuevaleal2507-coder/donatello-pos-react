@@ -593,18 +593,23 @@ function VentasDonatelloPOSApp() {
   } />
 </Routes>
 
-        {tab === "inventory" && (
-          <InventorySection
-            products={filteredProducts}
-            allProducts={products}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            categoryFilter={categoryFilter}
-            setCategoryFilter={setCategoryFilter}
-            categories={categories}
-            loadProducts={loadProducts}
-          />
-      )}
+       <Routes>
+  <Route
+    path="/inventario"
+    element={
+      <InventorySection
+        products={filteredProducts}
+        allProducts={products}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        categoryFilter={categoryFilter}
+        setCategoryFilter={setCategoryFilter}
+        categories={categories}
+        loadProducts={loadProducts}
+      />
+    }
+  />
+</Routes>
 
         {tab === "add" && (
   <AddProduct
