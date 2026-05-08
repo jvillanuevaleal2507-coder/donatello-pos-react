@@ -611,12 +611,17 @@ function VentasDonatelloPOSApp() {
   />
 </Routes>
 
-        {tab === "add" && (
-  <AddProduct
-    products={products}
-    loadProducts={loadProducts}
+<Routes>
+  <Route
+    path="/agregar"
+    element={
+      <AddProduct
+        products={products}
+        loadProducts={loadProducts}
+      />
+    }
   />
-)}
+</Routes>
 
         {tab === "qr" && <QRSection products={products} />}
 
