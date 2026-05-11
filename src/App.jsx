@@ -648,7 +648,10 @@ function VentasDonatelloPOSApp() {
     onClose={() => setLastReceipt(null)}
   />
 )}
-
+</main>
+</div>
+);
+}
 function InventorySection({
   products,
   allProducts,
