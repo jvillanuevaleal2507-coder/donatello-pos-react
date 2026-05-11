@@ -11,5 +11,8 @@ export default function InventoryPage({
  const [editingId, setEditingId] = useState(null);
 
   return (
+    <section className="inventory-section">
+    ...
+  </section>
       );
 }
