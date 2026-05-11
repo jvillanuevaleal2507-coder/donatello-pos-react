@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import Navbar from "./components/Navbar";
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
