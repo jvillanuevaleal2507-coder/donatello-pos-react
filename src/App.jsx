@@ -459,7 +459,7 @@ function VentasDonatelloPOSApp() {
           </div>
         </header>
 
-       <nav className="nav-grid">
+      <Navbar clearCart={clearCart} loadProducts={loadProducts} />
   <Link to="/" className="nav-btn">🛒 Venta</Link>
   <Link to="/inventario" className="nav-btn">📦 Inventario</Link>
   <Link to="/agregar" className="nav-btn">➕ Agregar</Link>
