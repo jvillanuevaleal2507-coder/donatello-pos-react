@@ -460,17 +460,7 @@ function VentasDonatelloPOSApp() {
         </header>
 
       <Navbar clearCart={clearCart} loadProducts={loadProducts} />
-  <Link to="/" className="nav-btn">🛒 Venta</Link>
-  <Link to="/inventario" className="nav-btn">📦 Inventario</Link>
-  <Link to="/agregar" className="nav-btn">➕ Agregar</Link>
-  <Link to="/qr" className="nav-btn">🏷️ QR</Link>
-  <Link to="/historial" className="nav-btn">📜 Ventas</Link>
-  <Link to="/csv" className="nav-btn">⬆️ CSV</Link>
-
-  <button className="nav-btn" onClick={clearCart}>🧹 Limpiar</button>
-  <button className="nav-btn" onClick={loadProducts}>🔄 Actualizar</button>
-</nav>
-       
+         
         {loadingProducts && <Card><p className="muted">Cargando inventario desde Supabase...</p></Card>}
 <Routes>
   <Route path="/" element={
