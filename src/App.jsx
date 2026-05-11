@@ -578,7 +578,7 @@ function VentasDonatelloPOSApp() {
   <Route
     path="/inventario"
     element={
-      <InventorySection
+      <InventoryPage
         products={filteredProducts}
         allProducts={products}
         searchTerm={searchTerm}
