@@ -658,7 +658,7 @@ function InventorySection({
   setCategoryFilter,
   categories,
   loadProducts,
-}) {
+
   const [editingId, setEditingId] = useState(null);
 
   return (
