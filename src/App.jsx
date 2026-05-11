@@ -612,17 +612,42 @@ function VentasDonatelloPOSApp() {
   />
 </Routes>
 
-        {tab === "qr" && <QRSection products={products} />}
+      <Routes>
 
-        {tab === "sales" && <SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
+  <Route
+    path="/qr"
+    element={<QRSection products={products} />}
+  />
 
-        {lastReceipt && <ReceiptModal sale={lastReceipt} onClose={() => setLastReceipt(null)} />}
+  <Route
+    path="/historial"
+    element={
+      <SalesSection
+        sales={sales}
+        loadingSales={loadingSales}
+        loadSales={loadSales}
+      />
+    }
+  />
 
-        {tab === "import" && <ImportCSV products={products} loadProducts={loadProducts} />}
-      </main>
-    </div>
-  );
-}
+  <Route
+    path="/csv"
+    element={
+      <ImportCSV
+        products={products}
+        loadProducts={loadProducts}
+      />
+    }
+  />
+
+</Routes>
+
+{lastReceipt && (
+  <ReceiptModal
+    sale={lastReceipt}
+    onClose={() => setLastReceipt(null)}
+  />
+)}
 
 function InventorySection({
   products,
