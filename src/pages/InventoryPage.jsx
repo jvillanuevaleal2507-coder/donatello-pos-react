@@ -13,7 +13,6 @@ export default function InventoryPage({
 
   return (
     <section className="inventory-section">
-    ...
-  </section>
+      </section>
       );
 }
