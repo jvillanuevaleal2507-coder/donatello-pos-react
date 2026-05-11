@@ -25,6 +25,10 @@ function money(value) {
     currency: "MXN",
   }).format(Number(value || 0));
 }
+function margin(price, cost) {
+  if (!price) return 0;
+  return ((Number(price || 0) - Number(cost || 0)) / Number(price || 1)) * 100;
+}
 export default function InventoryPage({
   products,
   allProducts,
