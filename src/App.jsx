@@ -469,10 +469,7 @@ function VentasDonatelloPOSApp() {
   <button className="nav-btn" onClick={clearCart}>🧹 Limpiar</button>
   <button className="nav-btn" onClick={loadProducts}>🔄 Actualizar</button>
 </nav>
-          <button className="nav-btn" onClick={clearCart}>🔄 Limpiar</button>
-          <button className="nav-btn" onClick={loadProducts}>🔃 Actualizar</button>
-        </nav>
-
+       
         {loadingProducts && <Card><p className="muted">Cargando inventario desde Supabase...</p></Card>}
 <Routes>
   <Route path="/" element={
