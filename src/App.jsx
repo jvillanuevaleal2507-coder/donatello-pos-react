@@ -648,10 +648,12 @@ function VentasDonatelloPOSApp() {
     onClose={() => setLastReceipt(null)}
   />
 )}
+        
 </main>
 </div>
 );
 }
+
 function InventorySection({
   products,
   allProducts,
@@ -661,7 +663,8 @@ function InventorySection({
   setCategoryFilter,
   categories,
   loadProducts,
-
+}) {
+  
   const [editingId, setEditingId] = useState(null);
 
   return (
