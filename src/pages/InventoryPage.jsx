@@ -19,6 +19,12 @@ function ProductImage({ src, alt = "Producto", small = false }) {
     />
   );
 }
+function money(value) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(Number(value || 0));
+}
 export default function InventoryPage({
   products,
   allProducts,
