@@ -11,3 +11,5 @@ export default function InventoryPage({
  const [editingId, setEditingId] = useState(null);
 
   return (
+      );
+}
