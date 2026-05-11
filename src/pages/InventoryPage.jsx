@@ -1,4 +1,24 @@
 import { useState } from "react";
+function Card({ children, className = "" }) {
+  return <div className={`card ${className}`}>{children}</div>;
+}
+
+function ProductImage({ src, alt = "Producto", small = false }) {
+  if (!src) {
+    return <div className={small ? "product-img small placeholder" : "product-img placeholder"}>📦</div>;
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={small ? "product-img small" : "product-img"}
+      onError={(e) => {
+        e.currentTarget.style.display = "none";
+      }}
+    />
+  );
+}
 export default function InventoryPage({
   products,
   allProducts,
