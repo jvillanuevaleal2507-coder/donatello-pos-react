@@ -8,3 +8,6 @@ export default function InventoryPage({
   categories,
   loadProducts,
 }) {
+ const [editingId, setEditingId] = useState(null);
+
+  return (
