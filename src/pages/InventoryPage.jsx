@@ -29,6 +29,80 @@ function margin(price, cost) {
   if (!price) return 0;
   return ((Number(price || 0) - Number(cost || 0)) / Number(price || 1)) * 100;
 }
+function EditProduct({ product, onSaved }) {
+  const [form, setForm] = useState({
+    name: product.name || "",
+    category: product.category || "",
+    cost: product.cost || 0,
+    price: product.price || 0,
+    stock: product.stock || 0,
+    image_url: product.image_url || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  async function handleImageFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploadingImage(true);
+      const publicUrl = await uploadProductImage(file);
+      setForm((prev) => ({ ...prev, image_url: publicUrl }));
+    } catch (error) {
+      alert(`Error subiendo imagen: ${error.message}`);
+    } finally {
+      setUploadingImage(false);
+    }
+  }
+
+  async function saveChanges() {
+    setSaving(true);
+    const { error } = await supabase
+      .from("products")
+      .update({
+        name: form.name,
+        category: form.category,
+        cost: Number(form.cost || 0),
+        price: Number(form.price || 0),
+        stock: Number(form.stock || 0),
+        image_url: form.image_url,
+      })
+      .eq("id", product.id);
+
+    setSaving(false);
+
+    if (error) {
+      alert(`Error actualizando producto: ${error.message}`);
+      return;
+    }
+
+    await onSaved();
+  }
+
+  return (
+    <div className="edit-box">
+      <h3>Editar producto</h3>
+      <div className="form-grid">
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre" />
+        <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Categoría" />
+        <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Costo" />
+        <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
+        <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
+        <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
+          <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
+        </label>
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
+          <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
+        </label>
+      </div>
+      <Button onClick={saveChanges} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</Button>
+    </div>
+  );
+}
 export default function InventoryPage({
   products,
   allProducts,
