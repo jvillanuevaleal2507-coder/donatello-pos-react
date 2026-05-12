@@ -1157,10 +1157,8 @@ const styles = `
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
   overflow: hidden;
-  backdrop-filter: blur(6px);
-}
+ }
 
   h1, h2, h3, p { margin: 0; }
 
