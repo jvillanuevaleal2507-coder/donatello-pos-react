@@ -1151,14 +1151,12 @@ const styles = `
   overflow: hidden;
 }
 .brand-logo {
-  width: 86px;
-  height: auto;
-  background: transparent;
+  width: 72px;
+  min-width: 72px;
+  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  overflow: visible;
 }
 
   h1, h2, h3, p { margin: 0; }
