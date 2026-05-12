@@ -7,6 +7,19 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 function Card({ children, className = "" }) {
   return <div className={`card ${className}`}>{children}</div>;
 }
+function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
+  return (
+    <button
+      type={type}
+      className={`btn ${variant === "secondary" ? "btn-secondary" : variant === "danger" ? "btn-danger" : "btn-primary"}`}
+      disabled={disabled}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
 export default function AddProductPage({
   products,
   loadProducts,
