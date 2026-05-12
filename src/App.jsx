@@ -597,7 +597,7 @@ function VentasDonatelloPOSApp() {
   <Route
     path="/agregar"
     element={
-      <AddProduct
+      <AddProductPage
         products={products}
         loadProducts={loadProducts}
       />
