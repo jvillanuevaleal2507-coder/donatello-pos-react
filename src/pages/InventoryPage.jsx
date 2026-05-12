@@ -128,7 +128,22 @@ export default function InventoryPage({
   loadProducts,
 }) {
  const [editingId, setEditingId] = useState(null);
+async function deleteProduct(product) {
+    const confirmed = window.confirm(`¿Eliminar "${product.name}" del inventario?`);
+    if (!confirmed) return;
 
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
+
+    if (error) {
+      alert(`Error eliminando producto: ${error.message}`);
+      return;
+    }
+
+    await loadProducts();
+  }
   return (
     <section className="inventory-section">
        <div className="catalog-toolbar">
