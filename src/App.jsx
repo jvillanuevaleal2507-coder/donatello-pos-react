@@ -2026,8 +2026,8 @@ const styles = `
   .brand-text p {
     font-size: 11px;
   .brand-logo-img {
-  width: 80%;
-  height: 80%;
+  width: 50%;
+  height: 50%;
   object-fit: contain;
   transform: scale(1.15);
 }
