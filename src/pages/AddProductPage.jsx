@@ -4,9 +4,11 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 function Card({ children, className = "" }) {
   return <div className={`card ${className}`}>{children}</div>;
 }
+
 function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
   return (
     <button
@@ -19,6 +21,14 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
     </button>
   );
 }
+
+function money(value) {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(Number(value || 0));
+}
+
 async function uploadProductImage(file) {
   if (!file) return "";
 
@@ -33,9 +43,7 @@ async function uploadProductImage(file) {
       upsert: false,
     });
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   const { data } = supabase.storage
     .from("product-images")
@@ -43,19 +51,40 @@ async function uploadProductImage(file) {
 
   return data.publicUrl;
 }
-export default function AddProductPage({
-  products,
-  loadProducts,
-}) {
+
+export default function AddProductPage({ products, loadProducts }) {
   const [form, setForm] = useState({
     name: "",
     category: "",
-    cost: "",
+    costUsd: "",
+    exchangeRate: "17.00",
+    commissionPercent: "0",
+    taxPercent: "8.25",
+    extraCostMxn: "0",
     price: "",
-    stock: "",
+    stock: "1",
     image_url: "",
   });
+
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  const costUsd = Number(form.costUsd || 0);
+  const exchangeRate = Number(form.exchangeRate || 0);
+  const commissionPercent = Number(form.commissionPercent || 0);
+  const taxPercent = Number(form.taxPercent || 0);
+  const extraCostMxn = Number(form.extraCostMxn || 0);
+  const price = Number(form.price || 0);
+
+  const baseCostMxn = costUsd * exchangeRate;
+  const commissionMxn = baseCostMxn * (commissionPercent / 100);
+  const taxMxn = baseCostMxn * (taxPercent / 100);
+  const totalCostMxn = baseCostMxn + commissionMxn + taxMxn + extraCostMxn;
+  const profit = price - totalCostMxn;
+  const margin = price > 0 ? (profit / price) * 100 : 0;
+
+  function updateField(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
 
   async function handleImageFile(event) {
     const file = event.target.files?.[0];
@@ -73,7 +102,11 @@ export default function AddProductPage({
   }
 
   async function saveProduct() {
-    if (!form.name.trim()) return;
+    if (!form.name.trim()) {
+      alert("Agrega el nombre del producto.");
+      return;
+    }
+
     const nextId = products.length ? Math.max(...products.map((p) => Number(p.id))) + 1 : 1;
     const code = `DON-${String(nextId).padStart(6, "0")}`;
 
@@ -81,7 +114,7 @@ export default function AddProductPage({
       code,
       name: form.name,
       category: form.category || "General",
-      cost: Number(form.cost || 0),
+      cost: Number(totalCostMxn.toFixed(2)),
       price: Number(form.price || 0),
       stock: Number(form.stock || 0),
       image_url: form.image_url,
@@ -94,22 +127,155 @@ export default function AddProductPage({
       return;
     }
 
-    setForm({ name: "", category: "", cost: "", price: "", stock: "", image_url: "" });
+    setForm({
+      name: "",
+      category: "",
+      costUsd: "",
+      exchangeRate: "17.00",
+      commissionPercent: "0",
+      taxPercent: "8.25",
+      extraCostMxn: "0",
+      price: "",
+      stock: "1",
+      image_url: "",
+    });
+
     await loadProducts();
+    alert("Producto guardado correctamente.");
   }
 
   return (
     <Card>
       <h2>Agregar producto</h2>
+
       <div className="form-grid">
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre" />
-        <input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Categoría" />
-        <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Costo" />
-        <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
-        <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
-        <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
+        <input
+          value={form.name}
+          onChange={(e) => updateField("name", e.target.value)}
+          placeholder="Nombre del producto"
+        />
+
+        <input
+          value={form.category}
+          onChange={(e) => updateField("category", e.target.value)}
+          placeholder="Categoría"
+        />
+
+        <input
+          type="number"
+          value={form.costUsd}
+          onChange={(e) => updateField("costUsd", e.target.value)}
+          placeholder="Costo USD"
+        />
+
+        <input
+          type="number"
+          value={form.exchangeRate}
+          onChange={(e) => updateField("exchangeRate", e.target.value)}
+          placeholder="Tipo de cambio"
+        />
+
+        <input
+          type="number"
+          value={form.commissionPercent}
+          onChange={(e) => updateField("commissionPercent", e.target.value)}
+          placeholder="Comisión proveedor %"
+        />
+
+        <input
+          type="number"
+          value={form.taxPercent}
+          onChange={(e) => updateField("taxPercent", e.target.value)}
+          placeholder="Taxes %"
+        />
+
+        <input
+          type="number"
+          value={form.extraCostMxn}
+          onChange={(e) => updateField("extraCostMxn", e.target.value)}
+          placeholder="Costo extra MXN"
+        />
+
+        <input
+          type="number"
+          value={form.price}
+          onChange={(e) => updateField("price", e.target.value)}
+          placeholder="Precio venta MXN"
+        />
+
+        <input
+          type="number"
+          value={form.stock}
+          onChange={(e) => updateField("stock", e.target.value)}
+          placeholder="Stock"
+        />
+
+        <input
+          value={form.image_url}
+          onChange={(e) => updateField("image_url", e.target.value)}
+          placeholder="URL de imagen opcional"
+        />
       </div>
-      <Button onClick={saveProduct}>Guardar producto</Button>
+
+      <label className="upload-btn">
+        {uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageFile}
+          hidden
+        />
+      </label>
+
+      {form.image_url && (
+        <div className="product-card with-image" style={{ marginTop: 12 }}>
+          <img
+            src={form.image_url}
+            alt="Vista previa"
+            className="product-img"
+          />
+          <div>
+            <strong>Imagen cargada</strong>
+            <p className="muted">La imagen se guardará con el producto.</p>
+          </div>
+        </div>
+      )}
+
+      <div className="metrics-grid" style={{ marginTop: 16 }}>
+        <Card>
+          <span className="metric-label">Costo base MXN</span>
+          <strong className="metric-value">{money(baseCostMxn)}</strong>
+        </Card>
+
+        <Card>
+          <span className="metric-label">Comisión</span>
+          <strong className="metric-value">{money(commissionMxn)}</strong>
+        </Card>
+
+        <Card>
+          <span className="metric-label">Taxes</span>
+          <strong className="metric-value">{money(taxMxn)}</strong>
+        </Card>
+
+        <Card>
+          <span className="metric-label">Costo total</span>
+          <strong className="metric-value">{money(totalCostMxn)}</strong>
+        </Card>
+
+        <Card>
+          <span className="metric-label">Utilidad estimada</span>
+          <strong className="metric-value">{money(profit)}</strong>
+        </Card>
+
+        <Card>
+          <span className="metric-label">Margen</span>
+          <strong className="metric-value">{margin.toFixed(1)}%</strong>
+        </Card>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <Button onClick={saveProduct}>Guardar producto</Button>
+      </div>
     </Card>
   );
 }
