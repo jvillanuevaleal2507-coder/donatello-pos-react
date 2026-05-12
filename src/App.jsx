@@ -1963,6 +1963,67 @@ const styles = `
 
   .premium-nav-btn span {
     font-size: 11px;
+    .brand-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%);
+  color: white;
+  box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  margin-bottom: 18px;
+}
+
+.brand-logo {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 4px rgba(255,255,255,.2);
+}
+
+.brand-text h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -.5px;
+}
+
+.brand-text p {
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-size: 13px;
+  opacity: .92;
+  font-weight: 500;
+}
+
+@media (max-width: 640px) {
+  .brand-header {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .brand-logo {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+
+  .brand-text h1 {
+    font-size: 22px;
+  }
+
+  .brand-text p {
+    font-size: 11px;
+  }
+}
   }
 }
   }
