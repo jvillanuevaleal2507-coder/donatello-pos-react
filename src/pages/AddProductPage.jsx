@@ -19,7 +19,30 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
     </button>
   );
 }
+async function uploadProductImage(file) {
+  if (!file) return "";
 
+  const fileExt = file.name.split(".").pop() || "jpg";
+  const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+  const filePath = `products/${safeName}`;
+
+  const { error } = await supabase.storage
+    .from("product-images")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { data } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  return data.publicUrl;
+}
 export default function AddProductPage({
   products,
   loadProducts,
