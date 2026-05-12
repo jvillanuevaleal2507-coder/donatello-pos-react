@@ -189,6 +189,12 @@ async function deleteProduct(product) {
                 <button className="text-btn" onClick={() => setEditingId(editingId === p.id ? null : p.id)}>
                   ✏️ {editingId === p.id ? "Cerrar edición" : "Editar producto"}
                 </button>
+                <button
+  className="btn btn-danger"
+  onClick={() => deleteProduct(p)}
+>
+  🗑️ Eliminar
+</button>
               </div>
               <div className="stock-pill">
                 <span>Stock</span>
