@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
+import AddProductPage from "./pages/AddProductPage";
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
