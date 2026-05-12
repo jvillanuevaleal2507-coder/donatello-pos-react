@@ -1908,6 +1908,60 @@ const styles = `
     .sale-card-header { flex-direction: column; }
     .sale-total-box { width: 100%; text-align: left; }
     .sale-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .premium-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+
+.premium-nav-btn {
+  border: none;
+  background: #fff;
+  border-radius: 18px;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: #3a2a12;
+  text-decoration: none;
+  box-shadow: 0 8px 18px rgba(0,0,0,.06);
+  transition: .2s ease;
+  font-size: 13px;
+}
+
+.premium-nav-btn span {
+  font-size: 12px;
+}
+
+.premium-nav-btn:active {
+  transform: scale(.97);
+}
+
+.premium-active {
+  background: linear-gradient(135deg, #ff8a00, #ff5e00);
+  color: white;
+  box-shadow: 0 10px 24px rgba(255,122,0,.35);
+}
+
+@media (max-width: 640px) {
+  .premium-nav {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .premium-nav-btn {
+    min-height: 62px;
+    border-radius: 16px;
+    font-size: 11px;
+  }
+
+  .premium-nav-btn span {
+    font-size: 11px;
+  }
+}
   }
 `;
   export default function VentasDonatelloPOS() {
