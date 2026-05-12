@@ -2023,8 +2023,8 @@ const styles = `
   .brand-text p {
     font-size: 11px;
  .brand-logo-img {
-  width: 86px;
-  height: auto;
+  width: 72px;
+  height: 72px;
   object-fit: contain;
   display: block;
 }
