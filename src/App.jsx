@@ -2029,6 +2029,7 @@ const styles = `
   width: 110%;
   height: 110%;
   object-fit: contain;
+  transform: scale(1.15);
 }
   }
 }
