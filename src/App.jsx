@@ -456,8 +456,8 @@ function VentasDonatelloPOSApp() {
       <main className="shell">
         <header className="brand-header">
   <div className="brand-logo">
-    🛒
-  </div>
+  <img src={logoDonatello} alt="Ventas Donatello" className="brand-logo-img" />
+</div>
 
   <div className="brand-text">
     <h1>Ventas Donatello</h1>
