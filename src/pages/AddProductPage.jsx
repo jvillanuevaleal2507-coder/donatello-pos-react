@@ -247,17 +247,30 @@ export default function AddProductPage({ products, loadProducts }) {
       </label>
     </div>
 
-    <div style={{ marginTop: 12 }}>
-  <Button variant="secondary">
-    {uploadingImage ? "Subiendo imagen..." : "📷 Seleccionar imagen"}
-  </Button>
+   <div style={{ marginTop: 14 }}>
+  <label
+    style={{
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 8,
+      background: "#ff7a00",
+      color: "#fff",
+      padding: "12px 18px",
+      borderRadius: 14,
+      fontWeight: 700,
+      cursor: "pointer",
+      boxShadow: "0 8px 20px rgba(255,122,0,.25)",
+    }}
+  >
+    📷 {uploadingImage ? "Subiendo..." : "Seleccionar imagen"}
 
-  <input
-    type="file"
-    accept="image/*"
-    onChange={handleImageFile}
-    style={{ marginTop: 8 }}
-  />
+    <input
+      type="file"
+      accept="image/*"
+      onChange={handleImageFile}
+      hidden
+    />
+  </label>
 </div>
 
     {form.image_url && (
