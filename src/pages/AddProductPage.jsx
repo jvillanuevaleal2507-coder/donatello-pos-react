@@ -145,80 +145,111 @@ export default function AddProductPage({ products, loadProducts }) {
   }
 
   return (
-    <Card>
-      <h2>Agregar producto</h2>
+  <Card>
+    <h2>Agregar producto</h2>
 
-      <div className="form-grid">
+    <div className="form-grid">
+      <label>
+        Nombre producto
         <input
           value={form.name}
           onChange={(e) => updateField("name", e.target.value)}
-          placeholder="Nombre del producto"
+          placeholder="Ej. Stand con 6 repisas"
         />
+      </label>
 
+      <label>
+        Categoría
         <input
           value={form.category}
           onChange={(e) => updateField("category", e.target.value)}
-          placeholder="Categoría"
+          placeholder="Ej. Muebles"
         />
+      </label>
 
+      <label>
+        Costo USD
         <input
           type="number"
           value={form.costUsd}
           onChange={(e) => updateField("costUsd", e.target.value)}
-          placeholder="Costo USD"
+          placeholder="Costo en dólares"
         />
+      </label>
 
+      <label>
+        Tipo de cambio
         <input
           type="number"
           value={form.exchangeRate}
           onChange={(e) => updateField("exchangeRate", e.target.value)}
-          placeholder="Tipo de cambio"
+          placeholder="Ej. 18.50"
         />
+      </label>
 
+      <label>
+        Comisión proveedor %
         <input
           type="number"
           value={form.commissionPercent}
           onChange={(e) => updateField("commissionPercent", e.target.value)}
-          placeholder="Comisión proveedor %"
+          placeholder="Ej. 3"
         />
+      </label>
 
+      <label>
+        Taxes %
         <input
           type="number"
           value={form.taxPercent}
           onChange={(e) => updateField("taxPercent", e.target.value)}
-          placeholder="Taxes %"
+          placeholder="Ej. 8.25"
         />
+      </label>
 
+      <label>
+        Costo extra MXN
         <input
           type="number"
           value={form.extraCostMxn}
           onChange={(e) => updateField("extraCostMxn", e.target.value)}
-          placeholder="Costo extra MXN"
+          placeholder="Flete, cruce, envío, etc."
         />
+      </label>
 
+      <label>
+        Precio venta MXN
         <input
           type="number"
           value={form.price}
           onChange={(e) => updateField("price", e.target.value)}
-          placeholder="Precio venta MXN"
+          placeholder="Precio final de venta"
         />
+      </label>
 
+      <label>
+        Stock
         <input
           type="number"
           value={form.stock}
           onChange={(e) => updateField("stock", e.target.value)}
-          placeholder="Stock"
+          placeholder="Cantidad"
         />
+      </label>
 
+      <label>
+        URL de imagen opcional
         <input
           value={form.image_url}
           onChange={(e) => updateField("image_url", e.target.value)}
-          placeholder="URL de imagen opcional"
+          placeholder="Pega URL si ya tienes una"
         />
-      </div>
+      </label>
+    </div>
 
+    <div style={{ marginTop: 12 }}>
       <label className="upload-btn">
-        {uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}
+        {uploadingImage ? "Subiendo imagen..." : "📷 Subir imagen del producto"}
         <input
           type="file"
           accept="image/*"
@@ -226,56 +257,52 @@ export default function AddProductPage({ products, loadProducts }) {
           hidden
         />
       </label>
+    </div>
 
-      {form.image_url && (
-        <div className="product-card with-image" style={{ marginTop: 12 }}>
-          <img
-            src={form.image_url}
-            alt="Vista previa"
-            className="product-img"
-          />
-          <div>
-            <strong>Imagen cargada</strong>
-            <p className="muted">La imagen se guardará con el producto.</p>
-          </div>
+    {form.image_url && (
+      <div className="product-card with-image" style={{ marginTop: 12 }}>
+        <img src={form.image_url} alt="Vista previa" className="product-img" />
+        <div>
+          <strong>Imagen cargada</strong>
+          <p className="muted">Se guardará junto con el producto.</p>
         </div>
-      )}
-
-      <div className="metrics-grid" style={{ marginTop: 16 }}>
-        <Card>
-          <span className="metric-label">Costo base MXN</span>
-          <strong className="metric-value">{money(baseCostMxn)}</strong>
-        </Card>
-
-        <Card>
-          <span className="metric-label">Comisión</span>
-          <strong className="metric-value">{money(commissionMxn)}</strong>
-        </Card>
-
-        <Card>
-          <span className="metric-label">Taxes</span>
-          <strong className="metric-value">{money(taxMxn)}</strong>
-        </Card>
-
-        <Card>
-          <span className="metric-label">Costo total</span>
-          <strong className="metric-value">{money(totalCostMxn)}</strong>
-        </Card>
-
-        <Card>
-          <span className="metric-label">Utilidad estimada</span>
-          <strong className="metric-value">{money(profit)}</strong>
-        </Card>
-
-        <Card>
-          <span className="metric-label">Margen</span>
-          <strong className="metric-value">{margin.toFixed(1)}%</strong>
-        </Card>
       </div>
+    )}
 
-      <div style={{ marginTop: 16 }}>
-        <Button onClick={saveProduct}>Guardar producto</Button>
-      </div>
-    </Card>
-  );
-}
+    <div className="metrics-grid" style={{ marginTop: 16 }}>
+      <Card>
+        <span className="metric-label">Costo base MXN</span>
+        <strong className="metric-value">{money(baseCostMxn)}</strong>
+      </Card>
+
+      <Card>
+        <span className="metric-label">Comisión</span>
+        <strong className="metric-value">{money(commissionMxn)}</strong>
+      </Card>
+
+      <Card>
+        <span className="metric-label">Taxes</span>
+        <strong className="metric-value">{money(taxMxn)}</strong>
+      </Card>
+
+      <Card>
+        <span className="metric-label">Costo total</span>
+        <strong className="metric-value">{money(totalCostMxn)}</strong>
+      </Card>
+
+      <Card>
+        <span className="metric-label">Utilidad estimada</span>
+        <strong className="metric-value">{money(profit)}</strong>
+      </Card>
+
+      <Card>
+        <span className="metric-label">Margen</span>
+        <strong className="metric-value">{margin.toFixed(1)}%</strong>
+      </Card>
+    </div>
+
+    <div style={{ marginTop: 16 }}>
+      <Button onClick={saveProduct}>Guardar producto</Button>
+    </div>
+  </Card>
+);
