@@ -2,16 +2,46 @@ import { Link } from "react-router-dom";
 
 export default function Navbar({ clearCart, loadProducts }) {
   return (
-    <nav className="nav-grid">
-      <Link to="/" className="nav-btn">🛒 Venta</Link>
-      <Link to="/inventario" className="nav-btn">📦 Inventario</Link>
-      <Link to="/agregar" className="nav-btn">➕ Agregar</Link>
-      <Link to="/qr" className="nav-btn">🏷️ QR</Link>
-      <Link to="/historial" className="nav-btn">📜 Ventas</Link>
-      <Link to="/csv" className="nav-btn">⬆️ CSV</Link>
+    <nav className="premium-nav">
+      <Link to="/" className="premium-nav-btn">
+        🛒
+        <span>Venta</span>
+      </Link>
 
-      <button className="nav-btn" onClick={clearCart}>🧹 Limpiar</button>
-      <button className="nav-btn" onClick={loadProducts}>🔄 Actualizar</button>
+      <Link to="/inventario" className="premium-nav-btn">
+        📦
+        <span>Inventario</span>
+      </Link>
+
+      <Link to="/agregar" className="premium-nav-btn premium-active">
+        ➕
+        <span>Agregar</span>
+      </Link>
+
+      <Link to="/qr" className="premium-nav-btn">
+        🏷️
+        <span>QR</span>
+      </Link>
+
+      <Link to="/historial" className="premium-nav-btn">
+        📋
+        <span>Ventas</span>
+      </Link>
+
+      <Link to="/csv" className="premium-nav-btn">
+        📤
+        <span>CSV</span>
+      </Link>
+
+      <button className="premium-nav-btn" onClick={clearCart}>
+        🧹
+        <span>Limpiar</span>
+      </button>
+
+      <button className="premium-nav-btn" onClick={loadProducts}>
+        🔄
+        <span>Actualizar</span>
+      </button>
     </nav>
   );
 }
