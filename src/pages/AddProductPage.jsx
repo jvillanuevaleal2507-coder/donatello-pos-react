@@ -248,16 +248,17 @@ export default function AddProductPage({ products, loadProducts }) {
     </div>
 
     <div style={{ marginTop: 12 }}>
-      <label className="upload-btn">
-        {uploadingImage ? "Subiendo imagen..." : "📷 Subir imagen del producto"}
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageFile}
-          hidden
-        />
-      </label>
-    </div>
+  <Button variant="secondary">
+    {uploadingImage ? "Subiendo imagen..." : "📷 Seleccionar imagen"}
+  </Button>
+
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleImageFile}
+    style={{ marginTop: 8 }}
+  />
+</div>
 
     {form.image_url && (
       <div className="product-card with-image" style={{ marginTop: 12 }}>
