@@ -1149,16 +1149,16 @@ const styles = `
     box-shadow: 0 14px 30px rgba(80, 45, 8, 0.18);
   }
 
-  .brand-logo {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  background: rgba(255,255,255,.10);
+.brand-logo {
+  width: 86px;
+  height: auto;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
- }
+  padding: 0;
+  overflow: visible;
+}
 
   h1, h2, h3, p { margin: 0; }
 
