@@ -96,11 +96,7 @@ function EditProduct({ product, onSaved }) {
         <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
         <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
         <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
-        <label className="file-upload-box">
-          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
-          <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
-        </label>
-        <label className="file-upload-box">
+                <label className="file-upload-box">
           <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
           <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
         </label>
