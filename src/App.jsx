@@ -1138,17 +1138,18 @@ const styles = `
     gap: 16px;
   }
 
-  .brand-header {
-    background: linear-gradient(135deg, #251f17 0%, #5a3a16 52%, #f7b733 100%);
-    color: white;
-    border-radius: 26px;
-    padding: 18px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    box-shadow: 0 14px 30px rgba(80, 45, 8, 0.18);
-  }
-
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%);
+  color: white;
+  box-shadow: 0 12px 30px rgba(0,0,0,.18);
+  margin-bottom: 18px;
+  overflow: hidden;
+}
 .brand-logo {
   width: 86px;
   height: auto;
