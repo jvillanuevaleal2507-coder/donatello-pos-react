@@ -518,11 +518,7 @@ function VentasDonatelloPOSApp() {
   </div>
 </header>
 
-  <div className="brand-text">
-    <h1>Ventas Donatello</h1>
-    <p>Diseño, orden y estilo para cada espacio.</p>
-  </div>
-</header>
+  
 
       <Navbar clearCart={clearCart} loadProducts={loadProducts} />
          
