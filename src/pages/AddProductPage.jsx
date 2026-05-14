@@ -9,14 +9,27 @@ function Card({ children, className = "" }) {
   return <div className={`card ${className}`}>{children}</div>;
 }
 
-function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
+function Button({
+  children,
+  variant = "primary",
+  disabled = false,
+  onClick,
+  type = "button",
+  style = {},
+}) {
   return (
     <button
       type={type}
-      className={`btn ${variant === "secondary" ? "btn-secondary" : variant === "danger" ? "btn-danger" : "btn-primary"}`}
+      className={`btn ${
+        variant === "secondary"
+          ? "btn-secondary"
+          : variant === "danger"
+          ? "btn-danger"
+          : "btn-primary"
+      }`}
       disabled={disabled}
       onClick={onClick}
-       style={style}
+      style={style}
     >
       {children}
     </button>
