@@ -1240,7 +1240,16 @@ function AddProduct({ products, loadProducts }) {
         <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
         <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
       </div>
-      <Button onClick={saveProduct}>Guardar producto</Button>
+     <Button
+  onClick={saveProduct}
+  style={{
+    fontSize: "2rem",
+    fontWeight: 900,
+    minHeight: "72px",
+  }}
+>
+  Guardar producto
+</Button>
     </Card>
   );
 }
