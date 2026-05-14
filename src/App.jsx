@@ -486,8 +486,8 @@ function VentasDonatelloPOSApp() {
       src={logoDonatello}
       alt="Ventas Donatello"
       style={{
-        width: "145%",
-        height: "145%",
+        width: "140%",
+        height: "140%",
         objectFit: "contain",
         display: "block",
       }}
