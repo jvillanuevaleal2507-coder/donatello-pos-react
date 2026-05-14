@@ -665,62 +665,54 @@ function VentasDonatelloPOSApp() {
   } />
 </Routes>
 
-        <Route
-    path="/inventario"
-    element={
-      <InventoryPage
-        products={filteredProducts}
-        allProducts={products}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        categoryFilter={categoryFilter}
-        setCategoryFilter={setCategoryFilter}
-        categories={categories}
-        loadProducts={loadProducts}
-      />
-    }
-  />
-</Routes>
+    <Route
+  path="/inventario"
+  element={
+    <InventoryPage
+      products={filteredProducts}
+      allProducts={products}
+      searchTerm={searchTerm}
+      setSearchTerm={setSearchTerm}
+      categoryFilter={categoryFilter}
+      setCategoryFilter={setCategoryFilter}
+      categories={categories}
+      loadProducts={loadProducts}
+    />
+  }
+/>
 
-<Routes>
-  <Route
-    path="/agregar"
-    element={
-      <AddProductPage
-        products={products}
-        loadProducts={loadProducts}
-      />
-    }
-  />
-</Routes>
+<Route
+  path="/agregar"
+  element={
+    <AddProductPage
+      products={products}
+      loadProducts={loadProducts}
+    />
+  }
+/>
 
-      <Routes>
+<Route path="/qr" element={<QRSection products={products} />} />
 
-  <Route
-    path="/qr"
-    element={<QRSection products={products} />}
-  />
+<Route
+  path="/historial"
+  element={
+    <SalesSection
+      sales={sales}
+      loadingSales={loadingSales}
+      loadSales={loadSales}
+    />
+  }
+/>
 
-  <Route
-    path="/historial"
-    element={
-      <SalesSection
-        sales={sales}
-        loadingSales={loadingSales}
-        loadSales={loadSales}
-      />
-    }
-  />
-
-  <Route
-    path="/csv"
-    element={
-      <ImportCSV
-        products={products}
-        loadProducts={loadProducts}
-      />
-    }
-  />
+<Route
+  path="/csv"
+  element={
+    <ImportCSV
+      products={products}
+      loadProducts={loadProducts}
+    />
+  }
+/>
 
 </Routes>
 
@@ -730,9 +722,9 @@ function VentasDonatelloPOSApp() {
     onClose={() => setLastReceipt(null)}
   />
 )}
-        
+
 </main>
-      </div>
+</div>
 );
 }
 
