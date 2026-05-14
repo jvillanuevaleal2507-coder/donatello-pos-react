@@ -1394,6 +1394,7 @@ const styles = `
     border-radius: 24px;
     padding: 16px;
     box-shadow: 0 6px 18px rgba(80, 45, 8, 0.08);
+    overflow: hidden;
   }
 
   .metric-label {
