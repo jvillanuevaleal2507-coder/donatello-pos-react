@@ -495,15 +495,23 @@ function VentasDonatelloPOSApp() {
   </div>
 
   <div>
-   <div
+ <div
   style={{
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
   }}
 >
-      Ventas Donatello
-    </h1>
+  <h1
+    style={{
+      margin: 0,
+      fontSize: 40,
+      lineHeight: 1,
+      fontWeight: 900,
+    }}
+  >
+    Ventas Donatello
+  </h1>
     <p
       style={{
         margin: "6px 0 0",
