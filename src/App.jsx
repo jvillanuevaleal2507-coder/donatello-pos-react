@@ -621,12 +621,14 @@ function VentasDonatelloPOSApp() {
 
                 <div className="pay-grid">
                   <div>
-                    <span>Cambio</span>
+                   <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
                     <strong>{change >= 0 ? money(change) : money(0)}</strong>
                   </div>
                   <div>
                     <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Falta</span>
-                    <strong>{change < 0 ? money(Math.abs(change)) : money(0)}</strong>
+                    <strong style={{ fontSize: "2.2rem", fontWeight: 900 }}>
+  {change >= 0 ? money(change) : money(0)}
+</strong>
                   </div>
                 </div>
 
