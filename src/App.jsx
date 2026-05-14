@@ -566,29 +566,44 @@ function VentasDonatelloPOSApp() {
 
                 <div className="scanner-actions">
                   {!scannerOn ? (
-                   <Button
-  onClick={startScanner}
-  style={{ fontSize: "2rem", fontWeight: 900 }}
->
-  Abrir cámara trasera
-</Button>
-                    <Button variant="secondary" onClick={stopScanner}>Cerrar cámara</Button>
-                  )}
-                  <div className="status-box">{scanStatus}</div>
-                </div>
+                  <div className="scanner-actions">
+  {!scannerOn ? (
+    <Button
+      onClick={startScanner}
+      style={{ fontSize: "2rem", fontWeight: 900 }}
+    >
+      Abrir cámara trasera
+    </Button>
+  ) : (
+    <Button
+      variant="secondary"
+      onClick={stopScanner}
+      style={{ fontSize: "2rem", fontWeight: 900 }}
+    >
+      Cerrar cámara
+    </Button>
+  )}
 
-                <div className="manual-row">
-                  <input
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                    placeholder="DON-000001"
-                  />
-                 <Button
-  onClick={startScanner}
-  style={{ fontSize: "2rem", fontWeight: 900 }}
->
-  Abrir cámara trasera
-</Button>
+  <div className="status-box">{scanStatus}</div>
+</div>
+
+<div className="manual-row">
+  <input
+    value={manualCode}
+    onChange={(e) => setManualCode(e.target.value)}
+    placeholder="DON-000001"
+  />
+
+  <Button
+    onClick={() => {
+      addToCartByCode(manualCode);
+      setManualCode("");
+    }}
+    style={{ fontSize: "2rem", fontWeight: 900 }}
+  >
+    Agregar
+  </Button>
+</div>
                 </div>
               </Card>
             </div>
