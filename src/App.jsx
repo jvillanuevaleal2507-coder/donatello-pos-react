@@ -2082,6 +2082,75 @@ const styles = `
   height: 72px;
   object-fit: contain;
   display: block;
+  @media (max-width: 900px) {
+  .shell {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .sale-layout {
+    grid-template-columns: 1fr !important;
+    gap: 14px;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .card {
+    border-radius: 18px;
+  }
+
+  .scanner-card {
+    margin-top: 4px;
+  }
+
+  .scanner-box {
+    min-height: 280px;
+    border-radius: 18px;
+  }
+
+  .manual-row {
+    grid-template-columns: 1fr;
+  }
+
+  .pay-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .cart-card,
+  .checkout-card {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .metric-value {
+    font-size: 24px;
+  }
+
+  .metric-label {
+    font-size: 11px;
+  }
+
+  .scanner-box {
+    min-height: 260px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
 }
   }
 }
