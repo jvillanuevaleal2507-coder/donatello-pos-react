@@ -708,6 +708,7 @@ function VentasDonatelloPOSApp() {
 )}
         
 </main>
+      </div>
 );
 }
 
