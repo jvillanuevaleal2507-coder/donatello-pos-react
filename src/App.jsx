@@ -684,8 +684,7 @@ function VentasDonatelloPOSApp() {
   } />
 </Routes>
 
-       <Routes>
-  <Route
+        <Route
     path="/inventario"
     element={
       <InventoryPage
