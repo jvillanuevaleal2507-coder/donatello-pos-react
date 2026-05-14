@@ -1342,10 +1342,26 @@ const styles = `
 
 .cart-card h2,
 .checkout-card h2 {
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 900;
   line-height: 1.1;
-  }
+}
+
+.checkout-card input {
+  min-height: 58px;
+  font-size: 1.3rem;
+}
+
+.change-box span {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.change-box strong {
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+}
   
   .section-title-row p, .muted {
     color: var(--muted);
