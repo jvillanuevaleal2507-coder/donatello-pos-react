@@ -459,7 +459,7 @@ function VentasDonatelloPOSApp() {
     display: "flex",
     alignItems: "center",
     gap: 12,
-    padding: 12,
+    padding: 16,
     borderRadius: 22,
     background: "linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%)",
     color: "white",
@@ -470,9 +470,9 @@ function VentasDonatelloPOSApp() {
 >
   <div
     style={{
-      width: 58,
-      minWidth: 58,
-      height: 58,
+      width: 72,
+      minWidth: 72,
+      height: 72,
       borderRadius: 16,
       background: "rgba(255,255,255,.14)",
       display: "flex",
@@ -498,7 +498,7 @@ function VentasDonatelloPOSApp() {
     <h1
       style={{
         margin: 0,
-        fontSize: 24,
+        fontSize: 28,
         lineHeight: 1,
         fontWeight: 900,
       }}
