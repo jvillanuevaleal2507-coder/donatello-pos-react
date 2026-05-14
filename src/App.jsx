@@ -1376,16 +1376,27 @@ const styles = `
   .big-icon { font-size: 30px; }
 
   .scanner-box {
-    min-height: 290px;
-    border-radius: 22px;
-    background: #111;
-    overflow: hidden;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-  }
+  min-height: 380px;
+  border-radius: 28px;
+  background: #0b0b0b;
+  overflow: hidden;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  position: relative;
+  box-shadow: inset 0 0 0 3px rgba(255, 122, 0, .35);
+}
+
+.scanner-box::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border-radius: 22px;
+  border: 2px dashed rgba(255, 255, 255, .22);
+  pointer-events: none;
+}
 
   .scanner-video {
     width: 100%;
