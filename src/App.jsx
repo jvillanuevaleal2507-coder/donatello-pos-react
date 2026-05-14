@@ -494,8 +494,7 @@ function VentasDonatelloPOSApp() {
     />
   </div>
 
-  <div>
- <div
+  <div
   style={{
     display: "flex",
     flexDirection: "column",
