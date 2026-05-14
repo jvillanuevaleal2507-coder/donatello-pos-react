@@ -470,9 +470,9 @@ function VentasDonatelloPOSApp() {
 >
   <div
     style={{
-      width: 118,
-      minWidth: 118,
-      height: 118,
+      width: 150,
+      minWidth: 150,
+      height: 150,
       borderRadius: 16,
       background: "rgba(255,255,255,.14)",
       display: "flex",
