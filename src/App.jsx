@@ -454,10 +454,69 @@ function VentasDonatelloPOSApp() {
       <style>{styles}</style>
 
       <main className="shell">
-        <header className="brand-header">
-  <div className="brand-logo">
-  <img src={logoDonatello} alt="Ventas Donatello" className="brand-logo-img" />
-</div>
+     <header
+  style={{
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 22,
+    background: "linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%)",
+    color: "white",
+    boxShadow: "0 12px 30px rgba(0,0,0,.18)",
+    marginBottom: 16,
+    overflow: "hidden",
+  }}
+>
+  <div
+    style={{
+      width: 58,
+      minWidth: 58,
+      height: 58,
+      borderRadius: 16,
+      background: "rgba(255,255,255,.14)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+      padding: 4,
+    }}
+  >
+    <img
+      src={logoDonatello}
+      alt="Ventas Donatello"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        display: "block",
+      }}
+    />
+  </div>
+
+  <div>
+    <h1
+      style={{
+        margin: 0,
+        fontSize: 24,
+        lineHeight: 1,
+        fontWeight: 900,
+      }}
+    >
+      Ventas Donatello
+    </h1>
+    <p
+      style={{
+        margin: "6px 0 0",
+        fontSize: 12,
+        opacity: 0.92,
+        fontWeight: 500,
+      }}
+    >
+      Diseño, orden y estilo para cada espacio.
+    </p>
+  </div>
+</header>
 
   <div className="brand-text">
     <h1>Ventas Donatello</h1>
