@@ -1397,18 +1397,19 @@ const styles = `
   }
 
   .metric-label {
-  font-size: 1.8rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: var(--muted);
   display: block;
-  letter-spacing: .5px;
+  letter-spacing: .3px;
 }
  .metric-value {
-  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  font-size: clamp(2rem, 5.2vw, 2.8rem);
   font-weight: 900;
   display: block;
   margin-top: 6px;
   line-height: 1;
+  white-space: nowrap;
 }
   .scanner-card {
     display: flex;
