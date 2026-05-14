@@ -2249,7 +2249,7 @@ const styles = `
 
   .btn {
   min-height: 64px;
-  font-size: 1.45rem;
+  font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: .3px;
 }
