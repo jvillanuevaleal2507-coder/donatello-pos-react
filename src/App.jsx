@@ -623,8 +623,7 @@ function VentasDonatelloPOSApp() {
     Agregar
   </Button>
 </div>
-                </div>
-              </Card>
+                              </Card>
             </div>
 
             <div className="right-panel">
