@@ -14,8 +14,8 @@ export default function Navbar({ clearCart, loadProducts }) {
 
   const navStyle = {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
-    gap: "10px",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "12px",
     margin: "14px 0 18px",
   };
 
@@ -23,7 +23,7 @@ export default function Navbar({ clearCart, loadProducts }) {
     border: "none",
     background: "#fff",
     borderRadius: "16px",
-    minHeight: "58px",
+    minHeight: "76px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -33,7 +33,7 @@ export default function Navbar({ clearCart, loadProducts }) {
     color: "#3a2a12",
     textDecoration: "none",
     boxShadow: "0 8px 18px rgba(0,0,0,.07)",
-    fontSize: "11px",
+    fontSize: "14px",
   };
 
   const activeStyle = {
@@ -52,7 +52,7 @@ export default function Navbar({ clearCart, loadProducts }) {
             to={item.to}
             style={{ ...btnStyle, ...(active ? activeStyle : {}) }}
           >
-            <span style={{ fontSize: 18 }}>{item.icon}</span>
+            <span style={{ fontSize: 24 }}>{item.icon}</span>
             <span>{item.label}</span>
           </Link>
         );
@@ -64,7 +64,7 @@ export default function Navbar({ clearCart, loadProducts }) {
       </button>
 
       <button style={btnStyle} onClick={loadProducts}>
-        <span style={{ fontSize: 18 }}>🔄</span>
+        <span style={{ fontSize: 24 }}>🔄</span>
         <span>Actualizar</span>
       </button>
     </nav>
