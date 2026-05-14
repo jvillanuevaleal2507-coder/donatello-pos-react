@@ -611,7 +611,7 @@ function VentasDonatelloPOSApp() {
               </Card>
 
               <Card>
-               <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
+               <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
                 <input
                   type="number"
                   value={received}
