@@ -110,13 +110,14 @@ async function uploadProductImage(file) {
   return data.publicUrl;
 }
 
-function Button({ children, variant = "primary", disabled = false, onClick, type = "button" }) {
+function Button({ children, variant = "primary", disabled = false, onClick, type = "button", style }) {
   return (
     <button
       type={type}
       className={`btn ${variant === "secondary" ? "btn-secondary" : variant === "danger" ? "btn-danger" : "btn-primary"}`}
       disabled={disabled}
       onClick={onClick}
+      style={style}
     >
       {children}
     </button>
@@ -527,204 +528,193 @@ function VentasDonatelloPOSApp() {
   
 
       <Navbar clearCart={clearCart} loadProducts={loadProducts} />
-         
-        {loadingProducts && <Card><p className="muted">Cargando inventario desde Supabase...</p></Card>}
-<Routes>
-  <Route path="/" element={
-    <>
-                 <section className="sale-layout">
-            <div className="left-panel">
-              <div className="metrics-grid">
-                <Card>
-                  <span className="metric-label">Total</span>
-                  <strong className="metric-value">{money(subtotal)}</strong>
-                </Card>
-                <Card>
-                  <span className="metric-label">Piezas</span>
-                  <strong className="metric-value">{itemsCount}</strong>
-                </Card>
-                <Card>
-                  <span className="metric-label">Utilidad</span>
-                  <strong className="metric-value">{money(profit)}</strong>
+
+      {loadingProducts && (
+        <Card>
+          <p className="muted">Cargando inventario desde Supabase...</p>
+        </Card>
+      )}
+
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <section className="sale-layout">
+              <div className="left-panel">
+                <div className="metrics-grid">
+                  <Card>
+                    <span className="metric-label">Total</span>
+                    <strong className="metric-value">{money(subtotal)}</strong>
+                  </Card>
+                  <Card>
+                    <span className="metric-label">Piezas</span>
+                    <strong className="metric-value">{itemsCount}</strong>
+                  </Card>
+                  <Card>
+                    <span className="metric-label">Utilidad</span>
+                    <strong className="metric-value">{money(profit)}</strong>
+                  </Card>
+                </div>
+
+                <Card className="scanner-card">
+                  <div className="section-title-row">
+                    <div>
+                      <h2>Escanear QR</h2>
+                      <p>Usa Chrome en Android para escanear con cámara trasera.</p>
+                    </div>
+                    <span className="big-icon">📷</span>
+                  </div>
+
+                  <div className="scanner-box">
+                    {!scannerOn && <span>Scanner apagado</span>}
+                    <video ref={videoRef} className="scanner-video" muted playsInline />
+                    <canvas ref={canvasRef} style={{ display: "none" }} />
+                  </div>
+
+                  <div className="scanner-actions">
+                    {!scannerOn ? (
+                      <Button
+                        onClick={startScanner}
+                        style={{ fontSize: "2rem", fontWeight: 900 }}
+                      >
+                        Abrir cámara trasera
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={stopScanner}
+                        style={{ fontSize: "2rem", fontWeight: 900 }}
+                      >
+                        Cerrar cámara
+                      </Button>
+                    )}
+
+                    <div className="status-box">{scanStatus}</div>
+                  </div>
+
+                  <div className="manual-row">
+                    <input
+                      value={manualCode}
+                      onChange={(e) => setManualCode(e.target.value)}
+                      placeholder="DON-000001"
+                    />
+
+                    <Button
+                      onClick={() => {
+                        addToCartByCode(manualCode);
+                        setManualCode("");
+                      }}
+                      style={{ fontSize: "2rem", fontWeight: 900 }}
+                    >
+                      Agregar
+                    </Button>
+                  </div>
                 </Card>
               </div>
 
-              <Card className="scanner-card">
-                <div className="section-title-row">
-                  <div>
-                    <h2>Escanear QR</h2>
-                    <p>Usa Chrome en Android para escanear con cámara trasera.</p>
-                  </div>
-                  <span className="big-icon">📷</span>
-                </div>
-
-                <div className="scanner-box">
-                  {!scannerOn && <span>Scanner apagado</span>}
-                  <video ref={videoRef} className="scanner-video" muted playsInline />
-                  <canvas ref={canvasRef} style={{ display: "none" }} />
-                </div>
-
-                <div className="scanner-actions">
-  {!scannerOn ? (
-    <Button
-      onClick={startScanner}
-      style={{ fontSize: "2rem", fontWeight: 900 }}
-    >
-      Abrir cámara trasera
-    </Button>
-  ) : (
-    <Button
-      variant="secondary"
-      onClick={stopScanner}
-      style={{ fontSize: "2rem", fontWeight: 900 }}
-    >
-      Cerrar cámara
-    </Button>
-  )}
-
-  
-
-  <div className="status-box">{scanStatus}</div>
-</div>
-
-<div className="manual-row">
-  <input
-    value={manualCode}
-    onChange={(e) => setManualCode(e.target.value)}
-    placeholder="DON-000001"
-  />
-
-  <Button
-    onClick={() => {
-      addToCartByCode(manualCode);
-      setManualCode("");
-    }}
-    style={{ fontSize: "2rem", fontWeight: 900 }}
-  >
-    Agregar
-  </Button>
-</div>
-                              </Card>
-            </div>
-
-            <div className="right-panel">
-              <Card>
-                <h2>Carrito</h2>
-                {cart.length === 0 ? (
-                  <p className="muted">Carrito vacío.</p>
-                ) : (
-                  <div className="cart-list">
-                    {cart.map((item) => (
-                      <div className="cart-item" key={item.id}>
-                        <ProductImage src={item.image_url} alt={item.name} small />
-                        <div className="cart-info">
-                          <strong>{item.name}</strong>
-                          <span>{item.code} · x{item.qty}</span>
+              <div className="right-panel">
+                <Card>
+                  <h2>Carrito</h2>
+                  {cart.length === 0 ? (
+                    <p className="muted">Carrito vacío.</p>
+                  ) : (
+                    <div className="cart-list">
+                      {cart.map((item) => (
+                        <div className="cart-item" key={item.id}>
+                          <ProductImage src={item.image_url} alt={item.name} small />
+                          <div className="cart-info">
+                            <strong>{item.name}</strong>
+                            <span>{item.code} · x{item.qty}</span>
+                          </div>
+                          <div className="cart-price">
+                            <strong>{money(Number(item.price || 0) * item.qty)}</strong>
+                            <button onClick={() => removeFromCart(item.id)}>🗑️ Quitar</button>
+                          </div>
                         </div>
-                        <div className="cart-price">
-                          <strong>{money(Number(item.price || 0) * item.qty)}</strong>
-                          <button onClick={() => removeFromCart(item.id)}>🗑️ Quitar</button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                </Card>
+
+                <Card>
+                  <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
+                  <input
+                    type="number"
+                    value={received}
+                    onChange={(e) => setReceived(e.target.value)}
+                    placeholder="Monto recibido"
+                  />
+
+                  <div className="pay-grid">
+                    <div>
+                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
+                      <strong style={{ fontSize: "2.4rem", fontWeight: 900 }}>
+                        {change >= 0 ? money(change) : money(0)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Falta</span>
+                      <strong style={{ fontSize: "2.2rem", fontWeight: 900 }}>
+                        {change < 0 ? money(Math.abs(change)) : money(0)}
+                      </strong>
+                    </div>
                   </div>
-                )}
-              </Card>
 
-              <Card>
-               <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
-                <input
-                  type="number"
-                  value={received}
-                  onChange={(e) => setReceived(e.target.value)}
-                  placeholder="Monto recibido"
-                />
+                  <Button
+                    disabled={cart.length === 0 || Number(received || 0) < subtotal}
+                    onClick={checkout}
+                    style={{ fontSize: "2rem", fontWeight: 900 }}
+                  >
+                    💳 Cobrar venta
+                  </Button>
+                </Card>
+              </div>
+            </section>
+          }
+        />
 
-                <div className="pay-grid">
-                  <div>
-                   <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
-                    <strong style={{ fontSize: "2.4rem", fontWeight: 900 }}>
-  {change >= 0 ? money(change) : money(0)}
-</strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Falta</span>
-                    <strong style={{ fontSize: "2.2rem", fontWeight: 900 }}>
-  {change >= 0 ? money(change) : money(0)}
-</strong>
-                  </div>
-                </div>
+        <Route
+          path="/inventario"
+          element={
+            <InventoryPage
+              products={filteredProducts}
+              allProducts={products}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              categoryFilter={categoryFilter}
+              setCategoryFilter={setCategoryFilter}
+              categories={categories}
+              loadProducts={loadProducts}
+            />
+          }
+        />
 
-                <Button disabled={cart.length === 0 || Number(received || 0) < subtotal} onClick={checkout}>
-                  💳 Cobrar venta
-                </Button>
-              </Card>
-            </div>
-          </section>
-               </>
-  } />
-</Routes>
+        <Route
+          path="/agregar"
+          element={<AddProductPage products={products} loadProducts={loadProducts} />}
+        />
 
-    <Route
-  path="/inventario"
-  element={
-    <InventoryPage
-      products={filteredProducts}
-      allProducts={products}
-      searchTerm={searchTerm}
-      setSearchTerm={setSearchTerm}
-      categoryFilter={categoryFilter}
-      setCategoryFilter={setCategoryFilter}
-      categories={categories}
-      loadProducts={loadProducts}
-    />
-  }
-/>
+        <Route path="/qr" element={<QRSection products={products} />} />
 
-<Route
-  path="/agregar"
-  element={
-    <AddProductPage
-      products={products}
-      loadProducts={loadProducts}
-    />
-  }
-/>
+        <Route
+          path="/historial"
+          element={<SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
+        />
 
-<Route path="/qr" element={<QRSection products={products} />} />
+        <Route
+          path="/csv"
+          element={<ImportCSV products={products} loadProducts={loadProducts} />}
+        />
+      </Routes>
 
-<Route
-  path="/historial"
-  element={
-    <SalesSection
-      sales={sales}
-      loadingSales={loadingSales}
-      loadSales={loadSales}
-    />
-  }
-/>
-
-<Route
-  path="/csv"
-  element={
-    <ImportCSV
-      products={products}
-      loadProducts={loadProducts}
-    />
-  }
-/>
-
-</Routes>
-
-{lastReceipt && (
-  <ReceiptModal
-    sale={lastReceipt}
-    onClose={() => setLastReceipt(null)}
-  />
-)}
-
-</main>
-</div>
+      {lastReceipt && (
+        <ReceiptModal
+          sale={lastReceipt}
+          onClose={() => setLastReceipt(null)}
+        />
+      )}
+    </main>
+  </div>
 );
 }
 
@@ -2027,120 +2017,122 @@ const styles = `
     .sale-card-header { flex-direction: column; }
     .sale-total-box { width: 100%; text-align: left; }
     .sale-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   .premium-nav {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin: 14px 0 18px;
-}
-
-.premium-nav-btn {
-  border: none;
-  background: #fff;
-  border-radius: 18px;
-  min-height: 68px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  color: #3a2a12;
-  text-decoration: none;
-  box-shadow: 0 8px 18px rgba(0,0,0,.06);
-  transition: .2s ease;
-  font-size: 13px;
-}
-
-.premium-nav-btn span {
-  font-size: 11px;
-}
-
-.premium-nav-btn:active {
-  transform: scale(.97);
-}
-
-.premium-active {
-  background: linear-gradient(135deg, #ff8a00, #ff5e00);
-  color: white;
-  box-shadow: 0 10px 24px rgba(255,122,0,.35);
-}
-
-@media (max-width: 900px) {
-  .shell {
-    width: 100%;
-    padding: 12px;
-  }
-
-  .sale-layout {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .metrics-grid {
-    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
+    margin: 14px 0 18px;
   }
 
-  .scanner-box {
-    min-height: 300px;
-  }
-}
-
-@media (max-width: 640px) {
-  body {
-    font-size: 16px;
-  }
-
-  .shell {
-    padding: 14px;
-    max-width: 100%;
-  }
-
-  .metrics-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .card {
-    padding: 18px;
-    margin-bottom: 14px;
+  .premium-nav-btn {
+    border: none;
+    background: #fff;
+    border-radius: 18px;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: #3a2a12;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(0,0,0,.06);
+    transition: .2s ease;
+    font-size: 13px;
   }
 
-  .metric-value {
-    font-size: 32px;
+  .premium-nav-btn span {
+    font-size: 11px;
   }
 
-  .metric-label {
-    font-size: 18px;
+  .premium-nav-btn:active {
+    transform: scale(.97);
   }
 
-  .scanner-box {
-    min-height: 360px;
+  .premium-active {
+    background: linear-gradient(135deg, #ff8a00, #ff5e00);
+    color: white;
+    box-shadow: 0 10px 24px rgba(255,122,0,.35);
   }
 
-  .scanner-actions {
-    grid-template-columns: 1fr;
+  @media (max-width: 900px) {
+    .shell {
+      width: 100%;
+      padding: 12px;
+    }
+
+    .sale-layout {
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .metrics-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .scanner-box {
+      min-height: 300px;
+    }
   }
 
-  .manual-row {
-    grid-template-columns: 1fr;
-  }
+  @media (max-width: 640px) {
+    body {
+      font-size: 16px;
+    }
 
-  .btn {
-    min-height: 64px;
-    font-size: 1.6rem;
-    font-weight: 800;
-  }
+    .shell {
+      padding: 14px;
+      max-width: 100%;
+    }
 
-  input {
-    min-height: 54px;
-    font-size: 1.2rem;
-  }
+    .metrics-grid {
+      grid-template-columns: 1fr;
+    }
 
-  .status-box {
-    font-size: 1.2rem;
+    .card {
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+    }
+
+    .metric-label {
+      font-size: 18px;
+    }
+
+    .scanner-box {
+      min-height: 360px;
+    }
+
+    .scanner-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .manual-row {
+      grid-template-columns: 1fr;
+    }
+
+    .btn {
+      min-height: 64px;
+      font-size: 1.6rem;
+      font-weight: 800;
+    }
+
+    input {
+      min-height: 54px;
+      font-size: 1.2rem;
+    }
+
+    .status-box {
+      font-size: 1.2rem;
+    }
   }
-}
 `;
   export default function VentasDonatelloPOS() {
   return (
