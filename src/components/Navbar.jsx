@@ -52,19 +52,19 @@ export default function Navbar({ clearCart, loadProducts }) {
             to={item.to}
             style={{ ...btnStyle, ...(active ? activeStyle : {}) }}
           >
-            <span style={{ fontSize: 40 }}>{item.icon}</span>
+            <span style={{ fontSize: 45 }}>{item.icon}</span>
             <span>{item.label}</span>
           </Link>
         );
       })}
 
       <button style={btnStyle} onClick={clearCart}>
-        <span style={{ fontSize: 40 }}>🧹</span>
+        <span style={{ fontSize: 45 }}>🧹</span>
         <span>Limpiar</span>
       </button>
 
       <button style={btnStyle} onClick={loadProducts}>
-        <span style={{ fontSize: 40 }}>🔄</span>
+        <span style={{ fontSize: 45 }}>🔄</span>
         <span>Actualizar</span>
       </button>
     </nav>
