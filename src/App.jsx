@@ -1307,10 +1307,11 @@ const styles = `
   }
 
   .metric-label {
-  font-size: 1.15rem;
+  font-size: 1.8rem;
   font-weight: 800;
   color: var(--muted);
   display: block;
+  letter-spacing: .5px;
 }
  .metric-value {
   font-size: clamp(2.4rem, 7vw, 3.4rem);
