@@ -1412,21 +1412,23 @@ const styles = `
   }
 
   .scanner-actions {
-    display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 10px;
-  }
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
 
-  .status-box {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    padding: 10px 12px;
-    color: var(--muted);
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-  }
+ .status-box {
+  min-height: 64px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.75);
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 12px;
+}
 
   .manual-row {
     display: grid;
@@ -2245,11 +2247,11 @@ const styles = `
     font-size: 16px;
   }
 
-  .btn,
-  button {
-    min-height: 48px;
-    font-size: 15px;
-  }
+  .btn {
+  min-height: 64px;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
 }
   }
 }
