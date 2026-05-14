@@ -470,9 +470,9 @@ function VentasDonatelloPOSApp() {
 >
   <div
     style={{
-      width: 150,
-      minWidth: 150,
-      height: 150,
+      width: 120,
+      minWidth: 120,
+      height: 120,
       borderRadius: 16,
       background: "rgba(255,255,255,.14)",
       display: "flex",
@@ -486,8 +486,8 @@ function VentasDonatelloPOSApp() {
       src={logoDonatello}
       alt="Ventas Donatello"
       style={{
-        width: "100%",
-        height: "100%",
+        width: "150%",
+        height: "150%",
         objectFit: "contain",
         display: "block",
       }}
