@@ -611,7 +611,7 @@ function VentasDonatelloPOSApp() {
               </Card>
 
               <Card>
-                <h2>Cobro</h2>
+               <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
                 <input
                   type="number"
                   value={received}
@@ -625,7 +625,7 @@ function VentasDonatelloPOSApp() {
                     <strong>{change >= 0 ? money(change) : money(0)}</strong>
                   </div>
                   <div>
-                    <span>Falta</span>
+                    <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Falta</span>
                     <strong>{change < 0 ? money(Math.abs(change)) : money(0)}</strong>
                   </div>
                 </div>
