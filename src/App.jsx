@@ -2249,8 +2249,9 @@ const styles = `
 
   .btn {
   min-height: 64px;
-  font-size: 1.15rem;
+  font-size: 1.45rem;
   font-weight: 800;
+  letter-spacing: .3px;
 }
 }
   }
