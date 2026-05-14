@@ -317,7 +317,16 @@ export default function AddProductPage({ products, loadProducts }) {
     </div>
 
     <div style={{ marginTop: 16 }}>
-      <Button onClick={saveProduct}>Guardar producto</Button>
+      <Button
+  onClick={saveProduct}
+  style={{
+    fontSize: "2rem",
+    fontWeight: 900,
+    minHeight: "72px",
+  }}
+>
+  Guardar producto
+</Button>
     </div>
   </Card>
 );
