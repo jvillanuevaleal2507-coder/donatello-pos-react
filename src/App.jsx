@@ -799,8 +799,17 @@ function EditProduct({ product, onSaved }) {
 function QRSection({ products }) {
   const [selectedId, setSelectedId] = useState(products[0]?.id || "");
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [downloadingAll, setDownloadingAll] = useState(false);
 
-  const selectedProduct = products.find((p) => String(p.id) === String(selectedId)) || products[0];
+  const selectedProduct =
+    products.find((p) => String(p.id) === String(selectedId)) || products[0];
+
+  function safeFileName(text) {
+    return String(text || "")
+      .replace(/[\\/:*?"<>|]/g, "")
+      .replace(/\s+/g, "_")
+      .slice(0, 80);
+  }
 
   useEffect(() => {
     async function generateQR() {
@@ -808,21 +817,69 @@ function QRSection({ products }) {
         setQrDataUrl("");
         return;
       }
+
       const dataUrl = await QRCode.toDataURL(selectedProduct.code, {
         width: 520,
         margin: 2,
         errorCorrectionLevel: "M",
       });
+
       setQrDataUrl(dataUrl);
     }
+
     generateQR();
   }, [selectedProduct?.code]);
+
+  async function downloadAllQRCodes() {
+    if (!products.length) {
+      alert("No hay productos para generar QR.");
+      return;
+    }
+
+    try {
+      setDownloadingAll(true);
+
+      const zip = new JSZip();
+      const folder = zip.folder("QR_Ventas_Donatello");
+
+      for (const product of products) {
+        if (!product.code) continue;
+
+        const dataUrl = await QRCode.toDataURL(product.code, {
+          width: 520,
+          margin: 2,
+          errorCorrectionLevel: "M",
+        });
+
+        const base64 = dataUrl.split(",")[1];
+        const fileName = `${safeFileName(product.code)}_${safeFileName(product.name)}.png`;
+
+        folder.file(fileName, base64, { base64: true });
+      }
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "QR_Ventas_Donatello.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert(`Error generando ZIP de QR: ${error.message}`);
+    } finally {
+      setDownloadingAll(false);
+    }
+  }
 
   return (
     <Card>
       <h2>Etiquetas QR</h2>
       <p className="muted" style={{ marginTop: 6 }}>
-        Selecciona un producto y descarga su código QR para imprimirlo o pegarlo en el producto.
+        Selecciona un producto, descarga su QR individual o genera todos los QR del inventario.
       </p>
 
       {products.length === 0 ? (
@@ -831,11 +888,25 @@ function QRSection({ products }) {
         <div className="qr-layout">
           <div className="qr-controls">
             <label>Producto</label>
-            <select value={selectedProduct?.id || ""} onChange={(e) => setSelectedId(e.target.value)}>
+            <select
+              value={selectedProduct?.id || ""}
+              onChange={(e) => setSelectedId(e.target.value)}
+            >
               {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
+                <option key={p.id} value={p.id}>
+                  {p.code} · {p.name}
+                </option>
               ))}
             </select>
+
+            <div style={{ marginTop: 12 }}>
+              <Button
+                onClick={downloadAllQRCodes}
+                disabled={downloadingAll}
+              >
+                {downloadingAll ? "Generando ZIP..." : "Descargar todos los QR"}
+              </Button>
+            </div>
 
             {selectedProduct && (
               <div className="qr-product-box">
@@ -852,8 +923,12 @@ function QRSection({ products }) {
             {qrDataUrl ? (
               <>
                 <img src={qrDataUrl} alt={`QR ${selectedProduct?.code}`} />
-                <a className="download-btn" href={qrDataUrl} download={`QR_${selectedProduct?.code}.png`}>
-                  Descargar QR
+                <a
+                  className="download-btn"
+                  href={qrDataUrl}
+                  download={`QR_${selectedProduct?.code}.png`}
+                >
+                  Descargar QR individual
                 </a>
               </>
             ) : (
@@ -865,7 +940,6 @@ function QRSection({ products }) {
     </Card>
   );
 }
-
 function ReceiptModal({ sale, onClose }) {
   function printReceipt() {
     window.print();
