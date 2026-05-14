@@ -16,6 +16,7 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
       className={`btn ${variant === "secondary" ? "btn-secondary" : variant === "danger" ? "btn-danger" : "btn-primary"}`}
       disabled={disabled}
       onClick={onClick}
+       style={style}
     >
       {children}
     </button>
