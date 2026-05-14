@@ -1384,7 +1384,7 @@ const styles = `
 
   .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(115px, 1fr));
     gap: 12px;
   }
 
@@ -1404,7 +1404,7 @@ const styles = `
   letter-spacing: .3px;
 }
  .metric-value {
-  font-size: clamp(2rem, 5.2vw, 2.8rem);
+  font-size: clamp(1.8rem, 4.5vw, 2.6rem);
   font-weight: 900;
   display: block;
   margin-top: 6px;
