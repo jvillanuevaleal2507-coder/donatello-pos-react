@@ -1307,17 +1307,18 @@ const styles = `
   }
 
   .metric-label {
-    font-size: 0.8rem;
-    color: var(--muted);
-    display: block;
-  }
-
-  .metric-value {
-    font-size: clamp(1.35rem, 4vw, 2rem);
-    display: block;
-    margin-top: 4px;
-  }
-
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--muted);
+  display: block;
+}
+ .metric-value {
+  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  font-weight: 900;
+  display: block;
+  margin-top: 6px;
+  line-height: 1;
+}
   .scanner-card {
     display: flex;
     flex-direction: column;
@@ -1332,15 +1333,23 @@ const styles = `
   }
 
   .section-title-row h2,
-  .card h2 {
-    font-size: 1.25rem;
-    font-weight: 900;
-  }
+.card h2 {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
 
+.cart-card h2,
+.checkout-card h2 {
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1.1;
+  }
+  
   .section-title-row p, .muted {
     color: var(--muted);
     margin-top: 4px;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
   }
 
   .big-icon { font-size: 30px; }
