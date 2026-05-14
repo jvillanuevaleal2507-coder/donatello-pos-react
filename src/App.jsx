@@ -2149,6 +2149,61 @@ const styles = `
 
   .form-grid {
     grid-template-columns: 1fr;
+    @media (max-width: 640px) {
+  body {
+    font-size: 16px;
+  }
+
+  .shell {
+    padding: 14px;
+    max-width: 100%;
+  }
+
+  .brand-header {
+    min-height: 96px;
+  }
+
+  .premium-nav {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .premium-nav-btn {
+    min-height: 72px !important;
+    font-size: 14px !important;
+  }
+
+  .sale-layout {
+    display: block !important;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card {
+    padding: 18px !important;
+    margin-bottom: 14px;
+  }
+
+  .metric-value {
+    font-size: 32px !important;
+  }
+
+  .scanner-box {
+    min-height: 360px !important;
+  }
+
+  input {
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  .btn,
+  button {
+    min-height: 48px;
+    font-size: 15px;
+  }
+}
   }
 }
 }
