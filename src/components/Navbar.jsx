@@ -10,6 +10,7 @@ export default function Navbar({ clearCart, loadProducts }) {
     { to: "/qr", icon: "🏷️", label: "QR" },
     { to: "/historial", icon: "📋", label: "Ventas" },
     { to: "/csv", icon: "📤", label: "CSV" },
+    { to: "/dashboard", icon: "📊", label: "RESUMEN" },
   ];
 
   const navStyle = {
@@ -67,6 +68,13 @@ export default function Navbar({ clearCart, loadProducts }) {
         <span style={{ fontSize: 45 }}>🔄</span>
         <span>Actualizar</span>
       </button>
+      <Link
+  to="/dashboard"
+  className={`premium-nav-btn ${location.pathname === "/dashboard" ? "premium-active" : ""}`}
+>
+  📊
+  <span>RESUMEN</span>
+</Link>
     </nav>
   );
 }
