@@ -745,6 +745,15 @@ function VentasDonatelloPOSApp() {
           path="/historial"
           element={<SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
         />
+        <Route
+  path="/dashboard"
+  element={
+    <DashboardPage
+      sales={sales}
+      products={products}
+    />
+  }
+/>
 
         <Route
           path="/csv"
