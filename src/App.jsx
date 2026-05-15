@@ -8,6 +8,7 @@ import AddProductPage from "./pages/AddProductPage";
 import logoDonatello from "./assets/logo-donatello.png";
 import JSZip from "jszip";
 import jsPDF from "jspdf";
+import DashboardPage from "./pages/DashboardPage";
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
