@@ -952,7 +952,7 @@ function QRSection({ products }) {
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.text(String(product.code || ""), x + labelWidth / 2, y + 30, {
+        doc.text(String(product.code || ""), x + labelWidth / 2, y + 34, {
           align: "center",
         });
 
