@@ -969,7 +969,7 @@ function QRSection({ products }) {
         });
       }
 
-      doc.save("Etiquetas_QR_Ventas_Donatello_8_por_hoja.pdf");
+      doc.save("Etiquetas_QR_Ventas_Donatello.pdf");
     } catch (error) {
       alert(`Error generando PDF: ${error.message}`);
     } finally {
