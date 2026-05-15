@@ -1003,11 +1003,11 @@ function QRSection({ products }) {
 
             <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
               <Button onClick={downloadAllQRCodes} disabled={downloadingAll}>
-                {downloadingAll ? "Generando ZIP..." : "Descargar todos los QR"}
+                {downloadingAll ? "Generando ZIP..." : "Descargar QR"}
               </Button>
 
               <Button onClick={generateLabelsPDF} disabled={generatingPdf}>
-                {generatingPdf ? "Generando PDF..." : "PDF etiquetas 8 por hoja"}
+                {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
               </Button>
             </div>
 
