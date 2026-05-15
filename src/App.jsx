@@ -165,6 +165,7 @@ function VentasDonatelloPOSApp() {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
+  const [quickSearch, setQuickSearch] = useState("");
   const lastScannedRef = useRef({ value: "", time: 0 });
 
   useEffect(() => {
