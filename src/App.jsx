@@ -901,9 +901,9 @@ function QRSection({ products }) {
       const pageHeight = 279.4;
 
       const marginX = 10;
-      const marginY = 6;
+      const marginY = 5;
       const gapX = 6;
-      const gapY = 6;
+      const gapY = 3;
 
       const cols = 2;
       const rows = 5;
@@ -932,7 +932,7 @@ function QRSection({ products }) {
 
         doc.setDrawColor(230, 210, 170);
         doc.setLineWidth(0.4);
-        doc.roundedRect(x, y, labelWidth, labelHeight, 3, 3);
+        doc.roundedRect(x, y, labelWidth, labelHeight, 2, 5);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
@@ -940,7 +940,7 @@ function QRSection({ products }) {
           align: "center",
         });
 
-        const qrSize = 26;
+        const qrSize = 24;
         doc.addImage(
           qrData,
           "PNG",
@@ -952,19 +952,19 @@ function QRSection({ products }) {
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.text(String(product.code || ""), x + labelWidth / 2, y + 36, {
+        doc.text(String(product.code || ""), x + labelWidth / 2, y + 35, {
           align: "center",
         });
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
-        doc.text(shortName(product.name, 30), x + labelWidth / 2, y + 41, {
+        doc.text(shortName(product.name, 30), x + labelWidth / 2, y + 40, {
           align: "center",
         });
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.text(money(product.price), x + labelWidth / 2, y + 47, {
+        doc.text(money(product.price), x + labelWidth / 2, y + 46, {
           align: "center",
         });
       }
