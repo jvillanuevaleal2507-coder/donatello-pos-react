@@ -68,13 +68,7 @@ export default function Navbar({ clearCart, loadProducts }) {
         <span style={{ fontSize: 45 }}>🔄</span>
         <span>Actualizar</span>
       </button>
-      <Link
-  to="/dashboard"
-  className={`premium-nav-btn ${location.pathname === "/dashboard" ? "premium-active" : ""}`}
->
-  📊
-  <span>RESUMEN</span>
-</Link>
+      
     </nav>
   );
 }
