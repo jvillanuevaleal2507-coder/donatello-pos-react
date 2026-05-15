@@ -558,6 +558,47 @@ function VentasDonatelloPOSApp() {
                     <strong className="metric-value">{money(profit)}</strong>
                   </Card>
                 </div>
+                <Card>
+  <h2>Agregar producto rápido</h2>
+
+  <input
+    value={quickSearch}
+    onChange={(e) => setQuickSearch(e.target.value)}
+    placeholder="Buscar por nombre, código o categoría..."
+    style={{
+      minHeight: "64px",
+      fontSize: "1.4rem",
+      fontWeight: 700,
+    }}
+  />
+
+  {quickSearch.trim() && (
+    <div className="quick-results">
+      {products
+        .filter((p) => {
+          const text = `${p.name || ""} ${p.code || ""} ${p.category || ""}`.toLowerCase();
+          return text.includes(quickSearch.toLowerCase());
+        })
+        .slice(0, 6)
+        .map((p) => (
+          <button
+            key={p.id}
+            className="quick-result-btn"
+            onClick={() => {
+              addToCart(p);
+              setQuickSearch("");
+            }}
+          >
+            <ProductImage src={p.image_url} alt={p.name} small />
+            <div>
+              <strong>{p.name}</strong>
+              <span>{p.code} · {money(p.price)} · Stock {p.stock}</span>
+            </div>
+          </button>
+        ))}
+    </div>
+  )}
+</Card>
 
                 <Card className="scanner-card">
                   <div className="section-title-row">
