@@ -1569,6 +1569,38 @@ const styles = `
     gap: 12px;
     align-items: center;
   }
+  .quick-results {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.quick-result-btn {
+  border: 1px solid var(--border);
+  background: var(--cream);
+  border-radius: 18px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  text-align: left;
+  align-items: center;
+  cursor: pointer;
+}
+
+.quick-result-btn strong {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.quick-result-btn span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 700;
+}
 
   .section-title-row h2,
 .card h2 {
