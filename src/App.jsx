@@ -906,7 +906,7 @@ function QRSection({ products }) {
       const gapY = 6;
 
       const cols = 2;
-      const rows = 4;
+      const rows = 5;
       const labelWidth = (pageWidth - marginX * 2 - gapX) / cols;
       const labelHeight = (pageHeight - marginY * 2 - gapY * 3) / rows;
 
@@ -936,35 +936,35 @@ function QRSection({ products }) {
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(11);
-        doc.text("Ventas Donatello", x + labelWidth / 2, y + 7, {
+        doc.text("Ventas Donatello", x + labelWidth / 2, y + 6, {
           align: "center",
         });
 
-        const qrSize = 36;
+        const qrSize = 30;
         doc.addImage(
           qrData,
           "PNG",
           x + (labelWidth - qrSize) / 2,
-          y + 10,
+          y + 8,
           qrSize,
           qrSize
         );
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.text(String(product.code || ""), x + labelWidth / 2, y + 52, {
+        doc.text(String(product.code || ""), x + labelWidth / 2, y + 43, {
           align: "center",
         });
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(8.5);
+        doc.setFontSize(7.5);
         doc.text(shortName(product.name), x + labelWidth / 2, y + 58, {
           align: "center",
         });
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(13);
-        doc.text(money(product.price), x + labelWidth / 2, y + 66, {
+        doc.text(money(product.price), x + labelWidth / 2, y + 54, {
           align: "center",
         });
       }
