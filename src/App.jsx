@@ -958,12 +958,12 @@ function QRSection({ products }) {
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
-        doc.text(shortName(product.name), x + labelWidth / 2, y + 58, {
+        doc.text(shortName(product.name, 30), x + labelWidth / 2, y + 48, {
           align: "center",
         });
 
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(13);
+        doc.setFontSize(10);
         doc.text(money(product.price), x + labelWidth / 2, y + 54, {
           align: "center",
         });
