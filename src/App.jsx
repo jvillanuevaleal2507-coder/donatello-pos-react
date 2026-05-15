@@ -801,6 +801,7 @@ function QRSection({ products }) {
   const [selectedId, setSelectedId] = useState(products[0]?.id || "");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const selectedProduct =
     products.find((p) => String(p.id) === String(selectedId)) || products[0];
@@ -810,6 +811,11 @@ function QRSection({ products }) {
       .replace(/[\\/:*?"<>|]/g, "")
       .replace(/\s+/g, "_")
       .slice(0, 80);
+  }
+
+  function shortName(text, max = 34) {
+    const value = String(text || "");
+    return value.length > max ? `${value.slice(0, max)}...` : value;
   }
 
   useEffect(() => {
@@ -876,11 +882,106 @@ function QRSection({ products }) {
     }
   }
 
+  async function generateLabelsPDF() {
+    if (!products.length) {
+      alert("No hay productos para generar etiquetas.");
+      return;
+    }
+
+    try {
+      setGeneratingPdf(true);
+
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "letter",
+      });
+
+      const pageWidth = 215.9;
+      const pageHeight = 279.4;
+
+      const marginX = 10;
+      const marginY = 10;
+      const gapX = 6;
+      const gapY = 6;
+
+      const cols = 2;
+      const rows = 4;
+      const labelWidth = (pageWidth - marginX * 2 - gapX) / cols;
+      const labelHeight = (pageHeight - marginY * 2 - gapY * 3) / rows;
+
+      for (let index = 0; index < products.length; index++) {
+        const product = products[index];
+
+        if (index > 0 && index % 8 === 0) {
+          doc.addPage();
+        }
+
+        const position = index % 8;
+        const col = position % cols;
+        const row = Math.floor(position / cols);
+
+        const x = marginX + col * (labelWidth + gapX);
+        const y = marginY + row * (labelHeight + gapY);
+
+        const qrData = await QRCode.toDataURL(product.code, {
+          width: 420,
+          margin: 1,
+          errorCorrectionLevel: "M",
+        });
+
+        doc.setDrawColor(230, 210, 170);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(x, y, labelWidth, labelHeight, 3, 3);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(11);
+        doc.text("Ventas Donatello", x + labelWidth / 2, y + 7, {
+          align: "center",
+        });
+
+        const qrSize = 36;
+        doc.addImage(
+          qrData,
+          "PNG",
+          x + (labelWidth - qrSize) / 2,
+          y + 10,
+          qrSize,
+          qrSize
+        );
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.text(String(product.code || ""), x + labelWidth / 2, y + 52, {
+          align: "center",
+        });
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.text(shortName(product.name), x + labelWidth / 2, y + 58, {
+          align: "center",
+        });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.text(money(product.price), x + labelWidth / 2, y + 66, {
+          align: "center",
+        });
+      }
+
+      doc.save("Etiquetas_QR_Ventas_Donatello_8_por_hoja.pdf");
+    } catch (error) {
+      alert(`Error generando PDF: ${error.message}`);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  }
+
   return (
     <Card>
       <h2>Etiquetas QR</h2>
       <p className="muted" style={{ marginTop: 6 }}>
-        Selecciona un producto, descarga su QR individual o genera todos los QR del inventario.
+        Selecciona un producto, descarga QR individuales o genera etiquetas imprimibles.
       </p>
 
       {products.length === 0 ? (
@@ -900,12 +1001,13 @@ function QRSection({ products }) {
               ))}
             </select>
 
-            <div style={{ marginTop: 12 }}>
-              <Button
-                onClick={downloadAllQRCodes}
-                disabled={downloadingAll}
-              >
+            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+              <Button onClick={downloadAllQRCodes} disabled={downloadingAll}>
                 {downloadingAll ? "Generando ZIP..." : "Descargar todos los QR"}
+              </Button>
+
+              <Button onClick={generateLabelsPDF} disabled={generatingPdf}>
+                {generatingPdf ? "Generando PDF..." : "PDF etiquetas 8 por hoja"}
               </Button>
             </div>
 
