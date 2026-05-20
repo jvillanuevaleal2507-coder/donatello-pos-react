@@ -590,7 +590,7 @@ discount_amount: discountAmount,
                   </Card>
                   <Card>
                     <span className="metric-label">Utilidad</span>
-                    <strong className="metric-value">{money(profit)}</strong>
+                    <strong className="metric-value">{money(adjustedProfit)}</strong>
                   </Card>
                 </div>
                 <Card>
