@@ -371,6 +371,150 @@ const expectedCash = todayReceived - todayChange;
           )}
         </Card>
       </div>
+      <Card>
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 20,
+      flexWrap: "wrap",
+    }}
+  >
+    <div>
+      <h2
+        style={{
+          fontSize: "2rem",
+          fontWeight: 900,
+        }}
+      >
+        Corte del día
+      </h2>
+
+      <p
+        style={{
+          color: "#6d604d",
+          marginTop: 4,
+          fontWeight: 700,
+        }}
+      >
+        Resumen operativo de caja y ventas del día actual.
+      </p>
+    </div>
+  </div>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+      gap: 14,
+      marginBottom: 24,
+    }}
+  >
+    <KpiCard
+      label="Ventas hoy"
+      value={money(todayTotal)}
+    />
+
+    <KpiCard
+      label="Utilidad hoy"
+      value={money(todayProfit)}
+    />
+
+    <KpiCard
+      label="Efectivo recibido"
+      value={money(todayReceived)}
+    />
+
+    <KpiCard
+      label="Cambio entregado"
+      value={money(todayChange)}
+    />
+
+    <KpiCard
+      label="Caja esperada"
+      value={money(expectedCash)}
+    />
+
+    <KpiCard
+      label="Descuentos"
+      value={money(todayDiscounts)}
+    />
+
+    <KpiCard
+      label="Piezas vendidas"
+      value={todayItems}
+    />
+
+    <KpiCard
+      label="Ventas realizadas"
+      value={todaySales.length}
+    />
+  </div>
+
+  <div style={{ display: "grid", gap: 10 }}>
+    {todaySales.length === 0 ? (
+      <p
+        style={{
+          color: "#6d604d",
+          fontWeight: 700,
+        }}
+      >
+        No hay ventas registradas hoy.
+      </p>
+    ) : (
+      todaySales.map((sale, index) => (
+        <div
+          key={sale.id || index}
+          style={{
+            background: "#fff7e8",
+            borderRadius: 18,
+            padding: 14,
+            display: "grid",
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <strong>
+              Venta #{index + 1}
+            </strong>
+
+            <strong>
+              {money(sale.total)}
+            </strong>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
+              flexWrap: "wrap",
+              color: "#6d604d",
+              fontWeight: 700,
+            }}
+          >
+            <span>
+              {sale.items_count} piezas
+            </span>
+
+            <span>
+              Utilidad: {money(sale.profit)}
+            </span>
+          </div>
+        </div>
+      ))
+    )}
+  </div>
+</Card>
     </div>
   );
 }
