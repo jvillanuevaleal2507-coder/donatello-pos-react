@@ -223,10 +223,39 @@ function VentasDonatelloPOSApp() {
     return matchesSearch && matchesCategory;
   });
 
-  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
-  const profit = useMemo(() => cart.reduce((sum, item) => sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty, 0), [cart]);
-  const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
-  const change = Number(received || 0) - subtotal;
+  const subtotal = useMemo(
+  () =>
+    cart.reduce(
+      (sum, item) => sum + Number(item.price || 0) * item.qty,
+      0
+    ),
+  [cart]
+);
+
+const originalProfit = useMemo(
+  () =>
+    cart.reduce(
+      (sum, item) =>
+        sum +
+        (Number(item.price || 0) - Number(item.cost || 0)) *
+          item.qty,
+      0
+    ),
+  [cart]
+);
+
+const discountAmount = subtotal * (Number(discountPercent || 0) / 100);
+
+const totalFinal = subtotal - discountAmount;
+
+const adjustedProfit = originalProfit - discountAmount;
+
+const itemsCount = useMemo(
+  () => cart.reduce((sum, item) => sum + item.qty, 0),
+  [cart]
+);
+
+const change = Number(received || 0) - totalFinal;
 
    
   function addToCartByCode(code) {
