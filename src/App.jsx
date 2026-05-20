@@ -373,16 +373,7 @@ discount_amount: discountAmount,
       }
     }
 
-    const receipt = {
-      id: saleData.id,
-      sale_date: new Date().toISOString(),
-      total: subtotal,
-      profit,
-      received: Number(received || 0),
-      change_amount: change,
-      items_count: itemsCount,
-      sale_items: saleItems,
-    };
+    
 
     setLastReceipt(receipt);
     setScanStatus(`Venta cobrada: ${money(subtotal)} | Cambio: ${money(change)}`);
@@ -391,7 +382,19 @@ discount_amount: discountAmount,
     await loadSales();
   }
 
-  async function startScanner() {
+  async function startScanner()const receipt = {
+  id: saleData.id,
+  sale_date: new Date().toISOString(),
+  subtotal_original: subtotal,
+  discount_percent: Number(discountPercent || 0),
+  discount_amount: discountAmount,
+  total: totalFinal,
+  profit: adjustedProfit,
+  received: Number(received || 0),
+  change_amount: change,
+  items_count: itemsCount,
+  sale_items: saleItems,
+}; {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setScanStatus("Este navegador no permite acceso directo a cámara.");
