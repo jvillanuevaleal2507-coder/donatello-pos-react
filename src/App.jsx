@@ -155,6 +155,7 @@ function VentasDonatelloPOSApp() {
   const [tab, setTab] = useState("sale");
   const [manualCode, setManualCode] = useState("");
   const [received, setReceived] = useState("");
+  const [discountPercent, setDiscountPercent] = useState(0);
   const [scanStatus, setScanStatus] = useState("Scanner apagado");
   const [scannerOn, setScannerOn] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
