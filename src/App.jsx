@@ -716,6 +716,55 @@ discount_amount: discountAmount,
 
                 <Card>
                   <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
+                  <div style={{ marginTop: 16 }}>
+  <span
+    style={{
+      fontSize: "1.2rem",
+      fontWeight: 800,
+      display: "block",
+      marginBottom: 8,
+    }}
+  >
+    Descuento %
+  </span>
+
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(4,1fr)",
+      gap: 8,
+      marginBottom: 10,
+    }}
+  >
+    {[0, 5, 10, 15].map((value) => (
+      <button
+        key={value}
+        onClick={() => setDiscountPercent(value)}
+        style={{
+          minHeight: 52,
+          borderRadius: 14,
+          border: "none",
+          fontWeight: 900,
+          cursor: "pointer",
+          background:
+            discountPercent === value
+              ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
+              : "#fff7e8",
+          color: discountPercent === value ? "white" : "#24180d",
+        }}
+      >
+        {value}%
+      </button>
+    ))}
+  </div>
+
+  <input
+    type="number"
+    value={discountPercent}
+    onChange={(e) => setDiscountPercent(e.target.value)}
+    placeholder="Descuento personalizado"
+  />
+</div>
                   <input
                     type="number"
                     value={received}
