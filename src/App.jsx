@@ -1212,9 +1212,147 @@ function ReceiptModal({ sale, onClose }) {
     <div className="receipt-overlay">
       <div className="receipt-panel">
         <div className="receipt-actions no-print">
-          <Button variant="secondary" onClick={onClose}>Cerrar</Button>
-          <Button onClick={printReceipt}>Imprimir / Guardar PDF</Button>
+          <Button variant="secondary" onClick={onClose}>
+            Cerrar
+          </Button>
+
+          <Button onClick={printReceipt}>
+            Imprimir / Guardar PDF
+          </Button>
         </div>
+
+        <div className="ticket-print-area">
+          <div className="ticket-header">
+            <div className="ticket-logo">🛒</div>
+
+            <h2>Ventas Donatello</h2>
+
+            <p>Ticket de venta</p>
+          </div>
+
+          <div className="ticket-meta">
+            <p>
+              <b>Venta:</b> #{sale.id}
+            </p>
+
+            <p>
+              <b>Fecha:</b>{" "}
+              {new Date(sale.sale_date).toLocaleString("es-MX")}
+            </p>
+          </div>
+
+          <div className="ticket-items">
+            {sale.sale_items?.map((item, index) => (
+              <div
+                className="ticket-item"
+                key={`${item.code}-${index}`}
+              >
+                <div>
+                  <b>{item.name}</b>
+
+                  <span>
+                    {item.code} · x{item.qty}
+                  </span>
+                </div>
+
+                <strong>
+                  {money(item.subtotal)}
+                </strong>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              borderTop: "1px dashed #aaa",
+              paddingTop: 12,
+              marginTop: 12,
+              display: "grid",
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+              }}
+            >
+              <span>Subtotal</span>
+
+              <strong>
+                {money(
+                  sale.subtotal_original || sale.total
+                )}
+              </strong>
+            </div>
+
+            {(Number(sale.discount_percent || 0) > 0 ||
+              Number(sale.discount_amount || 0) > 0) && (
+              <>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    color: "#c0392b",
+                    fontWeight: 800,
+                  }}
+                >
+                  <span>
+                    Descuento (
+                    {sale.discount_percent || 0}%)
+                  </span>
+
+                  <strong>
+                    -{money(sale.discount_amount || 0)}
+                  </strong>
+                </div>
+              </>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "1.2rem",
+                fontWeight: 900,
+              }}
+            >
+              <span>Total final</span>
+
+              <strong>{money(sale.total)}</strong>
+            </div>
+          </div>
+
+          <div className="ticket-totals">
+            <div>
+              <span>Piezas</span>
+              <b>{sale.items_count}</b>
+            </div>
+
+            <div>
+              <span>Recibido</span>
+              <b>{money(sale.received)}</b>
+            </div>
+
+            <div>
+              <span>Cambio</span>
+              <b>{money(sale.change_amount)}</b>
+            </div>
+
+            <div>
+              <span>Utilidad</span>
+              <b>{money(sale.profit)}</b>
+            </div>
+          </div>
+
+          <p className="ticket-footer">
+            Gracias por tu compra ✨
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
         <div className="ticket-print-area">
           <div className="ticket-header">
