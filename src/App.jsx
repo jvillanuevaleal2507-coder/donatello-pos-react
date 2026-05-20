@@ -303,6 +303,7 @@ const change = Number(received || 0) - totalFinal;
   function clearCart() {
     setCart([]);
     setReceived("");
+    setDiscountPercent(0);
     setScanStatus("Carrito vacío");
   }
 
