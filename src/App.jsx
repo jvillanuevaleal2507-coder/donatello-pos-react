@@ -775,6 +775,28 @@ discount_amount: discountAmount,
                   <div className="pay-grid">
                     <div>
                       <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
+                      <div style={{ marginBottom: 10 }}>
+    <span
+      style={{
+        display: "block",
+        fontSize: "1rem",
+        color: "#6d604d",
+        fontWeight: 700,
+      }}
+    >
+      Total final
+    </span>
+
+    <strong
+      style={{
+        fontSize: "2.5rem",
+        fontWeight: 900,
+        color: "#fc4a1a",
+      }}
+    >
+      {money(totalFinal)}
+    </strong>
+  </div>
                       <strong style={{ fontSize: "2.4rem", fontWeight: 900 }}>
                         {change >= 0 ? money(change) : money(0)}
                       </strong>
