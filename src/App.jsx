@@ -155,7 +155,6 @@ function VentasDonatelloPOSApp() {
   const [tab, setTab] = useState("sale");
   const [manualCode, setManualCode] = useState("");
   const [received, setReceived] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
   const [scanStatus, setScanStatus] = useState("Scanner apagado");
   const [scannerOn, setScannerOn] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -195,7 +194,7 @@ function VentasDonatelloPOSApp() {
     setLoadingSales(true);
     const { data, error } = await supabase
       .from("sales")
-      .select("id, sale_date, total, profit, received, change_amount, items_count, sale_items(code, name, qty, price, subtotal, profit)")
+      .select("id, sale_date, total, profit, received, change_amount, items_count, subtotal_original, discount_percent, discount_amount, sale_items(code, name, qty, price, subtotal, profit)")
       .order("sale_date", { ascending: false })
       .limit(50);
 
@@ -223,39 +222,10 @@ function VentasDonatelloPOSApp() {
     return matchesSearch && matchesCategory;
   });
 
-  const subtotal = useMemo(
-  () =>
-    cart.reduce(
-      (sum, item) => sum + Number(item.price || 0) * item.qty,
-      0
-    ),
-  [cart]
-);
-
-const originalProfit = useMemo(
-  () =>
-    cart.reduce(
-      (sum, item) =>
-        sum +
-        (Number(item.price || 0) - Number(item.cost || 0)) *
-          item.qty,
-      0
-    ),
-  [cart]
-);
-
-const discountAmount = subtotal * (Number(discountPercent || 0) / 100);
-
-const totalFinal = subtotal - discountAmount;
-
-const adjustedProfit = originalProfit - discountAmount;
-
-const itemsCount = useMemo(
-  () => cart.reduce((sum, item) => sum + item.qty, 0),
-  [cart]
-);
-
-const change = Number(received || 0) - totalFinal;
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
+  const profit = useMemo(() => cart.reduce((sum, item) => sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty, 0), [cart]);
+  const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
+  const change = Number(received || 0) - subtotal;
 
    
   function addToCartByCode(code) {
@@ -303,12 +273,11 @@ const change = Number(received || 0) - totalFinal;
   function clearCart() {
     setCart([]);
     setReceived("");
-    setDiscountPercent(0);
     setScanStatus("Carrito vacío");
   }
 
   async function checkout() {
-    if (Number(received || 0) < subtotal) return;
+    if (Number(received || 0) < totalFinal) return;
 
     for (const item of cart) {
       const current = products.find((p) => p.id === item.id);
@@ -319,11 +288,8 @@ const change = Number(received || 0) - totalFinal;
     }
 
     const salePayload = {
-      total: totalFinal,
-profit: adjustedProfit,
-subtotal_original: subtotal,
-discount_percent: Number(discountPercent || 0),
-discount_amount: discountAmount,
+      total: subtotal,
+      profit,
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
@@ -373,28 +339,28 @@ discount_amount: discountAmount,
       }
     }
 
-    
+    const receipt = {
+      id: saleData.id,
+      sale_date: new Date().toISOString(),
+      subtotal_original: subtotal,
+      discount_percent: Number(discountPercent || 0),
+      discount_amount: discountAmount,
+      total: totalFinal,
+      profit: adjustedProfit,
+      received: Number(received || 0),
+      change_amount: change,
+      items_count: itemsCount,
+      sale_items: saleItems,
+    };
 
     setLastReceipt(receipt);
-    setScanStatus(`Venta cobrada: ${money(subtotal)} | Cambio: ${money(change)}`);
+    setScanStatus(`Venta cobrada: ${money(totalFinal)} | Cambio: ${money(change)}`);
     clearCart();
     await loadProducts();
     await loadSales();
   }
 
-  async function startScanner()const receipt = {
-  id: saleData.id,
-  sale_date: new Date().toISOString(),
-  subtotal_original: subtotal,
-  discount_percent: Number(discountPercent || 0),
-  discount_amount: discountAmount,
-  total: totalFinal,
-  profit: adjustedProfit,
-  received: Number(received || 0),
-  change_amount: change,
-  items_count: itemsCount,
-  sale_items: saleItems,
-}; {
+  async function startScanner() {
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setScanStatus("Este navegador no permite acceso directo a cámara.");
@@ -593,7 +559,7 @@ discount_amount: discountAmount,
                   </Card>
                   <Card>
                     <span className="metric-label">Utilidad</span>
-                    <strong className="metric-value">{money(adjustedProfit)}</strong>
+                    <strong className="metric-value">{money(profit)}</strong>
                   </Card>
                 </div>
                 <Card>
@@ -720,55 +686,6 @@ discount_amount: discountAmount,
 
                 <Card>
                   <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
-                  <div style={{ marginTop: 16 }}>
-  <span
-    style={{
-      fontSize: "1.2rem",
-      fontWeight: 800,
-      display: "block",
-      marginBottom: 8,
-    }}
-  >
-    Descuento %
-  </span>
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(4,1fr)",
-      gap: 8,
-      marginBottom: 10,
-    }}
-  >
-    {[0, 5, 10, 15].map((value) => (
-      <button
-        key={value}
-        onClick={() => setDiscountPercent(value)}
-        style={{
-          minHeight: 52,
-          borderRadius: 14,
-          border: "none",
-          fontWeight: 900,
-          cursor: "pointer",
-          background:
-            discountPercent === value
-              ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-              : "#fff7e8",
-          color: discountPercent === value ? "white" : "#24180d",
-        }}
-      >
-        {value}%
-      </button>
-    ))}
-  </div>
-
-  <input
-    type="number"
-    value={discountPercent}
-    onChange={(e) => setDiscountPercent(e.target.value)}
-    placeholder="Descuento personalizado"
-  />
-</div>
                   <input
                     type="number"
                     value={received}
@@ -779,28 +696,6 @@ discount_amount: discountAmount,
                   <div className="pay-grid">
                     <div>
                       <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
-                      <div style={{ marginBottom: 10 }}>
-    <span
-      style={{
-        display: "block",
-        fontSize: "1rem",
-        color: "#6d604d",
-        fontWeight: 700,
-      }}
-    >
-      Total final
-    </span>
-
-    <strong
-      style={{
-        fontSize: "2.5rem",
-        fontWeight: 900,
-        color: "#fc4a1a",
-      }}
-    >
-      {money(totalFinal)}
-    </strong>
-  </div>
                       <strong style={{ fontSize: "2.4rem", fontWeight: 900 }}>
                         {change >= 0 ? money(change) : money(0)}
                       </strong>
@@ -814,7 +709,7 @@ discount_amount: discountAmount,
                   </div>
 
                   <Button
-                    disabled={cart.length === 0 || Number(received || 0) < subtotal}
+                    disabled={cart.length === 0 || Number(received || 0) < totalFinal}
                     onClick={checkout}
                     style={{ fontSize: "2rem", fontWeight: 900 }}
                   >
@@ -1224,9 +1119,7 @@ function ReceiptModal({ sale, onClose }) {
         <div className="ticket-print-area">
           <div className="ticket-header">
             <div className="ticket-logo">🛒</div>
-
             <h2>Ventas Donatello</h2>
-
             <p>Ticket de venta</p>
           </div>
 
@@ -1234,30 +1127,19 @@ function ReceiptModal({ sale, onClose }) {
             <p>
               <b>Venta:</b> #{sale.id}
             </p>
-
             <p>
-              <b>Fecha:</b>{" "}
-              {new Date(sale.sale_date).toLocaleString("es-MX")}
+              <b>Fecha:</b> {new Date(sale.sale_date).toLocaleString("es-MX")}
             </p>
           </div>
 
           <div className="ticket-items">
             {sale.sale_items?.map((item, index) => (
-              <div
-                className="ticket-item"
-                key={`${item.code}-${index}`}
-              >
+              <div className="ticket-item" key={`${item.code}-${index}`}>
                 <div>
                   <b>{item.name}</b>
-
-                  <span>
-                    {item.code} · x{item.qty}
-                  </span>
+                  <span>{item.code} · x{item.qty}</span>
                 </div>
-
-                <strong>
-                  {money(item.subtotal)}
-                </strong>
+                <strong>{money(item.subtotal)}</strong>
               </div>
             ))}
           </div>
@@ -1278,35 +1160,22 @@ function ReceiptModal({ sale, onClose }) {
               }}
             >
               <span>Subtotal</span>
-
-              <strong>
-                {money(
-                  sale.subtotal_original || sale.total
-                )}
-              </strong>
+              <strong>{money(sale.subtotal_original || sale.total)}</strong>
             </div>
 
             {(Number(sale.discount_percent || 0) > 0 ||
               Number(sale.discount_amount || 0) > 0) && (
-              <>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    color: "#c0392b",
-                    fontWeight: 800,
-                  }}
-                >
-                  <span>
-                    Descuento (
-                    {sale.discount_percent || 0}%)
-                  </span>
-
-                  <strong>
-                    -{money(sale.discount_amount || 0)}
-                  </strong>
-                </div>
-              </>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  color: "#c0392b",
+                  fontWeight: 800,
+                }}
+              >
+                <span>Descuento ({sale.discount_percent || 0}%)</span>
+                <strong>-{money(sale.discount_amount || 0)}</strong>
+              </div>
             )}
 
             <div
@@ -1318,7 +1187,6 @@ function ReceiptModal({ sale, onClose }) {
               }}
             >
               <span>Total final</span>
-
               <strong>{money(sale.total)}</strong>
             </div>
           </div>
@@ -1328,64 +1196,21 @@ function ReceiptModal({ sale, onClose }) {
               <span>Piezas</span>
               <b>{sale.items_count}</b>
             </div>
-
             <div>
               <span>Recibido</span>
               <b>{money(sale.received)}</b>
             </div>
-
             <div>
               <span>Cambio</span>
               <b>{money(sale.change_amount)}</b>
             </div>
-
             <div>
               <span>Utilidad</span>
               <b>{money(sale.profit)}</b>
             </div>
           </div>
 
-          <p className="ticket-footer">
-            Gracias por tu compra ✨
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-        <div className="ticket-print-area">
-          <div className="ticket-header">
-            <div className="ticket-logo">🛒</div>
-            <h2>Ventas Donatello</h2>
-            <p>Ticket de venta</p>
-          </div>
-
-          <div className="ticket-meta">
-            <p><b>Venta:</b> #{sale.id}</p>
-            <p><b>Fecha:</b> {new Date(sale.sale_date).toLocaleString("es-MX")}</p>
-          </div>
-
-          <div className="ticket-items">
-            {sale.sale_items?.map((item, index) => (
-              <div className="ticket-item" key={`${item.code}-${index}`}>
-                <div>
-                  <b>{item.name}</b>
-                  <span>{item.code} · x{item.qty}</span>
-                </div>
-                <strong>{money(item.subtotal)}</strong>
-              </div>
-            ))}
-          </div>
-
-          <div className="ticket-totals">
-            <div><span>Piezas</span><b>{sale.items_count}</b></div>
-            <div><span>Total</span><b>{money(sale.total)}</b></div>
-            <div><span>Recibido</span><b>{money(sale.received)}</b></div>
-            <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
-          </div>
-
-          <p className="ticket-footer">Gracias por tu compra.</p>
+          <p className="ticket-footer">Gracias por tu compra ✨</p>
         </div>
       </div>
     </div>
@@ -1415,7 +1240,7 @@ function SalesSection({ sales, loadingSales, loadSales }) {
         </Card>
         <Card>
           <span className="metric-label">Utilidad estimada</span>
-          <strong className="metric-value">{money(adjustedProfit)}</strong>
+          <strong className="metric-value">{money(totalProfit)}</strong>
         </Card>
         <Card>
           <span className="metric-label">Piezas vendidas</span>
