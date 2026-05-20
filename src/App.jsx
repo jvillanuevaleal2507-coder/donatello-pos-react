@@ -318,8 +318,11 @@ const change = Number(received || 0) - totalFinal;
     }
 
     const salePayload = {
-      total: subtotal,
-      profit,
+      total: totalFinal,
+profit: adjustedProfit,
+subtotal_original: subtotal,
+discount_percent: Number(discountPercent || 0),
+discount_amount: discountAmount,
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
