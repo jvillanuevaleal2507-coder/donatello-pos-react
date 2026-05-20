@@ -91,6 +91,44 @@ export default function DashboardPage({ sales = [], products = [] }) {
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     })
     .reduce((acc, sale) => acc + Number(sale.profit || 0), 0);
+  const todayKey = now.toISOString().slice(0, 10);
+
+const todaySales = sales.filter((sale) => {
+  const date = saleDate(sale);
+  return date.toISOString().slice(0, 10) === todayKey;
+});
+
+const todayTotal = todaySales.reduce(
+  (acc, sale) => acc + Number(sale.total || 0),
+  0
+);
+
+const todayProfit = todaySales.reduce(
+  (acc, sale) => acc + Number(sale.profit || 0),
+  0
+);
+
+const todayReceived = todaySales.reduce(
+  (acc, sale) => acc + Number(sale.received || 0),
+  0
+);
+
+const todayChange = todaySales.reduce(
+  (acc, sale) => acc + Number(sale.change_amount || 0),
+  0
+);
+
+const todayDiscounts = todaySales.reduce(
+  (acc, sale) => acc + Number(sale.discount_amount || 0),
+  0
+);
+
+const todayItems = todaySales.reduce(
+  (acc, sale) => acc + Number(sale.items_count || 0),
+  0
+);
+
+const expectedCash = todayReceived - todayChange;
 
   const salesByDay = {};
 
