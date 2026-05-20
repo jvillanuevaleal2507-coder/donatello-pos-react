@@ -1274,7 +1274,7 @@ function SalesSection({ sales, loadingSales, loadSales }) {
         </Card>
         <Card>
           <span className="metric-label">Utilidad estimada</span>
-          <strong className="metric-value">{money(totalProfit)}</strong>
+          <strong className="metric-value">{money(adjustedProfit)}</strong>
         </Card>
         <Card>
           <span className="metric-label">Piezas vendidas</span>
