@@ -266,10 +266,14 @@ function VentasDonatelloPOSApp() {
   }
 
  async function signOut() {
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "global" });
+
   setSession(null);
   setEmail("");
   setPassword("");
+  setAuthLoading(false);
+
+  window.location.reload();
 }
 
 
