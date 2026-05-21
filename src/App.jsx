@@ -167,6 +167,16 @@ function VentasDonatelloPOSApp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const videoRef = useRef(null);
+  const [discountPercent, setDiscountPercent] = useState(0);
+  const [saleMode, setSaleMode] = useState("sale");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [depositAmount, setDepositAmount] = useState("");
+  const [dueDate, setDueDate] = useState(() => {
+  const date = new Date();
+  date.setDate(date.getDate() + 15);
+  return date.toISOString().split("T")[0];
+});
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
