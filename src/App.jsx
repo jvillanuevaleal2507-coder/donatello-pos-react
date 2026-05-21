@@ -189,6 +189,40 @@ function VentasDonatelloPOSApp() {
       setAuthLoading(false);
     }
 
+    useEffect(() => {
+  if (!session) return;
+
+  let timeoutId;
+
+  function resetTimer() {
+    window.clearTimeout(timeoutId);
+
+    timeoutId = window.setTimeout(() => {
+      signOut();
+    }, 30 * 60 * 1000);
+  }
+
+  const events = [
+    "click",
+    "keydown",
+    "touchstart",
+    "mousemove",
+  ];
+
+  events.forEach((event) => {
+    window.addEventListener(event, resetTimer);
+  });
+
+  resetTimer();
+
+  return () => {
+    window.clearTimeout(timeoutId);
+
+    events.forEach((event) => {
+      window.removeEventListener(event, resetTimer);
+    });
+  };
+}, [session]);
     initAuth();
 
     const {
