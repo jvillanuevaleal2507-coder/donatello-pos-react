@@ -195,6 +195,7 @@ function VentasDonatelloPOSApp() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
+      setAuthLoading(false);
 
       if (session) {
         await loadProducts();
