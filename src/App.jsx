@@ -127,8 +127,8 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
   );
 }
 
-function Card({ children, className = "" }) {
-  return <div className={`card ${className}`}>{children}</div>;
+function Card({ children, className = "", style }) {
+  return <div className={`card ${className}`} style={style}>{children}</div>;
 }
 
 function ProductImage({ src, alt = "Producto", small = false }) {
@@ -162,6 +162,10 @@ function VentasDonatelloPOSApp() {
   const [sales, setSales] = useState([]);
   const [loadingSales, setLoadingSales] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -170,8 +174,43 @@ function VentasDonatelloPOSApp() {
   const lastScannedRef = useRef({ value: "", time: 0 });
 
   useEffect(() => {
-    loadProducts();
-    loadSales();
+    async function initAuth() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      setSession(session);
+
+      if (session) {
+        await loadProducts();
+        await loadSales();
+      }
+
+      setAuthLoading(false);
+    }
+
+    initAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+
+      if (session) {
+        await loadProducts();
+        await loadSales();
+      } else {
+        setProducts([]);
+        setSales([]);
+        setCart([]);
+        setReceived("");
+        setDiscountPercent(0);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function loadProducts() {
@@ -206,6 +245,31 @@ function VentasDonatelloPOSApp() {
     }
     setLoadingSales(false);
   }
+
+  async function signIn() {
+    const cleanEmail = email.trim();
+
+    if (!cleanEmail || !password) {
+      alert("Ingresa correo y contraseña.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password,
+    });
+
+    if (error) {
+      alert(`No se pudo iniciar sesión: ${error.message}`);
+    }
+  }
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    setEmail("");
+    setPassword("");
+  }
+
 
   const categories = [
     "all",
@@ -457,6 +521,133 @@ function VentasDonatelloPOSApp() {
     };
   }, []);
 
+  if (authLoading) {
+    return (
+      <div className="app">
+        <style>{styles}</style>
+        <main className="shell">
+          <Card>
+            <h2>Cargando sesión...</h2>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return (
+      <div className="app">
+        <style>{styles}</style>
+        <main
+          className="shell"
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Card
+            style={{
+              width: "100%",
+              maxWidth: 460,
+              padding: 28,
+            }}
+          >
+            <div style={{ display: "grid", gap: 16 }}>
+              <div style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    width: 110,
+                    height: 110,
+                    margin: "0 auto 14px",
+                    borderRadius: 24,
+                    background:
+                      "linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    overflow: "hidden",
+                  }}
+                >
+                  <img
+                    src={logoDonatello}
+                    alt="Ventas Donatello"
+                    style={{
+                      width: "140%",
+                      height: "140%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+
+                <h1
+                  style={{
+                    fontSize: "2.2rem",
+                    fontWeight: 900,
+                    lineHeight: 1,
+                  }}
+                >
+                  Ventas Donatello
+                </h1>
+
+                <p
+                  style={{
+                    marginTop: 8,
+                    color: "#6d604d",
+                    fontWeight: 700,
+                  }}
+                >
+                  Acceso al sistema POS
+                </p>
+              </div>
+
+              <input
+                type="email"
+                placeholder="Correo"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                style={{
+                  minHeight: 60,
+                  fontSize: "1.15rem",
+                  fontWeight: 700,
+                }}
+              />
+
+              <input
+                type="password"
+                placeholder="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") signIn();
+                }}
+                style={{
+                  minHeight: 60,
+                  fontSize: "1.15rem",
+                  fontWeight: 700,
+                }}
+              />
+
+              <Button
+                onClick={signIn}
+                style={{
+                  fontSize: "1.4rem",
+                  fontWeight: 900,
+                  minHeight: 64,
+                }}
+              >
+                Ingresar
+              </Button>
+            </div>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <style>{styles}</style>
@@ -535,6 +726,18 @@ function VentasDonatelloPOSApp() {
   
 
       <Navbar clearCart={clearCart} loadProducts={loadProducts} />
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginBottom: 10,
+        }}
+      >
+        <Button variant="secondary" onClick={signOut}>
+          Cerrar sesión
+        </Button>
+      </div>
 
       {loadingProducts && (
         <Card>
