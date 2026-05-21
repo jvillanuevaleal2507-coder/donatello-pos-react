@@ -264,11 +264,12 @@ function VentasDonatelloPOSApp() {
     }
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    setEmail("");
-    setPassword("");
-  }
+ async function signOut() {
+  await supabase.auth.signOut();
+  setSession(null);
+  setEmail("");
+  setPassword("");
+}
 
 
   const categories = [
