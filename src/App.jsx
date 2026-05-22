@@ -1055,7 +1055,17 @@ function VentasDonatelloPOSApp() {
                   </div>
 
                   <Button
-                    disabled={cart.length === 0 || Number(received || 0) < totalFinal}
+                    disabled={
+  cart.length === 0 ||
+  (
+    saleMode === "sale" &&
+    Number(received || 0) < totalFinal
+  ) ||
+  (
+    saleMode === "layaway" &&
+    Number(depositAmount || 0) <= 0
+  )
+}
                     onClick={checkout}
                     style={{ fontSize: "2rem", fontWeight: 900 }}
                   >
