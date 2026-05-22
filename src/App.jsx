@@ -166,16 +166,6 @@ function VentasDonatelloPOSApp() {
   const [authLoading, setAuthLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [saleMode, setSaleMode] = useState("sale");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [depositAmount, setDepositAmount] = useState("");
-  const [dueDate, setDueDate] = useState(() => {
-    const date = new Date();
-    date.setDate(date.getDate() + 15);
-    return date.toISOString().split("T")[0];
-  });
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -220,10 +210,6 @@ function VentasDonatelloPOSApp() {
         setCart([]);
         setReceived("");
         setDiscountPercent(0);
-        setSaleMode("sale");
-        setCustomerName("");
-        setCustomerPhone("");
-        setDepositAmount("");
       }
     });
 
@@ -337,10 +323,6 @@ function VentasDonatelloPOSApp() {
       setCart([]);
       setReceived("");
       setDiscountPercent(0);
-      setSaleMode("sale");
-      setCustomerName("");
-      setCustomerPhone("");
-      setDepositAmount("");
 
       window.location.href = "/";
     }
@@ -362,27 +344,10 @@ function VentasDonatelloPOSApp() {
     return matchesSearch && matchesCategory;
   });
 
-  const subtotal = useMemo(
-    () => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0),
-    [cart]
-  );
-
-  const originalProfit = useMemo(
-    () =>
-      cart.reduce(
-        (sum, item) =>
-          sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
-        0
-      ),
-    [cart]
-  );
-
-  const discountAmount = subtotal * (Number(discountPercent || 0) / 100);
-  const totalFinal = subtotal - discountAmount;
-  const adjustedProfit = originalProfit - discountAmount;
-
+  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
+  const profit = useMemo(() => cart.reduce((sum, item) => sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty, 0), [cart]);
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
-  const change = Number(received || 0) - totalFinal;
+  const change = Number(received || 0) - subtotal;
 
    
   function addToCartByCode(code) {
@@ -427,48 +392,14 @@ function VentasDonatelloPOSApp() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   }
 
-  function resetDueDate() {
-    const date = new Date();
-    date.setDate(date.getDate() + 15);
-    setDueDate(date.toISOString().split("T")[0]);
-  }
-
   function clearCart() {
     setCart([]);
     setReceived("");
-    setDiscountPercent(0);
-    setSaleMode("sale");
-    setCustomerName("");
-    setCustomerPhone("");
-    setDepositAmount("");
-    resetDueDate();
     setScanStatus("Carrito vacío");
   }
 
   async function checkout() {
-    if (cart.length === 0) return;
-
-    if (saleMode === "sale" && Number(received || 0) < totalFinal) {
-      setScanStatus("Monto recibido insuficiente");
-      return;
-    }
-
-    if (saleMode === "layaway") {
-      if (!customerName.trim()) {
-        alert("Agrega el nombre del cliente para el apartado.");
-        return;
-      }
-
-      if (Number(depositAmount || 0) <= 0) {
-        alert("Agrega un anticipo válido para el apartado.");
-        return;
-      }
-
-      if (Number(depositAmount || 0) > totalFinal) {
-        alert("El anticipo no puede ser mayor al total.");
-        return;
-      }
-    }
+    if (Number(received || 0) < totalFinal) return;
 
     for (const item of cart) {
       const current = products.find((p) => p.id === item.id);
@@ -478,93 +409,9 @@ function VentasDonatelloPOSApp() {
       }
     }
 
-    const saleItems = cart.map((item) => ({
-      product_id: item.id,
-      code: item.code,
-      name: item.name,
-      qty: item.qty,
-      cost: Number(item.cost || 0),
-      price: Number(item.price || 0),
-      subtotal: Number(item.price || 0) * item.qty,
-      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
-    }));
-
-    if (saleMode === "layaway") {
-      const deposit = Number(depositAmount || 0);
-      const balance = totalFinal - deposit;
-
-      const layawayPayload = {
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        total: totalFinal,
-        deposit,
-        balance,
-        due_date: dueDate,
-        status: "active",
-        items: saleItems,
-        notes:
-          "El apartado se mantiene vigente hasta la fecha acordada. Posterior a ese plazo, el anticipo podrá utilizarse como saldo a favor en otra compra.",
-      };
-
-      const { data: layawayData, error: layawayError } = await supabase
-        .from("layaways")
-        .insert([layawayPayload])
-        .select("id")
-        .single();
-
-      if (layawayError) {
-        setScanStatus(`Error guardando apartado: ${layawayError.message}`);
-        return;
-      }
-
-      for (const item of cart) {
-        const current = products.find((p) => p.id === item.id);
-        const newStock = Number(current.stock || 0) - Number(item.qty || 0);
-        const { error } = await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.id);
-
-        if (error) {
-          setScanStatus(`Error actualizando stock: ${error.message}`);
-          return;
-        }
-      }
-
-      const receipt = {
-        id: layawayData.id,
-        type: "layaway",
-        sale_date: new Date().toISOString(),
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        subtotal_original: subtotal,
-        discount_percent: Number(discountPercent || 0),
-        discount_amount: discountAmount,
-        total: totalFinal,
-        profit: adjustedProfit,
-        received: deposit,
-        change_amount: 0,
-        deposit,
-        balance,
-        due_date: dueDate,
-        items_count: itemsCount,
-        sale_items: saleItems,
-      };
-
-      setLastReceipt(receipt);
-      setScanStatus(`Apartado registrado: ${money(deposit)} | Saldo: ${money(balance)}`);
-      clearCart();
-      await loadProducts();
-      await loadSales();
-      return;
-    }
-
     const salePayload = {
-      total: totalFinal,
-      profit: adjustedProfit,
-      subtotal_original: subtotal,
-      discount_percent: Number(discountPercent || 0),
-      discount_amount: discountAmount,
+      total: subtotal,
+      profit,
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
@@ -581,12 +428,19 @@ function VentasDonatelloPOSApp() {
       return;
     }
 
-    const saleItemsPayload = saleItems.map((item) => ({
-      ...item,
+    const saleItems = cart.map((item) => ({
       sale_id: saleData.id,
+      product_id: item.id,
+      code: item.code,
+      name: item.name,
+      qty: item.qty,
+      cost: Number(item.cost || 0),
+      price: Number(item.price || 0),
+      subtotal: Number(item.price || 0) * item.qty,
+      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
     }));
 
-    const { error: itemsError } = await supabase.from("sale_items").insert(saleItemsPayload);
+    const { error: itemsError } = await supabase.from("sale_items").insert(saleItems);
 
     if (itemsError) {
       setScanStatus(`Venta creada, pero falló el detalle: ${itemsError.message}`);
@@ -609,7 +463,6 @@ function VentasDonatelloPOSApp() {
 
     const receipt = {
       id: saleData.id,
-      type: "sale",
       sale_date: new Date().toISOString(),
       subtotal_original: subtotal,
       discount_percent: Number(discountPercent || 0),
@@ -619,7 +472,7 @@ function VentasDonatelloPOSApp() {
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
-      sale_items: saleItemsPayload,
+      sale_items: saleItems,
     };
 
     setLastReceipt(receipt);
@@ -967,7 +820,7 @@ function VentasDonatelloPOSApp() {
                   </Card>
                   <Card>
                     <span className="metric-label">Utilidad</span>
-                    <strong className="metric-value">{money(adjustedProfit)}</strong>
+                    <strong className="metric-value">{money(profit)}</strong>
                   </Card>
                 </div>
                 <Card>
@@ -1094,137 +947,6 @@ function VentasDonatelloPOSApp() {
 
                 <Card>
                   <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
-
-                  <div style={{ marginTop: 16 }}>
-                    <span
-                      style={{
-                        fontSize: "1.2rem",
-                        fontWeight: 800,
-                        display: "block",
-                        marginBottom: 8,
-                      }}
-                    >
-                      Descuento %
-                    </span>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4,1fr)",
-                        gap: 8,
-                        marginBottom: 10,
-                      }}
-                    >
-                      {[0, 5, 10, 15].map((value) => (
-                        <button
-                          key={value}
-                          onClick={() => setDiscountPercent(value)}
-                          style={{
-                            minHeight: 52,
-                            borderRadius: 14,
-                            border: "none",
-                            fontWeight: 900,
-                            cursor: "pointer",
-                            background:
-                              Number(discountPercent) === value
-                                ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-                                : "#fff7e8",
-                            color: Number(discountPercent) === value ? "white" : "#24180d",
-                          }}
-                        >
-                          {value}%
-                        </button>
-                      ))}
-                    </div>
-
-                    <input
-                      type="number"
-                      value={discountPercent}
-                      onChange={(e) => setDiscountPercent(e.target.value)}
-                      placeholder="Descuento personalizado"
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 10,
-                      margin: "14px 0",
-                    }}
-                  >
-                    <button
-                      onClick={() => setSaleMode("sale")}
-                      style={{
-                        minHeight: 54,
-                        borderRadius: 16,
-                        border: "none",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        background:
-                          saleMode === "sale"
-                            ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-                            : "#fff7e8",
-                        color: saleMode === "sale" ? "white" : "#24180d",
-                      }}
-                    >
-                      Venta normal
-                    </button>
-
-                    <button
-                      onClick={() => setSaleMode("layaway")}
-                      style={{
-                        minHeight: 54,
-                        borderRadius: 16,
-                        border: "none",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        background:
-                          saleMode === "layaway"
-                            ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-                            : "#fff7e8",
-                        color: saleMode === "layaway" ? "white" : "#24180d",
-                      }}
-                    >
-                      Apartado
-                    </button>
-                  </div>
-
-                  {saleMode === "layaway" && (
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: 10,
-                        marginBottom: 14,
-                      }}
-                    >
-                      <input
-                        placeholder="Nombre cliente"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
-                      />
-
-                      <input
-                        placeholder="Teléfono"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                      />
-
-                      <input
-                        type="number"
-                        placeholder="Anticipo"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                      />
-
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
-                      />
-                    </div>
-                  )}
-
                   <input
                     type="number"
                     value={received}
@@ -1234,35 +956,25 @@ function VentasDonatelloPOSApp() {
 
                   <div className="pay-grid">
                     <div>
-                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>
-                        {saleMode === "layaway" ? "Saldo" : "Cambio"}
-                      </span>
+                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cambio</span>
                       <strong style={{ fontSize: "2.4rem", fontWeight: 900 }}>
-                        {saleMode === "layaway"
-                          ? money(Math.max(totalFinal - Number(depositAmount || 0), 0))
-                          : change >= 0
-                          ? money(change)
-                          : money(0)}
+                        {change >= 0 ? money(change) : money(0)}
                       </strong>
                     </div>
                     <div>
-                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Total final</span>
+                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Falta</span>
                       <strong style={{ fontSize: "2.2rem", fontWeight: 900 }}>
-                        {money(totalFinal)}
+                        {change < 0 ? money(Math.abs(change)) : money(0)}
                       </strong>
                     </div>
                   </div>
 
                   <Button
-                    disabled={
-                      cart.length === 0 ||
-                      (saleMode === "sale" && Number(received || 0) < totalFinal) ||
-                      (saleMode === "layaway" && Number(depositAmount || 0) <= 0)
-                    }
+                    disabled={cart.length === 0 || Number(received || 0) < totalFinal}
                     onClick={checkout}
                     style={{ fontSize: "2rem", fontWeight: 900 }}
                   >
-                    {saleMode === "layaway" ? "🧾 Registrar apartado" : "💳 Cobrar venta"}
+                    💳 Cobrar venta
                   </Button>
                 </Card>
               </div>
@@ -1652,8 +1364,6 @@ function ReceiptModal({ sale, onClose }) {
     window.print();
   }
 
-  const isLayaway = sale.type === "layaway";
-
   return (
     <div className="receipt-overlay">
       <div className="receipt-panel">
@@ -1669,35 +1379,18 @@ function ReceiptModal({ sale, onClose }) {
 
         <div className="ticket-print-area">
           <div className="ticket-header">
-            <div className="ticket-logo">{isLayaway ? "🧾" : "🛒"}</div>
+            <div className="ticket-logo">🛒</div>
             <h2>Ventas Donatello</h2>
-            <p>{isLayaway ? "Ticket de apartado" : "Ticket de venta"}</p>
+            <p>Ticket de venta</p>
           </div>
 
           <div className="ticket-meta">
             <p>
-              <b>{isLayaway ? "Apartado" : "Venta"}:</b> #{sale.id}
+              <b>Venta:</b> #{sale.id}
             </p>
             <p>
               <b>Fecha:</b> {new Date(sale.sale_date).toLocaleString("es-MX")}
             </p>
-
-            {isLayaway && (
-              <>
-                <p>
-                  <b>Cliente:</b> {sale.customer_name}
-                </p>
-                {sale.customer_phone && (
-                  <p>
-                    <b>Teléfono:</b> {sale.customer_phone}
-                  </p>
-                )}
-                <p>
-                  <b>Fecha límite:</b>{" "}
-                  {new Date(`${sale.due_date}T00:00:00`).toLocaleDateString("es-MX")}
-                </p>
-              </>
-            )}
           </div>
 
           <div className="ticket-items">
@@ -1764,56 +1457,19 @@ function ReceiptModal({ sale, onClose }) {
               <span>Piezas</span>
               <b>{sale.items_count}</b>
             </div>
-
-            {isLayaway ? (
-              <>
-                <div>
-                  <span>Anticipo</span>
-                  <b>{money(sale.deposit)}</b>
-                </div>
-                <div>
-                  <span>Saldo</span>
-                  <b>{money(sale.balance)}</b>
-                </div>
-                <div>
-                  <span>Vigencia</span>
-                  <b>{new Date(`${sale.due_date}T00:00:00`).toLocaleDateString("es-MX")}</b>
-                </div>
-              </>
-            ) : (
-              <>
-                <div>
-                  <span>Recibido</span>
-                  <b>{money(sale.received)}</b>
-                </div>
-                <div>
-                  <span>Cambio</span>
-                  <b>{money(sale.change_amount)}</b>
-                </div>
-                <div>
-                  <span>Utilidad</span>
-                  <b>{money(sale.profit)}</b>
-                </div>
-              </>
-            )}
+            <div>
+              <span>Recibido</span>
+              <b>{money(sale.received)}</b>
+            </div>
+            <div>
+              <span>Cambio</span>
+              <b>{money(sale.change_amount)}</b>
+            </div>
+            <div>
+              <span>Utilidad</span>
+              <b>{money(sale.profit)}</b>
+            </div>
           </div>
-
-          {isLayaway && (
-            <p
-              style={{
-                marginTop: 12,
-                paddingTop: 10,
-                borderTop: "1px dashed #aaa",
-                color: "#444",
-                fontSize: "0.8rem",
-                lineHeight: 1.35,
-                textAlign: "center",
-              }}
-            >
-              El apartado se mantiene vigente hasta la fecha acordada.
-              Posterior a ese plazo, el anticipo podrá utilizarse como saldo a favor en otra compra.
-            </p>
-          )}
 
           <p className="ticket-footer">Gracias por tu compra ✨</p>
         </div>
