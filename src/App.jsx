@@ -939,6 +939,99 @@ function VentasDonatelloPOSApp() {
 
                 <Card>
                   <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
+                  <div
+  style={{
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10,
+    marginBottom: 14,
+  }}
+>
+  <button
+    onClick={() => setSaleMode("sale")}
+    style={{
+      minHeight: 54,
+      borderRadius: 16,
+      border: "none",
+      fontWeight: 900,
+      cursor: "pointer",
+      background:
+        saleMode === "sale"
+          ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
+          : "#fff7e8",
+      color:
+        saleMode === "sale"
+          ? "white"
+          : "#24180d",
+    }}
+  >
+    Venta normal
+  </button>
+
+  <button
+    onClick={() => setSaleMode("layaway")}
+    style={{
+      minHeight: 54,
+      borderRadius: 16,
+      border: "none",
+      fontWeight: 900,
+      cursor: "pointer",
+      background:
+        saleMode === "layaway"
+          ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
+          : "#fff7e8",
+      color:
+        saleMode === "layaway"
+          ? "white"
+          : "#24180d",
+    }}
+  >
+    Apartado
+  </button>
+</div>
+
+{saleMode === "layaway" && (
+  <div
+    style={{
+      display: "grid",
+      gap: 10,
+      marginBottom: 14,
+    }}
+  >
+    <input
+      placeholder="Nombre cliente"
+      value={customerName}
+      onChange={(e) =>
+        setCustomerName(e.target.value)
+      }
+    />
+
+    <input
+      placeholder="Teléfono"
+      value={customerPhone}
+      onChange={(e) =>
+        setCustomerPhone(e.target.value)
+      }
+    />
+
+    <input
+      type="number"
+      placeholder="Anticipo"
+      value={depositAmount}
+      onChange={(e) =>
+        setDepositAmount(e.target.value)
+      }
+    />
+
+    <input
+      type="date"
+      value={dueDate}
+      onChange={(e) =>
+        setDueDate(e.target.value)
+      }
+    />
+  </div>
+)}
                   <input
                     type="number"
                     value={received}
