@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
-import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
 import AddProductPage from "./pages/AddProductPage";
@@ -184,19 +184,28 @@ function VentasDonatelloPOSApp() {
   const lastScannedRef = useRef({ value: "", time: 0 });
 
   useEffect(() => {
+    let mounted = true;
+
     async function initAuth() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      setSession(session);
+        if (!mounted) return;
 
-      if (session) {
-        await loadProducts();
-        await loadSales();
+        setSession(session || null);
+
+        if (session) {
+          await loadProducts();
+          await loadSales();
+        }
+      } catch (error) {
+        console.error("Error inicializando sesión:", error);
+        setSession(null);
+      } finally {
+        if (mounted) setAuthLoading(false);
       }
-
-      setAuthLoading(false);
     }
 
     initAuth();
@@ -204,7 +213,7 @@ function VentasDonatelloPOSApp() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
+      setSession(session || null);
       setAuthLoading(false);
 
       if (session) {
@@ -224,6 +233,7 @@ function VentasDonatelloPOSApp() {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -310,14 +320,29 @@ function VentasDonatelloPOSApp() {
   }
 
  async function signOut() {
-  await supabase.auth.signOut({ scope: "global" });
+  try {
+    await supabase.auth.signOut({ scope: "global" });
+  } catch (error) {
+    console.error("Error cerrando sesión:", error);
+  } finally {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("sb-") || key.includes("supabase")) {
+        localStorage.removeItem(key);
+      }
+    });
 
-  setSession(null);
-  setEmail("");
-  setPassword("");
-  setAuthLoading(false);
+    sessionStorage.clear();
 
-  window.location.reload();
+    setSession(null);
+    setEmail("");
+    setPassword("");
+    setAuthLoading(false);
+    setProducts([]);
+    setSales([]);
+    setCart([]);
+
+    window.location.replace("/");
+  }
 }
 
 
