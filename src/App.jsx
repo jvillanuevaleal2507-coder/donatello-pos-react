@@ -199,40 +199,6 @@ function VentasDonatelloPOSApp() {
       setAuthLoading(false);
     }
 
-    useEffect(() => {
-  if (!session) return;
-
-  let timeoutId;
-
-  function resetTimer() {
-    window.clearTimeout(timeoutId);
-
-    timeoutId = window.setTimeout(() => {
-      signOut();
-    }, 30 * 60 * 1000);
-  }
-
-  const events = [
-    "click",
-    "keydown",
-    "touchstart",
-    "mousemove",
-  ];
-
-  events.forEach((event) => {
-    window.addEventListener(event, resetTimer);
-  });
-
-  resetTimer();
-
-  return () => {
-    window.clearTimeout(timeoutId);
-
-    events.forEach((event) => {
-      window.removeEventListener(event, resetTimer);
-    });
-  };
-}, [session]);
     initAuth();
 
     const {
@@ -250,6 +216,10 @@ function VentasDonatelloPOSApp() {
         setCart([]);
         setReceived("");
         setDiscountPercent(0);
+        setSaleMode("sale");
+        setCustomerName("");
+        setCustomerPhone("");
+        setDepositAmount("");
       }
     });
 
@@ -257,6 +227,36 @@ function VentasDonatelloPOSApp() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+
+    let timeoutId;
+
+    function resetTimer() {
+      window.clearTimeout(timeoutId);
+
+      timeoutId = window.setTimeout(() => {
+        signOut();
+      }, 30 * 60 * 1000);
+    }
+
+    const events = ["click", "keydown", "touchstart", "mousemove"];
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [session]);
 
   async function loadProducts() {
     setLoadingProducts(true);
@@ -336,10 +336,27 @@ function VentasDonatelloPOSApp() {
     return matchesSearch && matchesCategory;
   });
 
-  const subtotal = useMemo(() => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0), [cart]);
-  const profit = useMemo(() => cart.reduce((sum, item) => sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty, 0), [cart]);
+  const subtotal = useMemo(
+    () => cart.reduce((sum, item) => sum + Number(item.price || 0) * item.qty, 0),
+    [cart]
+  );
+
+  const originalProfit = useMemo(
+    () =>
+      cart.reduce(
+        (sum, item) =>
+          sum + (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
+        0
+      ),
+    [cart]
+  );
+
+  const discountAmount = subtotal * (Number(discountPercent || 0) / 100);
+  const totalFinal = subtotal - discountAmount;
+  const adjustedProfit = originalProfit - discountAmount;
+
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
-  const change = Number(received || 0) - subtotal;
+  const change = Number(received || 0) - totalFinal;
 
    
   function addToCartByCode(code) {
@@ -384,14 +401,48 @@ function VentasDonatelloPOSApp() {
     setCart((prev) => prev.filter((item) => item.id !== id));
   }
 
+  function resetDueDate() {
+    const date = new Date();
+    date.setDate(date.getDate() + 15);
+    setDueDate(date.toISOString().split("T")[0]);
+  }
+
   function clearCart() {
     setCart([]);
     setReceived("");
+    setDiscountPercent(0);
+    setSaleMode("sale");
+    setCustomerName("");
+    setCustomerPhone("");
+    setDepositAmount("");
+    resetDueDate();
     setScanStatus("Carrito vacío");
   }
 
   async function checkout() {
-    if (Number(received || 0) < totalFinal) return;
+    if (cart.length === 0) return;
+
+    if (saleMode === "sale" && Number(received || 0) < totalFinal) {
+      setScanStatus("Monto recibido insuficiente");
+      return;
+    }
+
+    if (saleMode === "layaway") {
+      if (!customerName.trim()) {
+        alert("Agrega el nombre del cliente para el apartado.");
+        return;
+      }
+
+      if (Number(depositAmount || 0) <= 0) {
+        alert("Agrega un anticipo válido para el apartado.");
+        return;
+      }
+
+      if (Number(depositAmount || 0) > totalFinal) {
+        alert("El anticipo no puede ser mayor al total.");
+        return;
+      }
+    }
 
     for (const item of cart) {
       const current = products.find((p) => p.id === item.id);
@@ -401,9 +452,93 @@ function VentasDonatelloPOSApp() {
       }
     }
 
+    const saleItems = cart.map((item) => ({
+      product_id: item.id,
+      code: item.code,
+      name: item.name,
+      qty: item.qty,
+      cost: Number(item.cost || 0),
+      price: Number(item.price || 0),
+      subtotal: Number(item.price || 0) * item.qty,
+      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
+    }));
+
+    if (saleMode === "layaway") {
+      const deposit = Number(depositAmount || 0);
+      const balance = totalFinal - deposit;
+
+      const layawayPayload = {
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        total: totalFinal,
+        deposit,
+        balance,
+        due_date: dueDate,
+        status: "active",
+        items: saleItems,
+        notes:
+          "El apartado se mantiene vigente hasta la fecha acordada. Posterior a ese plazo, el anticipo podrá utilizarse como saldo a favor en otra compra.",
+      };
+
+      const { data: layawayData, error: layawayError } = await supabase
+        .from("layaways")
+        .insert([layawayPayload])
+        .select("id")
+        .single();
+
+      if (layawayError) {
+        setScanStatus(`Error guardando apartado: ${layawayError.message}`);
+        return;
+      }
+
+      for (const item of cart) {
+        const current = products.find((p) => p.id === item.id);
+        const newStock = Number(current.stock || 0) - Number(item.qty || 0);
+        const { error } = await supabase
+          .from("products")
+          .update({ stock: newStock })
+          .eq("id", item.id);
+
+        if (error) {
+          setScanStatus(`Error actualizando stock: ${error.message}`);
+          return;
+        }
+      }
+
+      const receipt = {
+        id: layawayData.id,
+        type: "layaway",
+        sale_date: new Date().toISOString(),
+        customer_name: customerName.trim(),
+        customer_phone: customerPhone.trim(),
+        subtotal_original: subtotal,
+        discount_percent: Number(discountPercent || 0),
+        discount_amount: discountAmount,
+        total: totalFinal,
+        profit: adjustedProfit,
+        received: deposit,
+        change_amount: 0,
+        deposit,
+        balance,
+        due_date: dueDate,
+        items_count: itemsCount,
+        sale_items: saleItems,
+      };
+
+      setLastReceipt(receipt);
+      setScanStatus(`Apartado registrado: ${money(deposit)} | Saldo: ${money(balance)}`);
+      clearCart();
+      await loadProducts();
+      await loadSales();
+      return;
+    }
+
     const salePayload = {
-      total: subtotal,
-      profit,
+      total: totalFinal,
+      profit: adjustedProfit,
+      subtotal_original: subtotal,
+      discount_percent: Number(discountPercent || 0),
+      discount_amount: discountAmount,
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
@@ -420,19 +555,12 @@ function VentasDonatelloPOSApp() {
       return;
     }
 
-    const saleItems = cart.map((item) => ({
+    const saleItemsPayload = saleItems.map((item) => ({
+      ...item,
       sale_id: saleData.id,
-      product_id: item.id,
-      code: item.code,
-      name: item.name,
-      qty: item.qty,
-      cost: Number(item.cost || 0),
-      price: Number(item.price || 0),
-      subtotal: Number(item.price || 0) * item.qty,
-      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
     }));
 
-    const { error: itemsError } = await supabase.from("sale_items").insert(saleItems);
+    const { error: itemsError } = await supabase.from("sale_items").insert(saleItemsPayload);
 
     if (itemsError) {
       setScanStatus(`Venta creada, pero falló el detalle: ${itemsError.message}`);
@@ -455,6 +583,7 @@ function VentasDonatelloPOSApp() {
 
     const receipt = {
       id: saleData.id,
+      type: "sale",
       sale_date: new Date().toISOString(),
       subtotal_original: subtotal,
       discount_percent: Number(discountPercent || 0),
@@ -464,7 +593,7 @@ function VentasDonatelloPOSApp() {
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
-      sale_items: saleItems,
+      sale_items: saleItemsPayload,
     };
 
     setLastReceipt(receipt);
@@ -812,7 +941,7 @@ function VentasDonatelloPOSApp() {
                   </Card>
                   <Card>
                     <span className="metric-label">Utilidad</span>
-                    <strong className="metric-value">{money(profit)}</strong>
+                    <strong className="metric-value">{money(adjustedProfit)}</strong>
                   </Card>
                 </div>
                 <Card>
@@ -1069,7 +1198,7 @@ function VentasDonatelloPOSApp() {
                     onClick={checkout}
                     style={{ fontSize: "2rem", fontWeight: 900 }}
                   >
-                    💳 Cobrar venta
+                    {saleMode === "layaway" ? "🧾 Registrar apartado" : "💳 Cobrar venta"}
                   </Button>
                 </Card>
               </div>
@@ -1459,6 +1588,8 @@ function ReceiptModal({ sale, onClose }) {
     window.print();
   }
 
+  const isLayaway = sale.type === "layaway";
+
   return (
     <div className="receipt-overlay">
       <div className="receipt-panel">
@@ -1474,18 +1605,34 @@ function ReceiptModal({ sale, onClose }) {
 
         <div className="ticket-print-area">
           <div className="ticket-header">
-            <div className="ticket-logo">🛒</div>
+            <div className="ticket-logo">{isLayaway ? "🧾" : "🛒"}</div>
             <h2>Ventas Donatello</h2>
-            <p>Ticket de venta</p>
+            <p>{isLayaway ? "Ticket de apartado" : "Ticket de venta"}</p>
           </div>
 
           <div className="ticket-meta">
             <p>
-              <b>Venta:</b> #{sale.id}
+              <b>{isLayaway ? "Apartado" : "Venta"}:</b> #{sale.id}
             </p>
             <p>
               <b>Fecha:</b> {new Date(sale.sale_date).toLocaleString("es-MX")}
             </p>
+
+            {isLayaway && (
+              <>
+                <p>
+                  <b>Cliente:</b> {sale.customer_name}
+                </p>
+                {sale.customer_phone && (
+                  <p>
+                    <b>Teléfono:</b> {sale.customer_phone}
+                  </p>
+                )}
+                <p>
+                  <b>Fecha límite:</b> {new Date(`${sale.due_date}T00:00:00`).toLocaleDateString("es-MX")}
+                </p>
+              </>
+            )}
           </div>
 
           <div className="ticket-items">
@@ -1552,19 +1699,56 @@ function ReceiptModal({ sale, onClose }) {
               <span>Piezas</span>
               <b>{sale.items_count}</b>
             </div>
-            <div>
-              <span>Recibido</span>
-              <b>{money(sale.received)}</b>
-            </div>
-            <div>
-              <span>Cambio</span>
-              <b>{money(sale.change_amount)}</b>
-            </div>
-            <div>
-              <span>Utilidad</span>
-              <b>{money(sale.profit)}</b>
-            </div>
+
+            {isLayaway ? (
+              <>
+                <div>
+                  <span>Anticipo</span>
+                  <b>{money(sale.deposit)}</b>
+                </div>
+                <div>
+                  <span>Saldo</span>
+                  <b>{money(sale.balance)}</b>
+                </div>
+                <div>
+                  <span>Vigencia</span>
+                  <b>{new Date(`${sale.due_date}T00:00:00`).toLocaleDateString("es-MX")}</b>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span>Recibido</span>
+                  <b>{money(sale.received)}</b>
+                </div>
+                <div>
+                  <span>Cambio</span>
+                  <b>{money(sale.change_amount)}</b>
+                </div>
+                <div>
+                  <span>Utilidad</span>
+                  <b>{money(sale.profit)}</b>
+                </div>
+              </>
+            )}
           </div>
+
+          {isLayaway && (
+            <p
+              style={{
+                marginTop: 12,
+                paddingTop: 10,
+                borderTop: "1px dashed #aaa",
+                color: "#444",
+                fontSize: "0.8rem",
+                lineHeight: 1.35,
+                textAlign: "center",
+              }}
+            >
+              El apartado se mantiene vigente hasta la fecha acordada.
+              Posterior a ese plazo, el anticipo podrá utilizarse como saldo a favor en otra compra.
+            </p>
+          )}
 
           <p className="ticket-footer">Gracias por tu compra ✨</p>
         </div>
