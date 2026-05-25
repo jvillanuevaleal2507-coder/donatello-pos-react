@@ -9,6 +9,7 @@ export default function Navbar({ clearCart, loadProducts }) {
     { to: "/agregar", icon: "➕", label: "Agregar" },
     { to: "/qr", icon: "🏷️", label: "QR" },
     { to: "/historial", icon: "📋", label: "Ventas" },
+    { to: "/apartados", icon: "🧾", label: "Apartados" },
     { to: "/csv", icon: "📤", label: "CSV" },
     { to: "/dashboard", icon: "📊", label: "RESUMEN" },
   ];
