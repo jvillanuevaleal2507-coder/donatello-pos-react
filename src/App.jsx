@@ -1648,8 +1648,17 @@ function QRSection({ products }) {
   );
 }
 function ReceiptModal({ sale, onClose }) {
+  const printLockRef = useRef(false);
+
   function printReceipt() {
+    if (printLockRef.current) return;
+    printLockRef.current = true;
+
     window.print();
+
+    window.setTimeout(() => {
+      printLockRef.current = false;
+    }, 1200);
   }
 
   const isLayaway = sale.type === "layaway";
@@ -1669,7 +1678,9 @@ function ReceiptModal({ sale, onClose }) {
 
         <div className="ticket-print-area">
           <div className="ticket-header">
-            <div className="ticket-logo">{isLayaway ? "🧾" : "🛒"}</div>
+            <div className="ticket-logo ticket-logo-img">
+              <img src={logoDonatello} alt="Ventas Donatello" />
+            </div>
             <h2>Ventas Donatello</h2>
             <p>{isLayaway ? "Ticket de apartado" : "Ticket de venta"}</p>
           </div>
@@ -2794,6 +2805,19 @@ const styles = `
     margin-bottom: 6px;
   }
 
+
+  .ticket-logo-img {
+    overflow: hidden;
+    padding: 3px;
+  }
+
+  .ticket-logo-img img {
+    width: 145%;
+    height: 145%;
+    object-fit: contain;
+    display: block;
+  }
+
   .ticket-header h2 {
     font-size: 1.3rem;
     margin: 0;
@@ -2866,18 +2890,58 @@ const styles = `
   }
 
   @media print {
-    body * { visibility: hidden !important; }
-    .ticket-print-area, .ticket-print-area * { visibility: visible !important; }
-    .ticket-print-area {
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 100%;
-      border: none;
-      border-radius: 0;
-      padding: 12px;
+    @page {
+      margin: 0;
+      size: auto;
     }
-    .no-print { display: none !important; }
+
+    html,
+    body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: white !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .shell > *:not(.receipt-overlay) {
+      display: none !important;
+    }
+
+    .receipt-overlay {
+      position: static !important;
+      inset: auto !important;
+      display: block !important;
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      width: 100% !important;
+      min-height: auto !important;
+    }
+
+    .receipt-panel {
+      width: 80mm !important;
+      max-width: 80mm !important;
+      margin: 0 auto !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      background: white !important;
+    }
+
+    .ticket-print-area {
+      width: 80mm !important;
+      max-width: 80mm !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 10px !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+    }
+
+    .no-print {
+      display: none !important;
+    }
   }
 
   .qr-layout {
