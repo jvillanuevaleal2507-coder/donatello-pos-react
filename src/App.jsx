@@ -160,6 +160,7 @@ function VentasDonatelloPOSApp() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [sales, setSales] = useState([]);
+  const [layaways, setLayaways] = useState([]);
   const [loadingSales, setLoadingSales] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
   const [session, setSession] = useState(null);
@@ -198,6 +199,7 @@ function VentasDonatelloPOSApp() {
       if (session) {
         await loadProducts();
         await loadSales();
+        await loadLayaways();
       }
 
       setAuthLoading(false);
@@ -214,6 +216,7 @@ function VentasDonatelloPOSApp() {
       if (session) {
         await loadProducts();
         await loadSales();
+        await loadLayaways();
       } else {
         setProducts([]);
         setSales([]);
@@ -294,6 +297,22 @@ function VentasDonatelloPOSApp() {
       setSales(data || []);
     }
     setLoadingSales(false);
+  }
+
+
+  async function loadLayaways() {
+    const { data, error } = await supabase
+      .from("layaways")
+      .select("*")
+      .eq("status", "active")
+      .order("id", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      setLayaways([]);
+    } else {
+      setLayaways(data || []);
+    }
   }
 
   async function signIn() {
@@ -1307,6 +1326,18 @@ function VentasDonatelloPOSApp() {
   }
 />
 
+
+        <Route
+          path="/apartados"
+          element={
+            <LayawaysSection
+              layaways={layaways}
+              loadLayaways={loadLayaways}
+              loadSales={loadSales}
+            />
+          }
+        />
+
         <Route
           path="/csv"
           element={<ImportCSV products={products} loadProducts={loadProducts} />}
@@ -1912,6 +1943,179 @@ function SalesSection({ sales, loadingSales, loadSales }) {
     </section>
   );
 }
+
+
+
+function LayawaysSection({ layaways, loadLayaways, loadSales }) {
+  const [selected, setSelected] = useState(null);
+  const [payment, setPayment] = useState("");
+
+  async function liquidateLayaway() {
+    if (!selected) return;
+
+    const amount = Number(payment || 0);
+
+    if (amount <= 0) {
+      alert("Ingresa un monto válido.");
+      return;
+    }
+
+    const currentBalance = Number(selected.balance || 0);
+
+    if (amount > currentBalance) {
+      alert("El pago no puede ser mayor al saldo.");
+      return;
+    }
+
+    const newBalance = currentBalance - amount;
+
+    if (newBalance <= 0) {
+      const { error } = await supabase
+        .from("layaways")
+        .update({
+          balance: 0,
+          status: "paid",
+        })
+        .eq("id", selected.id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      alert("Apartado liquidado correctamente.");
+    } else {
+      const { error } = await supabase
+        .from("layaways")
+        .update({
+          balance: newBalance,
+          deposit: Number(selected.deposit || 0) + amount,
+        })
+        .eq("id", selected.id);
+
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      alert("Pago registrado correctamente.");
+    }
+
+    setSelected(null);
+    setPayment("");
+    await loadLayaways();
+    await loadSales();
+  }
+
+  return (
+    <section className="inventory-section">
+      <div className="sales-header">
+        <div>
+          <h2>Apartados activos</h2>
+          <p className="muted">Gestiona pagos y liquidaciones.</p>
+        </div>
+
+        <Button onClick={loadLayaways}>
+          Actualizar
+        </Button>
+      </div>
+
+      {layaways.length === 0 ? (
+        <Card>
+          <p className="muted">No hay apartados activos.</p>
+        </Card>
+      ) : (
+        <div className="sales-list">
+          {layaways.map((item) => (
+            <Card key={item.id}>
+              <div className="sale-card-header">
+                <div>
+                  <h3>{item.customer_name}</h3>
+                  <p>{item.customer_phone || "Sin teléfono"}</p>
+                </div>
+
+                <div className="sale-total-box">
+                  <span>Saldo</span>
+                  <strong>{money(item.balance)}</strong>
+                </div>
+              </div>
+
+              <div className="sale-summary-grid">
+                <div>
+                  <span>Total</span>
+                  <b>{money(item.total)}</b>
+                </div>
+
+                <div>
+                  <span>Anticipo</span>
+                  <b>{money(item.deposit)}</b>
+                </div>
+
+                <div>
+                  <span>Saldo</span>
+                  <b>{money(item.balance)}</b>
+                </div>
+
+                <div>
+                  <span>Vence</span>
+                  <b>{new Date(item.due_date + "T00:00:00").toLocaleDateString("es-MX")}</b>
+                </div>
+              </div>
+
+              <div style={{ marginTop: 14 }}>
+                <Button onClick={() => setSelected(item)}>
+                  Liquidar / Abonar
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {selected && (
+        <div className="receipt-overlay">
+          <div className="receipt-panel">
+            <h2>Pago apartado</h2>
+
+            <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
+              <div>
+                <b>Cliente:</b> {selected.customer_name}
+              </div>
+
+              <div>
+                <b>Saldo actual:</b> {money(selected.balance)}
+              </div>
+
+              <input
+                type="number"
+                placeholder="Monto a pagar"
+                value={payment}
+                onChange={(e) => setPayment(e.target.value)}
+              />
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                <Button variant="secondary" onClick={() => setSelected(null)}>
+                  Cancelar
+                </Button>
+
+                <Button onClick={liquidateLayaway}>
+                  Confirmar pago
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function ImportCSV({ products, loadProducts }) {
   const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario.");
