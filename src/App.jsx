@@ -304,14 +304,20 @@ function VentasDonatelloPOSApp() {
     const { data, error } = await supabase
       .from("layaways")
       .select("*")
-      .eq("status", "active")
       .order("id", { ascending: false });
 
     if (error) {
-      console.error(error);
+      console.error("Error cargando apartados:", error);
       setLayaways([]);
     } else {
-      setLayaways(data || []);
+      const activeLayaways = (data || []).filter(
+        (item) => String(item.status || "").trim().toLowerCase() === "active"
+      );
+
+      console.log("Apartados recibidos:", data);
+      console.log("Apartados activos:", activeLayaways);
+
+      setLayaways(activeLayaways);
     }
   }
 
@@ -573,6 +579,7 @@ function VentasDonatelloPOSApp() {
       setLastReceipt(receipt);
       setScanStatus(`Apartado registrado: ${money(deposit)} | Saldo: ${money(balance)}`);
       clearCart();
+      await loadLayaways();
       await loadProducts();
       await loadSales();
       return;
@@ -1949,6 +1956,21 @@ function SalesSection({ sales, loadingSales, loadSales }) {
 function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [selected, setSelected] = useState(null);
   const [payment, setPayment] = useState("");
+  const [loadingLayaways, setLoadingLayaways] = useState(false);
+
+  async function refreshLayaways() {
+    setLoadingLayaways(true);
+
+    try {
+      await loadLayaways();
+    } finally {
+      setLoadingLayaways(false);
+    }
+  }
+
+  useEffect(() => {
+    refreshLayaways();
+  }, []);
 
   async function liquidateLayaway() {
     if (!selected) return;
@@ -1974,6 +1996,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
         .from("layaways")
         .update({
           balance: 0,
+          deposit: Number(selected.deposit || 0) + amount,
           status: "paid",
         })
         .eq("id", selected.id);
@@ -2003,7 +2026,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
 
     setSelected(null);
     setPayment("");
-    await loadLayaways();
+    await refreshLayaways();
     await loadSales();
   }
 
@@ -2012,17 +2035,26 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
       <div className="sales-header">
         <div>
           <h2>Apartados activos</h2>
-          <p className="muted">Gestiona pagos y liquidaciones.</p>
+          <p className="muted">
+            Gestiona pagos y liquidaciones. Registros activos: {layaways.length}
+          </p>
         </div>
 
-        <Button onClick={loadLayaways}>
-          Actualizar
+        <Button onClick={refreshLayaways} disabled={loadingLayaways}>
+          {loadingLayaways ? "Actualizando..." : "Actualizar"}
         </Button>
       </div>
 
-      {layaways.length === 0 ? (
+      {loadingLayaways ? (
         <Card>
-          <p className="muted">No hay apartados activos.</p>
+          <p className="muted">Cargando apartados...</p>
+        </Card>
+      ) : layaways.length === 0 ? (
+        <Card>
+          <p className="muted">
+            No hay apartados activos. Si en Supabase sí aparecen, revisa la consola:
+            ahora el sistema imprime “Apartados recibidos” para validar qué responde la base.
+          </p>
         </Card>
       ) : (
         <div className="sales-list">
@@ -2058,9 +2090,28 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
 
                 <div>
                   <span>Vence</span>
-                  <b>{new Date(item.due_date + "T00:00:00").toLocaleDateString("es-MX")}</b>
+                  <b>
+                    {item.due_date
+                      ? new Date(item.due_date + "T00:00:00").toLocaleDateString("es-MX")
+                      : "Sin fecha"}
+                  </b>
                 </div>
               </div>
+
+              {Array.isArray(item.items) && item.items.length > 0 && (
+                <div className="sale-items-list">
+                  {item.items.map((product, index) => (
+                    <div className="sale-item-row" key={`${item.id}-${product.code}-${index}`}>
+                      <div>
+                        <strong>{product.name}</strong>
+                        <span>{product.code} · x{product.qty}</span>
+                      </div>
+
+                      <b>{money(product.subtotal)}</b>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div style={{ marginTop: 14 }}>
                 <Button onClick={() => setSelected(item)}>
@@ -2115,7 +2166,6 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     </section>
   );
 }
-
 
 function ImportCSV({ products, loadProducts }) {
   const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario.");
