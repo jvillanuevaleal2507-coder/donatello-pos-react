@@ -2006,27 +2006,106 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     try {
       setProcessingPayment(true);
 
-      const { data, error } = await supabase
-        .from("layaways")
-        .update({
-          balance: newBalance,
-          deposit: newDeposit,
-          status: newStatus,
-        })
-        .eq("id", selected.id)
-        .select()
-        .single();
-
-      console.log("Respuesta update layaway:", { data, error });
-
-      if (error) {
-        alert(`Error actualizando apartado: ${error.message}`);
-        return;
-      }
-
       if (newStatus === "paid") {
-        alert("Apartado liquidado correctamente.");
+        const items = Array.isArray(selected.items) ? selected.items : [];
+        const total = Number(selected.total || 0);
+        const totalProfit = items.reduce(
+          (sum, item) => sum + Number(item.profit || 0),
+          0
+        );
+        const itemsCount = items.reduce(
+          (sum, item) => sum + Number(item.qty || 0),
+          0
+        );
+
+        const salePayload = {
+          total,
+          profit: totalProfit,
+          received: newDeposit,
+          change_amount: 0,
+          items_count: itemsCount,
+          subtotal_original: total,
+          discount_percent: 0,
+          discount_amount: 0,
+        };
+
+        const { data: saleData, error: saleError } = await supabase
+          .from("sales")
+          .insert([salePayload])
+          .select("id")
+          .single();
+
+        console.log("Respuesta insert venta apartado:", { saleData, saleError });
+
+        if (saleError) {
+          alert(`Error creando venta final: ${saleError.message}`);
+          return;
+        }
+
+        const saleItems = items.map((item) => ({
+          sale_id: saleData.id,
+          product_id: item.product_id || null,
+          code: item.code,
+          name: item.name,
+          qty: Number(item.qty || 0),
+          cost: Number(item.cost || 0),
+          price: Number(item.price || 0),
+          subtotal: Number(item.subtotal || 0),
+          profit: Number(item.profit || 0),
+        }));
+
+        if (saleItems.length > 0) {
+          const { error: itemsError } = await supabase
+            .from("sale_items")
+            .insert(saleItems);
+
+          console.log("Respuesta insert detalle venta apartado:", { saleItems, itemsError });
+
+          if (itemsError) {
+            alert(`Venta creada, pero falló el detalle: ${itemsError.message}`);
+            return;
+          }
+        }
+
+        const { data, error } = await supabase
+          .from("layaways")
+          .update({
+            balance: 0,
+            deposit: newDeposit,
+            status: "paid",
+            notes: `Apartado liquidado y registrado como venta #${saleData.id}`,
+          })
+          .eq("id", selected.id)
+          .select()
+          .single();
+
+        console.log("Respuesta update layaway liquidado:", { data, error });
+
+        if (error) {
+          alert(`Venta creada, pero falló actualizar apartado: ${error.message}`);
+          return;
+        }
+
+        alert(`Apartado liquidado correctamente. Venta #${saleData.id} creada en historial.`);
       } else {
+        const { data, error } = await supabase
+          .from("layaways")
+          .update({
+            balance: newBalance,
+            deposit: newDeposit,
+            status: "active",
+          })
+          .eq("id", selected.id)
+          .select()
+          .single();
+
+        console.log("Respuesta update abono layaway:", { data, error });
+
+        if (error) {
+          alert(`Error actualizando apartado: ${error.message}`);
+          return;
+        }
+
         alert("Pago registrado correctamente.");
       }
 
