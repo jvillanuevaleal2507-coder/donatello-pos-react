@@ -1957,6 +1957,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [selected, setSelected] = useState(null);
   const [payment, setPayment] = useState("");
   const [loadingLayaways, setLoadingLayaways] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
 
   async function refreshLayaways() {
     setLoadingLayaways(true);
@@ -1973,11 +1974,20 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   }, []);
 
   async function liquidateLayaway() {
-    if (!selected) return;
+    console.log("CLICK CONFIRMAR PAGO");
+    console.log("payment:", payment);
+    console.log("selected:", selected);
+
+    if (processingPayment) return;
+
+    if (!selected) {
+      alert("No hay apartado seleccionado.");
+      return;
+    }
 
     const amount = Number(payment || 0);
 
-    if (amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       alert("Ingresa un monto válido.");
       return;
     }
@@ -1989,45 +1999,47 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
       return;
     }
 
-    const newBalance = currentBalance - amount;
+    const newBalance = Math.max(currentBalance - amount, 0);
+    const newDeposit = Number(selected.deposit || 0) + amount;
+    const newStatus = newBalance <= 0 ? "paid" : "active";
 
-    if (newBalance <= 0) {
-      const { error } = await supabase
-        .from("layaways")
-        .update({
-          balance: 0,
-          deposit: Number(selected.deposit || 0) + amount,
-          status: "paid",
-        })
-        .eq("id", selected.id);
+    try {
+      setProcessingPayment(true);
 
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      alert("Apartado liquidado correctamente.");
-    } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("layaways")
         .update({
           balance: newBalance,
-          deposit: Number(selected.deposit || 0) + amount,
+          deposit: newDeposit,
+          status: newStatus,
         })
-        .eq("id", selected.id);
+        .eq("id", selected.id)
+        .select()
+        .single();
+
+      console.log("Respuesta update layaway:", { data, error });
 
       if (error) {
-        alert(error.message);
+        alert(`Error actualizando apartado: ${error.message}`);
         return;
       }
 
-      alert("Pago registrado correctamente.");
-    }
+      if (newStatus === "paid") {
+        alert("Apartado liquidado correctamente.");
+      } else {
+        alert("Pago registrado correctamente.");
+      }
 
-    setSelected(null);
-    setPayment("");
-    await refreshLayaways();
-    await loadSales();
+      setSelected(null);
+      setPayment("");
+      await refreshLayaways();
+      await loadSales();
+    } catch (error) {
+      console.error("Error inesperado liquidando apartado:", error);
+      alert(`Error inesperado: ${error.message || error}`);
+    } finally {
+      setProcessingPayment(false);
+    }
   }
 
   return (
@@ -2114,7 +2126,12 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
               )}
 
               <div style={{ marginTop: 14 }}>
-                <Button onClick={() => setSelected(item)}>
+                <Button
+                  onClick={() => {
+                    setSelected(item);
+                    setPayment(String(item.balance || ""));
+                  }}
+                >
                   Liquidar / Abonar
                 </Button>
               </div>
@@ -2155,8 +2172,11 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                   Cancelar
                 </Button>
 
-                <Button onClick={liquidateLayaway}>
-                  Confirmar pago
+                <Button
+                  onClick={liquidateLayaway}
+                  disabled={processingPayment}
+                >
+                  {processingPayment ? "Procesando..." : "Confirmar pago"}
                 </Button>
               </div>
             </div>
