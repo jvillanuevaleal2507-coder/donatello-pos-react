@@ -1013,6 +1013,7 @@ function VentasDonatelloPOSApp() {
   {quickSearch.trim() && (
     <div className="quick-results">
       {products
+        .filter((p) => Number(p.stock || 0) > 0)
         .filter((p) => {
           const text = `${p.name || ""} ${p.code || ""} ${p.category || ""}`.toLowerCase();
           return text.includes(quickSearch.toLowerCase());
