@@ -407,6 +407,32 @@ function VentasDonatelloPOSApp() {
   const adjustedProfit = originalProfit - discountAmount;
 
   const itemsCount = useMemo(() => cart.reduce((sum, item) => sum + item.qty, 0), [cart]);
+
+  const inventoryStats = useMemo(() => {
+    return products
+      .filter((product) => Number(product.stock || 0) > 0)
+      .reduce(
+        (totals, product) => {
+          const stock = Number(product.stock || 0);
+          const price = Number(product.price || 0);
+          const cost = Number(product.cost || 0);
+
+          totals.units += stock;
+          totals.salesValue += price * stock;
+          totals.costValue += cost * stock;
+          totals.potentialProfit += (price - cost) * stock;
+
+          return totals;
+        },
+        {
+          units: 0,
+          salesValue: 0,
+          costValue: 0,
+          potentialProfit: 0,
+        }
+      );
+  }, [products]);
+
   const change = Number(received || 0) - totalFinal;
 
    
@@ -1300,16 +1326,19 @@ function VentasDonatelloPOSApp() {
         <Route
           path="/inventario"
           element={
-            <InventoryPage
-              products={filteredProducts}
-              allProducts={products}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              categoryFilter={categoryFilter}
-              setCategoryFilter={setCategoryFilter}
-              categories={categories}
-              loadProducts={loadProducts}
-            />
+            <>
+              <InventoryTotals stats={inventoryStats} />
+              <InventoryPage
+                products={filteredProducts}
+                allProducts={products}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                categoryFilter={categoryFilter}
+                setCategoryFilter={setCategoryFilter}
+                categories={categories}
+                loadProducts={loadProducts}
+              />
+            </>
           }
         />
 
@@ -1363,6 +1392,47 @@ function VentasDonatelloPOSApp() {
 );
 }
 
+
+
+function InventoryTotals({ stats }) {
+  return (
+    <section className="inventory-totals-section">
+      <div className="inventory-totals-header">
+        <div>
+          <span className="eyebrow">Resumen de inventario</span>
+          <h2>Totales actuales</h2>
+          <p>Calculado solo con productos que tienen stock disponible.</p>
+        </div>
+      </div>
+
+      <div className="inventory-kpis-grid">
+        <Card className="inventory-kpi-card">
+          <span className="metric-label">Piezas en stock</span>
+          <strong className="metric-value">{stats.units}</strong>
+          <small>Unidades disponibles para venta</small>
+        </Card>
+
+        <Card className="inventory-kpi-card">
+          <span className="metric-label">Venta potencial</span>
+          <strong className="metric-value">{money(stats.salesValue)}</strong>
+          <small>Precio de venta × stock</small>
+        </Card>
+
+        <Card className="inventory-kpi-card">
+          <span className="metric-label">Valor inventario</span>
+          <strong className="metric-value">{money(stats.costValue)}</strong>
+          <small>Costo × stock</small>
+        </Card>
+
+        <Card className="inventory-kpi-card profit">
+          <span className="metric-label">Utilidad potencial</span>
+          <strong className="metric-value">{money(stats.potentialProfit)}</strong>
+          <small>Venta potencial - valor inventario</small>
+        </Card>
+      </div>
+    </section>
+  );
+}
 
 
 function EditProduct({ product, onSaved }) {
@@ -2836,6 +2906,77 @@ const styles = `
     margin-top: 4px;
   }
 
+  .inventory-totals-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .inventory-totals-header {
+    background: linear-gradient(135deg, #0b2f23 0%, #123c2c 58%, #b37a20 100%);
+    color: #fff7e8;
+    border: 1px solid rgba(247,183,51,.35);
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.16);
+  }
+
+  .inventory-totals-header .eyebrow {
+    display: block;
+    color: #f7b733;
+    font-size: .76rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .inventory-totals-header h2 {
+    font-size: clamp(1.45rem, 3vw, 2.2rem);
+    font-weight: 900;
+    letter-spacing: -.03em;
+  }
+
+  .inventory-totals-header p {
+    margin-top: 6px;
+    color: rgba(255,247,232,.82);
+    font-weight: 700;
+  }
+
+  .inventory-kpis-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .inventory-kpi-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(179,122,32,.25);
+  }
+
+  .inventory-kpi-card::after {
+    content: "";
+    position: absolute;
+    right: -35px;
+    top: -35px;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    background: rgba(247,183,51,.13);
+  }
+
+  .inventory-kpi-card small {
+    display: block;
+    margin-top: 8px;
+    color: var(--muted);
+    font-weight: 800;
+  }
+
+  .inventory-kpi-card.profit .metric-value {
+    color: #b37a20;
+  }
+
   .inventory-section {
     display: flex;
     flex-direction: column;
@@ -3500,6 +3641,19 @@ const styles = `
       font-size: 1.2rem;
     }
   }
+
+  @media (max-width: 920px) {
+    .inventory-kpis-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 560px) {
+    .inventory-kpis-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
 `;
   export default function VentasDonatelloPOS() {
   return (
