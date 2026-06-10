@@ -911,73 +911,17 @@ function VentasDonatelloPOSApp() {
       <style>{styles}</style>
 
       <main className="shell">
-     <header
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: 24,
-    borderRadius: 22,
-    background: "linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%)",
-    color: "white",
-    boxShadow: "0 12px 30px rgba(0,0,0,.18)",
-    marginBottom: 16,
-    overflow: "hidden",
-  }}
->
-  <div
-    style={{
-      width: 120,
-      minWidth: 120,
-      height: 120,
-      borderRadius: 16,
-      background: "rgba(255,255,255,.14)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      overflow: "hidden",
-      padding: 4,
-    }}
-  >
+     <header className="brand-hero">
+  <div className="brand-hero-logo">
     <img
       src={logoDonatello}
       alt="Ventas Donatello"
-      style={{
-        width: "140%",
-        height: "140%",
-        objectFit: "contain",
-        display: "block",
-      }}
     />
   </div>
 
-  <div
-  style={{
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-  }}
->
-  <h1
-    style={{
-      margin: 0,
-      fontSize: 40,
-      lineHeight: 1,
-      fontWeight: 900,
-    }}
-  >
-    Ventas Donatello
-  </h1>
-    <p
-      style={{
-        margin: "6px 0 0",
-        fontSize: 25,
-        opacity: 0.92,
-        fontWeight: 500,
-      }}
-    >
-      Diseño, orden y estilo para cada espacio.
-    </p>
+  <div className="brand-hero-copy">
+    <h1>Ventas Donatello</h1>
+    <p>Diseño, orden y estilo para cada espacio.</p>
   </div>
 </header>
 
@@ -2695,11 +2639,12 @@ const styles = `
     gap: 16px;
   }
 
-.brand-header {
+.brand-header,
+.brand-hero {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px;
+  gap: 18px;
+  padding: clamp(16px, 2.4vw, 24px);
   border-radius: 24px;
   background: linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%);
   color: white;
@@ -2707,13 +2652,48 @@ const styles = `
   margin-bottom: 18px;
   overflow: hidden;
 }
-.brand-logo {
-  width: 72px;
-  min-width: 72px;
-  height: 72px;
+
+.brand-logo,
+.brand-hero-logo {
+  width: clamp(78px, 12vw, 120px);
+  min-width: clamp(78px, 12vw, 120px);
+  height: clamp(78px, 12vw, 120px);
+  border-radius: 18px;
+  background: rgba(255,255,255,.14);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.brand-hero-logo img,
+.brand-logo img {
+  width: 140%;
+  height: 140%;
+  object-fit: contain;
+  display: block;
+}
+
+.brand-hero-copy {
+  min-width: 0;
+}
+
+.brand-hero-copy h1 {
+  margin: 0;
+  font-size: clamp(2rem, 5vw, 2.7rem);
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+}
+
+.brand-hero-copy p {
+  margin: 8px 0 0;
+  font-size: clamp(1.05rem, 2.8vw, 1.55rem);
+  line-height: 1.18;
+  opacity: 0.94;
+  font-weight: 650;
 }
 
   h1, h2, h3, p { margin: 0; }
@@ -3860,6 +3840,97 @@ const styles = `
   @media (max-width: 560px) {
     .inventory-kpis-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .brand-hero {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 10px;
+      padding: 18px 16px;
+      border-radius: 22px;
+    }
+
+    .brand-hero-logo {
+      width: 116px;
+      min-width: 116px;
+      height: 116px;
+    }
+
+    .brand-hero-copy h1 {
+      font-size: clamp(2.25rem, 10vw, 3.15rem);
+      line-height: .98;
+    }
+
+    .brand-hero-copy p {
+      max-width: 330px;
+      font-size: clamp(1.15rem, 5.4vw, 1.65rem);
+      line-height: 1.18;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .premium-nav {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .premium-nav-btn {
+      min-height: 88px;
+      border-radius: 20px;
+      font-size: 1.08rem;
+      padding: 12px 8px;
+    }
+
+    .premium-nav-btn span,
+    .premium-nav-btn .nav-icon {
+      font-size: 2.35rem;
+      line-height: 1;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .app {
+      padding: 8px;
+    }
+
+    .shell {
+      padding: 8px;
+      gap: 12px;
+    }
+
+    .brand-hero {
+      padding: 16px 12px;
+      margin-bottom: 12px;
+    }
+
+    .brand-hero-logo {
+      width: 106px;
+      min-width: 106px;
+      height: 106px;
+      border-radius: 16px;
+    }
+
+    .brand-hero-copy h1 {
+      font-size: 2.45rem;
+    }
+
+    .brand-hero-copy p {
+      font-size: 1.34rem;
+    }
+
+    .premium-nav {
+      gap: 10px;
+      margin: 10px 0 14px;
+    }
+
+    .premium-nav-btn {
+      min-height: 82px;
+      border-radius: 18px;
+      font-size: 1rem;
     }
   }
 
