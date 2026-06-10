@@ -1788,11 +1788,87 @@ function ReceiptModal({ sale, onClose }) {
     if (printLockRef.current) return;
     printLockRef.current = true;
 
-    window.print();
+    const ticket = document.querySelector(".ticket-print-area");
 
-    window.setTimeout(() => {
+    if (!ticket) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=420,height=700");
+
+    if (!printWindow) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Ticket Ventas Donatello</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            * { box-sizing: border-box; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #111827;
+            }
+            .ticket-print-area {
+              width: 80mm;
+              max-width: 80mm;
+              margin: 0 auto;
+              padding: 10px;
+              background: #ffffff;
+              border: none;
+              box-shadow: none;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .ticket-header { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 10px; margin-bottom: 10px; }
+            .ticket-logo { width: 74px; height: 74px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+            .ticket-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+            .ticket-header h2 { font-size: 1.25rem; letter-spacing: 0.04em; margin: 0; color: #12372b; font-weight: 900; }
+            .ticket-brand-line { color: #6b5a35; font-size: 0.72rem; font-weight: 700; margin: 4px 0 0; }
+            .ticket-doc-title { color: #8a6a2f; font-weight: 700; margin: 4px 0 0; }
+            .ticket-meta { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .ticket-header p, .ticket-meta p, .ticket-footer { font-size: 0.8rem; margin: 3px 0; }
+            .ticket-items { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .ticket-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 0.82rem; margin-bottom: 8px; }
+            .ticket-item span { color: #555; font-size: 0.74rem; display: block; margin-top: 2px; }
+            .ticket-totals { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .ticket-totals div { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; font-size: 0.84rem; }
+            .ticket-totals span { color: #555; }
+            .ticket-totals b { font-size: 0.95rem; }
+            .ticket-total-label { color: #12372b !important; font-weight: 900 !important; text-transform: uppercase; }
+            .ticket-catalog-box { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 10px; margin-bottom: 8px; }
+            .ticket-catalog-box p { margin: 3px 0; font-size: 0.78rem; color: #12372b; font-weight: 800; }
+            .ticket-catalog-box img { width: 86px; height: 86px; object-fit: contain; display: block; margin: 5px auto; }
+            .ticket-catalog-box span { display: block; font-size: 0.68rem; color: #374151; word-break: break-word; }
+            .ticket-footer { text-align: center; padding-top: 4px; margin-top: 8px; font-weight: 700; color: #8a6a2f; }
+          </style>
+        </head>
+        <body>${ticket.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    printWindow.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
       printLockRef.current = false;
-    }, 1200);
+    }, 500);
   }
 
   const isLayaway = sale.type === "layaway";
@@ -3485,13 +3561,23 @@ const styles = `
       overflow: visible !important;
     }
 
-    .shell > *:not(.receipt-overlay) {
-      display: none !important;
+    body * {
+      visibility: hidden !important;
+    }
+
+    .receipt-overlay,
+    .receipt-overlay * {
+      visibility: visible !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     .receipt-overlay {
-      position: static !important;
-      inset: auto !important;
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      right: auto !important;
+      bottom: auto !important;
       display: block !important;
       background: white !important;
       padding: 0 !important;
@@ -3522,6 +3608,7 @@ const styles = `
 
     .no-print {
       display: none !important;
+      visibility: hidden !important;
     }
   }
 
