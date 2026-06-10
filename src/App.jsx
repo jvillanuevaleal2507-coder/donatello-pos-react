@@ -1758,6 +1758,31 @@ function QRSection({ products }) {
 }
 function ReceiptModal({ sale, onClose }) {
   const printLockRef = useRef(false);
+  const catalogUrl = "https://catalogo.ventasdonatello.com/";
+  const [catalogQr, setCatalogQr] = useState("");
+
+  useEffect(() => {
+    let alive = true;
+
+    QRCode.toDataURL(catalogUrl, {
+      width: 220,
+      margin: 1,
+      color: {
+        dark: "#12372b",
+        light: "#ffffff",
+      },
+    })
+      .then((dataUrl) => {
+        if (alive) setCatalogQr(dataUrl);
+      })
+      .catch(() => {
+        if (alive) setCatalogQr("");
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   function printReceipt() {
     if (printLockRef.current) return;
@@ -1790,8 +1815,9 @@ function ReceiptModal({ sale, onClose }) {
             <div className="ticket-logo ticket-logo-img">
               <img src={logoDonatello} alt="Ventas Donatello" />
             </div>
-            <h2>Ventas Donatello</h2>
-            <p>{isLayaway ? "Ticket de apartado" : "Ticket de venta"}</p>
+            <h2>VENTAS DONATELLO</h2>
+            <p className="ticket-brand-line">Bazar • Hogar • Muebles • Iluminación • Juguetes</p>
+            <p>{isLayaway ? "Comprobante de Apartado" : "Comprobante de Venta"}</p>
           </div>
 
           <div className="ticket-meta">
@@ -1931,7 +1957,13 @@ function ReceiptModal({ sale, onClose }) {
             </p>
           )}
 
-          <p className="ticket-footer">Gracias por tu compra ✨</p>
+          <div className="ticket-catalog-box">
+            <p>Escanea y descubre más productos</p>
+            {catalogQr && <img src={catalogQr} alt="Catálogo Ventas Donatello" />}
+            <span>catalogo.ventasdonatello.com</span>
+          </div>
+
+          <p className="ticket-footer">✨ Gracias por confiar en Ventas Donatello ✨</p>
         </div>
       </div>
     </div>
@@ -3285,8 +3317,8 @@ const styles = `
   }
 
   .ticket-logo {
-    width: 52px;
-    height: 52px;
+    width: 64px;
+    height: 64px;
     border-radius: 16px;
     background: #fff4df;
     display: inline-flex;
@@ -3303,15 +3335,24 @@ const styles = `
   }
 
   .ticket-logo-img img {
-    width: 145%;
-    height: 145%;
+    width: 150%;
+    height: 150%;
     object-fit: contain;
     display: block;
   }
 
   .ticket-header h2 {
-    font-size: 1.3rem;
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
     margin: 0;
+  }
+
+  .ticket-brand-line {
+    font-size: 0.68rem !important;
+    color: #6b5a35 !important;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-top: 3px !important;
   }
 
   .ticket-header p,
@@ -3373,11 +3414,44 @@ const styles = `
     margin-top: 2px;
   }
 
+  .ticket-catalog-box {
+    border-top: 1px dashed #aaa;
+    margin-top: 12px;
+    padding-top: 12px;
+    text-align: center;
+  }
+
+  .ticket-catalog-box p {
+    margin: 0 0 6px;
+    font-size: 0.78rem;
+    color: #12372b;
+    font-weight: 800;
+  }
+
+  .ticket-catalog-box img {
+    width: 82px;
+    height: 82px;
+    display: block;
+    margin: 0 auto 5px;
+    border: 1px solid #e1d4aa;
+    border-radius: 8px;
+    padding: 4px;
+    background: white;
+  }
+
+  .ticket-catalog-box span {
+    display: block;
+    font-size: 0.72rem;
+    color: #444;
+    font-weight: 700;
+  }
+
   .ticket-footer {
     text-align: center;
     border-top: 1px dashed #aaa;
     padding-top: 10px;
     margin-top: 10px;
+    font-weight: 700;
   }
 
   @media print {
