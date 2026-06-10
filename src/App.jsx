@@ -1133,7 +1133,7 @@ function VentasDonatelloPOSApp() {
                           <ProductImage src={item.image_url} alt={item.name} small />
                           <div className="cart-info">
                             <strong>{item.name}</strong>
-                            <span>{item.code} · x{item.qty}</span>
+                            <span>Cantidad: {item.qty}</span>
                           </div>
                           <div className="cart-price">
                             <strong>{money(Number(item.price || 0) * item.qty)}</strong>
@@ -1825,7 +1825,7 @@ function ReceiptModal({ sale, onClose }) {
               <div className="ticket-item" key={`${item.code}-${index}`}>
                 <div>
                   <b>{item.name}</b>
-                  <span>{item.code} · x{item.qty}</span>
+                  <span>Cantidad: {item.qty}</span>
                 </div>
                 <strong>{money(item.subtotal)}</strong>
               </div>
@@ -2002,7 +2002,7 @@ function SalesSection({ sales, loadingSales, loadSales }) {
                     <div className="sale-item-row" key={`${sale.id}-${item.code}-${index}`}>
                       <div>
                         <strong>{item.name}</strong>
-                        <span>{item.code} · x{item.qty}</span>
+                        <span>Cantidad: {item.qty}</span>
                       </div>
                       <b>{money(item.subtotal)}</b>
                     </div>
