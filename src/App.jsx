@@ -1817,7 +1817,7 @@ function ReceiptModal({ sale, onClose }) {
             </div>
             <h2>VENTAS DONATELLO</h2>
             <p className="ticket-brand-line">Bazar • Hogar • Muebles • Iluminación • Juguetes</p>
-            <p>{isLayaway ? "Comprobante de Apartado" : "Comprobante de Venta"}</p>
+            <p className="ticket-doc-title">{isLayaway ? "Comprobante de Apartado" : "Comprobante de Venta"}</p>
           </div>
 
           <div className="ticket-meta">
@@ -1900,7 +1900,7 @@ function ReceiptModal({ sale, onClose }) {
                 fontWeight: 900,
               }}
             >
-              <span>Total final</span>
+              <span className="ticket-total-label">Total final</span>
               <strong>{money(sale.total)}</strong>
             </div>
           </div>
@@ -3345,6 +3345,8 @@ const styles = `
     font-size: 1.25rem;
     letter-spacing: 0.04em;
     margin: 0;
+    color: #12372b;
+    font-weight: 900;
   }
 
   .ticket-brand-line {
@@ -3353,6 +3355,19 @@ const styles = `
     font-weight: 700;
     letter-spacing: 0.02em;
     margin-top: 3px !important;
+  }
+
+  .ticket-doc-title {
+    color: #8a6a2f !important;
+    font-weight: 800;
+    margin-top: 4px !important;
+  }
+
+  .ticket-total-label {
+    color: #12372b;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   .ticket-header p,
@@ -3451,7 +3466,8 @@ const styles = `
     border-top: 1px dashed #aaa;
     padding-top: 10px;
     margin-top: 10px;
-    font-weight: 700;
+    font-weight: 800;
+    color: #8a6a2f !important;
   }
 
   @media print {
