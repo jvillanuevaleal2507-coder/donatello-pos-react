@@ -1910,10 +1910,6 @@ function ReceiptModal({ sale, onClose }) {
                   <span>Cambio</span>
                   <b>{money(sale.change_amount)}</b>
                 </div>
-                <div>
-                  <span>Utilidad</span>
-                  <b>{money(sale.profit)}</b>
-                </div>
               </>
             )}
           </div>
