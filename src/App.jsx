@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
+import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
@@ -1758,6 +1759,7 @@ function QRSection({ products }) {
 }
 function ReceiptModal({ sale, onClose }) {
   const printLockRef = useRef(false);
+  const ticketRef = useRef(null);
   const catalogUrl = "https://catalogo.ventasdonatello.com/";
   const [catalogQr, setCatalogQr] = useState("");
 
@@ -1871,22 +1873,56 @@ function ReceiptModal({ sale, onClose }) {
     }, 500);
   }
 
+  async function downloadReceiptPng() {
+    const ticket = ticketRef.current;
+
+    if (!ticket) {
+      alert("No se encontró el ticket para descargar.");
+      return;
+    }
+
+    try {
+      const dataUrl = await toPng(ticket, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: "#ffffff",
+        style: {
+          margin: "0",
+          transform: "none",
+        },
+      });
+
+      const link = document.createElement("a");
+      const ticketType = sale.type === "layaway" ? "apartado" : "venta";
+      link.download = `ticket-donatello-${ticketType}-${sale.id}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Error al generar PNG del ticket:", error);
+      alert("No se pudo generar la imagen del ticket. Intenta de nuevo o usa Imprimir/PDF.");
+    }
+  }
+
   const isLayaway = sale.type === "layaway";
 
   return (
     <div className="receipt-overlay">
       <div className="receipt-panel">
         <div className="receipt-actions no-print">
-          <Button variant="secondary" onClick={onClose}>
-            Cerrar
+          <Button onClick={downloadReceiptPng}>
+            Descargar PNG
           </Button>
 
           <Button onClick={printReceipt}>
-            Imprimir / Guardar PDF
+            Imprimir / PDF
+          </Button>
+
+          <Button variant="secondary" onClick={onClose}>
+            Cerrar
           </Button>
         </div>
 
-        <div className="ticket-print-area">
+        <div className="ticket-print-area" ref={ticketRef}>
           <div className="ticket-header">
             <div className="ticket-logo ticket-logo-img">
               <img src={logoDonatello} alt="Ventas Donatello" />
@@ -3371,7 +3407,7 @@ const styles = `
 
   .receipt-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 12px;
   }
