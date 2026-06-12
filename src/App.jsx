@@ -2381,6 +2381,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [recentPayments, setRecentPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
+  const [expandedLayawayHistoryId, setExpandedLayawayHistoryId] = useState(null);
 
   async function loadRecentPayments() {
     setLoadingPayments(true);
@@ -2462,6 +2463,12 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
       items: Array.isArray(payment.items) ? payment.items : [],
       sale_id: payment.sale_id,
     });
+  }
+
+  function getPaymentsForLayaway(layawayId) {
+    return recentPayments.filter(
+      (payment) => Number(payment.layaway_id) === Number(layawayId)
+    );
   }
 
   useEffect(() => {
@@ -2712,7 +2719,14 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                 </div>
               )}
 
-              <div style={{ marginTop: 14 }}>
+              <div
+                style={{
+                  marginTop: 14,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
                 <Button
                   onClick={() => {
                     setSelected(item);
@@ -2721,7 +2735,91 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                 >
                   Liquidar / Abonar
                 </Button>
+
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setExpandedLayawayHistoryId((current) =>
+                      Number(current) === Number(item.id) ? null : item.id
+                    );
+                  }}
+                >
+                  Historial / Reimprimir
+                </Button>
               </div>
+
+              {Number(expandedLayawayHistoryId) === Number(item.id) && (
+                <div
+                  style={{
+                    marginTop: 14,
+                    padding: 14,
+                    borderRadius: 18,
+                    background: "#fff7e8",
+                    border: "1px solid #ead6ad",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: 0 }}>Historial de abonos</h3>
+                      <p className="muted" style={{ marginTop: 4 }}>
+                        Reimprime o descarga el recibo de cada movimiento.
+                      </p>
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      onClick={loadRecentPayments}
+                      disabled={loadingPayments}
+                    >
+                      {loadingPayments ? "Cargando..." : "Actualizar"}
+                    </Button>
+                  </div>
+
+                  {getPaymentsForLayaway(item.id).length === 0 ? (
+                    <p className="muted">
+                      Este apartado aún no tiene abonos registrados en historial.
+                      Los pagos hechos antes de activar esta función no se pueden reimprimir.
+                    </p>
+                  ) : (
+                    <div className="sale-items-list">
+                      {getPaymentsForLayaway(item.id).map((payment) => (
+                        <div className="sale-item-row" key={payment.id}>
+                          <div>
+                            <strong>
+                              {payment.payment_type === "liquidation"
+                                ? "Liquidación"
+                                : "Abono"}{" "}
+                              {money(payment.payment_amount)}
+                            </strong>
+                            <span>
+                              {new Date(payment.created_at).toLocaleString("es-MX")} ·
+                              Saldo anterior {money(payment.previous_balance)} ·
+                              Saldo nuevo {money(payment.new_balance)}
+                            </span>
+                          </div>
+
+                          <div style={{ textAlign: "right" }}>
+                            <button
+                              className="text-btn"
+                              onClick={() => openPaymentReceiptFromHistory(payment)}
+                            >
+                              Reimprimir recibo
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>
