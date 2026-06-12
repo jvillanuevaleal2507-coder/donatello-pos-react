@@ -2229,6 +2229,7 @@ function PaymentReceiptModal({ receipt, onClose }) {
           </div>
 
           <div className="payment-ticket-section">
+            {receipt.payment_id && <p><b>Recibo:</b> #{receipt.payment_id}</p>}
             <p><b>Apartado:</b> #{receipt.id}</p>
             {receipt.sale_id && <p><b>Venta final:</b> #{receipt.sale_id}</p>}
             <p><b>Fecha:</b> {new Date(receipt.payment_date).toLocaleString("es-MX")}</p>
@@ -2378,15 +2379,89 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [loadingLayaways, setLoadingLayaways] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [paymentReceipt, setPaymentReceipt] = useState(null);
+  const [recentPayments, setRecentPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  async function loadRecentPayments() {
+    setLoadingPayments(true);
+
+    const { data, error } = await supabase
+      .from("layaway_payments")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.error("Error cargando historial de abonos:", error);
+      setRecentPayments([]);
+    } else {
+      setRecentPayments(data || []);
+    }
+
+    setLoadingPayments(false);
+  }
 
   async function refreshLayaways() {
     setLoadingLayaways(true);
 
     try {
       await loadLayaways();
+      await loadRecentPayments();
     } finally {
       setLoadingLayaways(false);
     }
+  }
+
+  async function savePaymentHistory(receiptData, saleId = null) {
+    const payload = {
+      layaway_id: receiptData.id,
+      payment_amount: Number(receiptData.payment_amount || 0),
+      previous_balance: Number(receiptData.previous_balance || 0),
+      new_balance: Number(receiptData.balance || 0),
+      previous_deposit: Number(receiptData.previous_deposit || 0),
+      new_deposit: Number(receiptData.total_deposit || 0),
+      payment_type: receiptData.type === "liquidation" ? "liquidation" : "payment",
+      sale_id: saleId,
+      customer_name: receiptData.customer_name || "",
+      customer_phone: receiptData.customer_phone || "",
+      total: Number(receiptData.total || 0),
+      due_date: receiptData.due_date || null,
+      items: receiptData.items || [],
+    };
+
+    const { data, error } = await supabase
+      .from("layaway_payments")
+      .insert([payload])
+      .select("id, created_at")
+      .single();
+
+    if (error) {
+      console.error("Error guardando historial de abono:", error);
+      alert(`El pago se guardó, pero no se pudo guardar el historial del recibo: ${error.message}`);
+      return null;
+    }
+
+    return data;
+  }
+
+  function openPaymentReceiptFromHistory(payment) {
+    setPaymentReceipt({
+      id: payment.layaway_id,
+      payment_id: payment.id,
+      type: payment.payment_type === "liquidation" ? "liquidation" : "payment",
+      payment_date: payment.created_at,
+      customer_name: payment.customer_name,
+      customer_phone: payment.customer_phone,
+      total: Number(payment.total || 0),
+      previous_deposit: Number(payment.previous_deposit || 0),
+      payment_amount: Number(payment.payment_amount || 0),
+      total_deposit: Number(payment.new_deposit || 0),
+      previous_balance: Number(payment.previous_balance || 0),
+      balance: Number(payment.new_balance || 0),
+      due_date: payment.due_date,
+      items: Array.isArray(payment.items) ? payment.items : [],
+      sale_id: payment.sale_id,
+    });
   }
 
   useEffect(() => {
@@ -2510,9 +2585,12 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           return;
         }
 
+        const savedPayment = await savePaymentHistory(paymentReceiptData, saleData.id);
         setPaymentReceipt({
           ...paymentReceiptData,
           sale_id: saleData.id,
+          payment_id: savedPayment?.id,
+          payment_date: savedPayment?.created_at || paymentReceiptData.payment_date,
         });
         alert(`Apartado liquidado correctamente. Venta #${saleData.id} creada en historial.`);
       } else {
@@ -2530,7 +2608,12 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           return;
         }
 
-        setPaymentReceipt(paymentReceiptData);
+        const savedPayment = await savePaymentHistory(paymentReceiptData);
+        setPaymentReceipt({
+          ...paymentReceiptData,
+          payment_id: savedPayment?.id,
+          payment_date: savedPayment?.created_at || paymentReceiptData.payment_date,
+        });
         alert("Pago registrado correctamente.");
       }
 
@@ -2643,6 +2726,45 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           ))}
         </div>
       )}
+
+      <Card>
+        <div className="sales-header">
+          <div>
+            <h2>Historial de abonos</h2>
+            <p className="muted">Últimos 30 abonos registrados para reimprimir recibos.</p>
+          </div>
+
+          <Button onClick={loadRecentPayments} disabled={loadingPayments}>
+            {loadingPayments ? "Cargando..." : "Actualizar historial"}
+          </Button>
+        </div>
+
+        {recentPayments.length === 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Todavía no hay abonos registrados en historial.
+          </p>
+        ) : (
+          <div className="sale-items-list" style={{ marginTop: 12 }}>
+            {recentPayments.map((payment) => (
+              <div className="sale-item-row" key={payment.id}>
+                <div>
+                  <strong>{payment.customer_name || "Cliente sin nombre"}</strong>
+                  <span>
+                    {new Date(payment.created_at).toLocaleString("es-MX")} · {payment.payment_type === "liquidation" ? "Liquidación" : "Abono"} · Saldo {money(payment.new_balance)}
+                  </span>
+                </div>
+
+                <div style={{ textAlign: "right", display: "grid", gap: 6 }}>
+                  <b>{money(payment.payment_amount)}</b>
+                  <button className="text-btn" onClick={() => openPaymentReceiptFromHistory(payment)}>
+                    Reimprimir
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {selected && (
         <div className="receipt-overlay">
