@@ -2082,6 +2082,214 @@ function ReceiptModal({ sale, onClose }) {
   );
 }
 
+
+function PaymentReceiptModal({ receipt, onClose }) {
+  const printLockRef = useRef(false);
+  const ticketRef = useRef(null);
+  const isLiquidation = receipt.type === "liquidation";
+
+  function printReceipt() {
+    if (printLockRef.current) return;
+    printLockRef.current = true;
+
+    const ticket = ticketRef.current;
+
+    if (!ticket) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=420,height=700");
+
+    if (!printWindow) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Recibo de Abono Ventas Donatello</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            * { box-sizing: border-box; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #111827;
+            }
+            .payment-ticket {
+              width: 80mm;
+              max-width: 80mm;
+              margin: 0 auto;
+              padding: 10px;
+              background: #ffffff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .payment-ticket-header { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 10px; margin-bottom: 10px; }
+            .payment-ticket-logo { width: 76px; height: 76px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+            .payment-ticket-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+            .payment-ticket-header h2 { font-size: 1.25rem; letter-spacing: 0.04em; margin: 0; color: #12372b; font-weight: 900; }
+            .payment-ticket-title { color: #8a6a2f; font-weight: 900; margin: 4px 0 0; font-size: .85rem; }
+            .payment-ticket-section { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .payment-ticket-section p { font-size: 0.82rem; margin: 3px 0; }
+            .payment-ticket-row { display: flex; justify-content: space-between; gap: 10px; margin: 5px 0; font-size: 0.84rem; }
+            .payment-ticket-row span { color: #555; }
+            .payment-ticket-row b { font-size: .95rem; }
+            .payment-ticket-row.highlight { background: #fff4df; border: 1px solid #ead6ad; border-radius: 10px; padding: 8px; font-weight: 900; color: #12372b; }
+            .payment-ticket-row.highlight b { font-size: 1.12rem; }
+            .payment-ticket-items { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .payment-ticket-item { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; font-size: .82rem; }
+            .payment-ticket-item span { color: #555; font-size: .74rem; }
+            .payment-ticket-note { font-size: .76rem; line-height: 1.35; color: #444; text-align: center; }
+            .payment-ticket-footer { text-align: center; padding-top: 8px; margin-top: 8px; font-weight: 800; color: #8a6a2f; font-size: .82rem; }
+          </style>
+        </head>
+        <body>${ticket.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    printWindow.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+      printLockRef.current = false;
+    }, 500);
+  }
+
+  async function downloadReceiptPng() {
+    const ticket = ticketRef.current;
+
+    if (!ticket) {
+      alert("No se encontró el recibo para descargar.");
+      return;
+    }
+
+    try {
+      const dataUrl = await toPng(ticket, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: "#ffffff",
+        style: {
+          margin: "0",
+          transform: "none",
+        },
+      });
+
+      const link = document.createElement("a");
+      const receiptType = isLiquidation ? "liquidacion" : "abono";
+      link.download = `recibo-donatello-${receiptType}-${receipt.id}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Error al generar PNG del recibo:", error);
+      alert("No se pudo generar la imagen del recibo. Intenta de nuevo o usa Imprimir/PDF.");
+    }
+  }
+
+  return (
+    <div className="receipt-overlay">
+      <div className="receipt-panel">
+        <div className="receipt-actions no-print">
+          <Button onClick={downloadReceiptPng}>
+            Descargar PNG
+          </Button>
+
+          <Button onClick={printReceipt}>
+            Imprimir / PDF
+          </Button>
+
+          <Button variant="secondary" onClick={onClose}>
+            Cerrar
+          </Button>
+        </div>
+
+        <div className="payment-ticket" ref={ticketRef}>
+          <div className="payment-ticket-header">
+            <div className="payment-ticket-logo">
+              <img src={logoDonatello} alt="Ventas Donatello" />
+            </div>
+            <h2>VENTAS DONATELLO</h2>
+            <p className="ticket-brand-line">Bazar • Hogar • Muebles • Iluminación • Juguetes</p>
+            <p className="payment-ticket-title">
+              {isLiquidation ? "RECIBO DE LIQUIDACIÓN" : "RECIBO DE ABONO"}
+            </p>
+          </div>
+
+          <div className="payment-ticket-section">
+            <p><b>Apartado:</b> #{receipt.id}</p>
+            {receipt.sale_id && <p><b>Venta final:</b> #{receipt.sale_id}</p>}
+            <p><b>Fecha:</b> {new Date(receipt.payment_date).toLocaleString("es-MX")}</p>
+            <p><b>Cliente:</b> {receipt.customer_name}</p>
+            {receipt.customer_phone && <p><b>Teléfono:</b> {receipt.customer_phone}</p>}
+            {receipt.due_date && (
+              <p><b>Vigencia:</b> {new Date(`${receipt.due_date}T00:00:00`).toLocaleDateString("es-MX")}</p>
+            )}
+          </div>
+
+          <div className="payment-ticket-section">
+            <div className="payment-ticket-row">
+              <span>Total apartado</span>
+              <b>{money(receipt.total)}</b>
+            </div>
+            <div className="payment-ticket-row">
+              <span>Abonado anterior</span>
+              <b>{money(receipt.previous_deposit)}</b>
+            </div>
+            <div className="payment-ticket-row highlight">
+              <span>{isLiquidation ? "Liquidación actual" : "Abono actual"}</span>
+              <b>{money(receipt.payment_amount)}</b>
+            </div>
+            <div className="payment-ticket-row">
+              <span>Total abonado</span>
+              <b>{money(receipt.total_deposit)}</b>
+            </div>
+            <div className="payment-ticket-row">
+              <span>Saldo pendiente</span>
+              <b>{money(receipt.balance)}</b>
+            </div>
+          </div>
+
+          {receipt.items?.length > 0 && (
+            <div className="payment-ticket-items">
+              {receipt.items.map((item, index) => (
+                <div className="payment-ticket-item" key={`${receipt.id}-${index}`}>
+                  <div>
+                    <b>{item.name}</b>
+                    <span>Cantidad: {item.qty}</span>
+                  </div>
+                  <b>{money(item.subtotal)}</b>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="payment-ticket-note">
+            Este recibo ampara únicamente el abono registrado sobre el apartado indicado.
+            Conserva este comprobante para cualquier aclaración.
+          </p>
+
+          <p className="payment-ticket-footer">
+            ✨ Gracias por confiar en Ventas Donatello ✨
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SalesSection({ sales, loadingSales, loadSales }) {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const totalSold = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
@@ -2169,6 +2377,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [payment, setPayment] = useState("");
   const [loadingLayaways, setLoadingLayaways] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentReceipt, setPaymentReceipt] = useState(null);
 
   async function refreshLayaways() {
     setLoadingLayaways(true);
@@ -2185,10 +2394,6 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   }, []);
 
   async function liquidateLayaway() {
-    console.log("CLICK CONFIRMAR PAGO");
-    console.log("payment:", payment);
-    console.log("selected:", selected);
-
     if (processingPayment) return;
 
     if (!selected) {
@@ -2204,6 +2409,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     }
 
     const currentBalance = Number(selected.balance || 0);
+    const previousDeposit = Number(selected.deposit || 0);
 
     if (amount > currentBalance) {
       alert("El pago no puede ser mayor al saldo.");
@@ -2211,8 +2417,23 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     }
 
     const newBalance = Math.max(currentBalance - amount, 0);
-    const newDeposit = Number(selected.deposit || 0) + amount;
+    const newDeposit = previousDeposit + amount;
     const newStatus = newBalance <= 0 ? "paid" : "active";
+    const paymentReceiptData = {
+      id: selected.id,
+      type: newStatus === "paid" ? "liquidation" : "payment",
+      payment_date: new Date().toISOString(),
+      customer_name: selected.customer_name,
+      customer_phone: selected.customer_phone,
+      total: Number(selected.total || 0),
+      previous_deposit: previousDeposit,
+      payment_amount: amount,
+      total_deposit: newDeposit,
+      previous_balance: currentBalance,
+      balance: newBalance,
+      due_date: selected.due_date,
+      items: Array.isArray(selected.items) ? selected.items : [],
+    };
 
     try {
       setProcessingPayment(true);
@@ -2246,8 +2467,6 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           .select("id")
           .single();
 
-        console.log("Respuesta insert venta apartado:", { saleData, saleError });
-
         if (saleError) {
           alert(`Error creando venta final: ${saleError.message}`);
           return;
@@ -2270,15 +2489,13 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             .from("sale_items")
             .insert(saleItems);
 
-          console.log("Respuesta insert detalle venta apartado:", { saleItems, itemsError });
-
           if (itemsError) {
             alert(`Venta creada, pero falló el detalle: ${itemsError.message}`);
             return;
           }
         }
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("layaways")
           .update({
             balance: 0,
@@ -2286,37 +2503,34 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             status: "paid",
             notes: `Apartado liquidado y registrado como venta #${saleData.id}`,
           })
-          .eq("id", selected.id)
-          .select()
-          .single();
-
-        console.log("Respuesta update layaway liquidado:", { data, error });
+          .eq("id", selected.id);
 
         if (error) {
           alert(`Venta creada, pero falló actualizar apartado: ${error.message}`);
           return;
         }
 
+        setPaymentReceipt({
+          ...paymentReceiptData,
+          sale_id: saleData.id,
+        });
         alert(`Apartado liquidado correctamente. Venta #${saleData.id} creada en historial.`);
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("layaways")
           .update({
             balance: newBalance,
             deposit: newDeposit,
             status: "active",
           })
-          .eq("id", selected.id)
-          .select()
-          .single();
-
-        console.log("Respuesta update abono layaway:", { data, error });
+          .eq("id", selected.id);
 
         if (error) {
           alert(`Error actualizando apartado: ${error.message}`);
           return;
         }
 
+        setPaymentReceipt(paymentReceiptData);
         alert("Pago registrado correctamente.");
       }
 
@@ -2472,6 +2686,13 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             </div>
           </div>
         </div>
+      )}
+
+      {paymentReceipt && (
+        <PaymentReceiptModal
+          receipt={paymentReceipt}
+          onClose={() => setPaymentReceipt(null)}
+        />
       )}
     </section>
   );
@@ -3632,7 +3853,8 @@ const styles = `
       background: white !important;
     }
 
-    .ticket-print-area {
+    .ticket-print-area,
+    .payment-ticket {
       width: 80mm !important;
       max-width: 80mm !important;
       border: none !important;
@@ -3646,6 +3868,132 @@ const styles = `
       display: none !important;
       visibility: hidden !important;
     }
+  }
+
+
+  .payment-ticket {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #eee;
+    border-radius: 18px;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+  }
+
+  .payment-ticket-header {
+    text-align: center;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .payment-ticket-logo {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .payment-ticket-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .payment-ticket-header h2 {
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+    margin: 0;
+    color: #12372b;
+    font-weight: 900;
+  }
+
+  .payment-ticket-title {
+    color: #8a6a2f;
+    font-weight: 900;
+    margin: 4px 0 0;
+    font-size: .86rem;
+  }
+
+  .payment-ticket-section {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-section p {
+    font-size: 0.82rem;
+    margin: 3px 0;
+  }
+
+  .payment-ticket-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 5px 0;
+    font-size: 0.84rem;
+  }
+
+  .payment-ticket-row span {
+    color: #555;
+  }
+
+  .payment-ticket-row b {
+    font-size: .95rem;
+  }
+
+  .payment-ticket-row.highlight {
+    background: #fff4df;
+    border: 1px solid #ead6ad;
+    border-radius: 10px;
+    padding: 8px;
+    font-weight: 900;
+    color: #12372b;
+  }
+
+  .payment-ticket-row.highlight b {
+    font-size: 1.12rem;
+  }
+
+  .payment-ticket-items {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: .82rem;
+  }
+
+  .payment-ticket-item span {
+    display: block;
+    color: #555;
+    font-size: .74rem;
+    margin-top: 2px;
+  }
+
+  .payment-ticket-note {
+    font-size: .76rem;
+    line-height: 1.35;
+    color: #444;
+    text-align: center;
+  }
+
+  .payment-ticket-footer {
+    text-align: center;
+    padding-top: 8px;
+    margin-top: 8px;
+    font-weight: 800;
+    color: #8a6a2f;
+    font-size: .82rem;
   }
 
   .qr-layout {
@@ -3729,7 +4077,133 @@ const styles = `
     .form-grid { grid-template-columns: 1fr; }
     .product-card.with-image { grid-template-columns: auto 1fr; }
     .stock-pill { grid-column: 1 / -1; }
-    .qr-layout { grid-template-columns: 1fr; }
+  
+  .payment-ticket {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #eee;
+    border-radius: 18px;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+  }
+
+  .payment-ticket-header {
+    text-align: center;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .payment-ticket-logo {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .payment-ticket-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .payment-ticket-header h2 {
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+    margin: 0;
+    color: #12372b;
+    font-weight: 900;
+  }
+
+  .payment-ticket-title {
+    color: #8a6a2f;
+    font-weight: 900;
+    margin: 4px 0 0;
+    font-size: .86rem;
+  }
+
+  .payment-ticket-section {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-section p {
+    font-size: 0.82rem;
+    margin: 3px 0;
+  }
+
+  .payment-ticket-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 5px 0;
+    font-size: 0.84rem;
+  }
+
+  .payment-ticket-row span {
+    color: #555;
+  }
+
+  .payment-ticket-row b {
+    font-size: .95rem;
+  }
+
+  .payment-ticket-row.highlight {
+    background: #fff4df;
+    border: 1px solid #ead6ad;
+    border-radius: 10px;
+    padding: 8px;
+    font-weight: 900;
+    color: #12372b;
+  }
+
+  .payment-ticket-row.highlight b {
+    font-size: 1.12rem;
+  }
+
+  .payment-ticket-items {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: .82rem;
+  }
+
+  .payment-ticket-item span {
+    display: block;
+    color: #555;
+    font-size: .74rem;
+    margin-top: 2px;
+  }
+
+  .payment-ticket-note {
+    font-size: .76rem;
+    line-height: 1.35;
+    color: #444;
+    text-align: center;
+  }
+
+  .payment-ticket-footer {
+    text-align: center;
+    padding-top: 8px;
+    margin-top: 8px;
+    font-weight: 800;
+    color: #8a6a2f;
+    font-size: .82rem;
+  }
+
+  .qr-layout { grid-template-columns: 1fr; }
     .sales-header { flex-direction: column; align-items: stretch; }
     .sale-card-header { flex-direction: column; }
     .sale-total-box { width: 100%; text-align: left; }
