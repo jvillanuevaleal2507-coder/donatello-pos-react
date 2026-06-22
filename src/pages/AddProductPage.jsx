@@ -78,6 +78,9 @@ export default function AddProductPage({ products, loadProducts }) {
     price: "",
     stock: "1",
     image_url: "",
+    image_url_2: "",
+    image_url_3: "",
+    image_url_4: "",
   });
 
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -115,14 +118,14 @@ export default function AddProductPage({ products, loadProducts }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  async function handleImageFile(event) {
+  async function handleImageFile(field, event) {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
       setUploadingImage(true);
       const publicUrl = await uploadProductImage(file);
-      setForm((prev) => ({ ...prev, image_url: publicUrl }));
+      setForm((prev) => ({ ...prev, [field]: publicUrl }));
     } catch (error) {
       alert(`Error subiendo imagen: ${error.message}`);
     } finally {
@@ -147,6 +150,9 @@ export default function AddProductPage({ products, loadProducts }) {
       price: Number(form.price || 0),
       stock: Number(form.stock || 0),
       image_url: form.image_url,
+      image_url_2: form.image_url_2,
+      image_url_3: form.image_url_3,
+      image_url_4: form.image_url_4,
     };
 
     const { error } = await supabase.from("products").insert([newProduct]);
@@ -160,13 +166,16 @@ export default function AddProductPage({ products, loadProducts }) {
       name: "",
       category: "",
       costUsd: "",
-      exchangeRate: "17.00",
-      commissionPercent: "0",
+      exchangeRate: "20.00",
+      commissionPercent: "15.00",
       taxPercent: "8.25",
       extraCostMxn: "0",
       price: "",
       stock: "1",
       image_url: "",
+      image_url_2: "",
+      image_url_3: "",
+      image_url_4: "",
     });
 
     await loadProducts();
@@ -278,7 +287,7 @@ export default function AddProductPage({ products, loadProducts }) {
         </label>
 
         <label style={labelStyle}>
-          URL de imagen opcional
+          URL imagen principal
           <input
             style={inputStyle}
             value={form.image_url}
@@ -286,44 +295,90 @@ export default function AddProductPage({ products, loadProducts }) {
             placeholder="Pega URL si ya tienes una"
           />
         </label>
-      </div>
 
-      <div style={{ marginTop: 20 }}>
-        <label
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 10,
-            background: "#ff7a00",
-            color: "#fff",
-            padding: "22px 28px",
-            borderRadius: 20,
-            fontWeight: 900,
-            fontSize: "1.5rem",
-            minHeight: "72px",
-            cursor: "pointer",
-            boxShadow: "0 8px 20px rgba(255,122,0,.25)",
-          }}
-        >
-          📷 {uploadingImage ? "Subiendo..." : "Seleccionar imagen"}
-
+        <label style={labelStyle}>
+          URL imagen 2
           <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageFile}
-            hidden
+            style={inputStyle}
+            value={form.image_url_2}
+            onChange={(e) => updateField("image_url_2", e.target.value)}
+            placeholder="Opcional"
+          />
+        </label>
+
+        <label style={labelStyle}>
+          URL imagen 3
+          <input
+            style={inputStyle}
+            value={form.image_url_3}
+            onChange={(e) => updateField("image_url_3", e.target.value)}
+            placeholder="Opcional"
+          />
+        </label>
+
+        <label style={labelStyle}>
+          URL imagen 4
+          <input
+            style={inputStyle}
+            value={form.image_url_4}
+            onChange={(e) => updateField("image_url_4", e.target.value)}
+            placeholder="Opcional"
           />
         </label>
       </div>
 
-      {form.image_url && (
-        <div className="product-card with-image" style={{ marginTop: 16 }}>
-          <img src={form.image_url} alt="Vista previa" className="product-img" />
-          <div>
-            <strong>Imagen cargada</strong>
-            <p className="muted">Se guardará junto con el producto.</p>
+      <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+        {[
+          ["image_url", "Imagen principal"],
+          ["image_url_2", "Imagen 2"],
+          ["image_url_3", "Imagen 3"],
+          ["image_url_4", "Imagen 4"],
+        ].map(([field, label]) => (
+          <label
+            key={field}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 10,
+              background: "#ff7a00",
+              color: "#fff",
+              padding: "18px 20px",
+              borderRadius: 20,
+              fontWeight: 900,
+              fontSize: "1.1rem",
+              minHeight: "62px",
+              cursor: "pointer",
+              boxShadow: "0 8px 20px rgba(255,122,0,.25)",
+              textAlign: "center",
+            }}
+          >
+            📷 {uploadingImage ? "Subiendo..." : `Subir ${label}`}
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleImageFile(field, e)}
+              hidden
+              disabled={uploadingImage}
+            />
+          </label>
+        ))}
+      </div>
+
+      {[form.image_url, form.image_url_2, form.image_url_3, form.image_url_4].filter(Boolean).length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <strong>Vista previa de imágenes</strong>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginTop: 10 }}>
+            {[form.image_url, form.image_url_2, form.image_url_3, form.image_url_4]
+              .filter(Boolean)
+              .map((url, index) => (
+                <div key={`${url}-${index}`} className="product-card with-image">
+                  <img src={url} alt={`Vista previa ${index + 1}`} className="product-img" />
+                </div>
+              ))}
           </div>
+          <p className="muted" style={{ marginTop: 8 }}>Se guardarán junto con el producto.</p>
         </div>
       )}
 
