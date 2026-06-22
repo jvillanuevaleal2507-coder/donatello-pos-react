@@ -271,7 +271,7 @@ function VentasDonatelloPOSApp() {
     setLoadingProducts(true);
     const { data, error } = await supabase
       .from("products")
-      .select("id, code, name, category, cost, price, stock, image_url")
+      .select("id, code, name, category, cost, price, stock, image_url, image_url_2, image_url_3, image_url_4")
       .order("id", { ascending: false });
 
     if (error) {
