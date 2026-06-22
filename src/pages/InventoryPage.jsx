@@ -43,18 +43,21 @@ function EditProduct({ product, onSaved }) {
     price: product.price || 0,
     stock: product.stock || 0,
     image_url: product.image_url || "",
+    image_url_2: product.image_url_2 || "",
+    image_url_3: product.image_url_3 || "",
+    image_url_4: product.image_url_4 || "",
   });
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
-  async function handleImageFile(event) {
+  async function handleImageFile(field, event) {
     const file = event.target.files?.[0];
     if (!file) return;
 
     try {
       setUploadingImage(true);
       const publicUrl = await uploadProductImage(file);
-      setForm((prev) => ({ ...prev, image_url: publicUrl }));
+      setForm((prev) => ({ ...prev, [field]: publicUrl }));
     } catch (error) {
       alert(`Error subiendo imagen: ${error.message}`);
     } finally {
@@ -73,6 +76,9 @@ function EditProduct({ product, onSaved }) {
         price: Number(form.price || 0),
         stock: Number(form.stock || 0),
         image_url: form.image_url,
+        image_url_2: form.image_url_2,
+        image_url_3: form.image_url_3,
+        image_url_4: form.image_url_4,
       })
       .eq("id", product.id);
 
@@ -95,10 +101,28 @@ function EditProduct({ product, onSaved }) {
         <input type="number" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} placeholder="Costo" />
         <input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Precio" />
         <input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} placeholder="Stock" />
-        <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL de imagen" />
-                <label className="file-upload-box">
-          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen del producto"}</span>
-          <input type="file" accept="image/*" onChange={handleImageFile} disabled={uploadingImage} />
+        <input value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="URL imagen principal" />
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen principal"}</span>
+          <input type="file" accept="image/*" onChange={(e) => handleImageFile("image_url", e)} disabled={uploadingImage} />
+        </label>
+
+        <input value={form.image_url_2} onChange={(e) => setForm({ ...form, image_url_2: e.target.value })} placeholder="URL imagen 2" />
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen 2"}</span>
+          <input type="file" accept="image/*" onChange={(e) => handleImageFile("image_url_2", e)} disabled={uploadingImage} />
+        </label>
+
+        <input value={form.image_url_3} onChange={(e) => setForm({ ...form, image_url_3: e.target.value })} placeholder="URL imagen 3" />
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen 3"}</span>
+          <input type="file" accept="image/*" onChange={(e) => handleImageFile("image_url_3", e)} disabled={uploadingImage} />
+        </label>
+
+        <input value={form.image_url_4} onChange={(e) => setForm({ ...form, image_url_4: e.target.value })} placeholder="URL imagen 4" />
+        <label className="file-upload-box">
+          <span>{uploadingImage ? "Subiendo imagen..." : "Subir imagen 4"}</span>
+          <input type="file" accept="image/*" onChange={(e) => handleImageFile("image_url_4", e)} disabled={uploadingImage} />
         </label>
       </div>
       <Button onClick={saveChanges} disabled={saving}>{saving ? "Guardando..." : "Guardar cambios"}</Button>
@@ -180,7 +204,14 @@ async function deleteProduct(product) {
         {products.map((p) => (
           <Card key={p.id}>
             <div className="product-card with-image">
-              <ProductImage src={p.image_url} alt={p.name} />
+              <div>
+                <ProductImage src={p.image_url} alt={p.name} />
+                {[p.image_url_2, p.image_url_3, p.image_url_4].filter(Boolean).length > 0 && (
+                  <p style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: "#6d604d" }}>
+                    +{[p.image_url_2, p.image_url_3, p.image_url_4].filter(Boolean).length} fotos
+                  </p>
+                )}
+              </div>
               <div className="product-main">
                 <h3>{p.name}</h3>
                 <p>{p.code} · {p.category}</p>
