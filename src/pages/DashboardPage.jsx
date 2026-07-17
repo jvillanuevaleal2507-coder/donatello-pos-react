@@ -68,24 +68,31 @@ function KpiCard({ label, value, sub }) {
 }
 
 export default function DashboardPage({ sales = [], products = [] }) {
+  const activeSales = sales.filter(
+    (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
+  );
+  const voidedSales = sales.filter(
+    (sale) => String(sale.status || "completed").toLowerCase() === "voided"
+  );
+
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const totalSales = sales.reduce((acc, sale) => acc + Number(sale.total || 0), 0);
-  const totalProfit = sales.reduce((acc, sale) => acc + Number(sale.profit || 0), 0);
-  const totalOrders = sales.length;
-  const totalItems = sales.reduce((acc, sale) => acc + Number(sale.items_count || 0), 0);
+  const totalSales = activeSales.reduce((acc, sale) => acc + Number(sale.total || 0), 0);
+  const totalProfit = activeSales.reduce((acc, sale) => acc + Number(sale.profit || 0), 0);
+  const totalOrders = activeSales.length;
+  const totalItems = activeSales.reduce((acc, sale) => acc + Number(sale.items_count || 0), 0);
   const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
 
-  const monthSales = sales
+  const monthSales = activeSales
     .filter((sale) => {
       const date = saleDate(sale);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
     })
     .reduce((acc, sale) => acc + Number(sale.total || 0), 0);
 
-  const monthProfit = sales
+  const monthProfit = activeSales
     .filter((sale) => {
       const date = saleDate(sale);
       return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
@@ -93,7 +100,7 @@ export default function DashboardPage({ sales = [], products = [] }) {
     .reduce((acc, sale) => acc + Number(sale.profit || 0), 0);
   const todayKey = now.toISOString().slice(0, 10);
 
-const todaySales = sales.filter((sale) => {
+const todaySales = activeSales.filter((sale) => {
   const date = saleDate(sale);
   return date.toISOString().slice(0, 10) === todayKey;
 });
@@ -132,7 +139,7 @@ const expectedCash = todayReceived - todayChange;
 
   const salesByDay = {};
 
-  sales.forEach((sale) => {
+  activeSales.forEach((sale) => {
     const date = saleDate(sale);
     const key = date.toISOString().slice(0, 10);
     const label = `${date.getDate()}/${date.getMonth() + 1}`;
@@ -157,7 +164,7 @@ const expectedCash = todayReceived - todayChange;
 
   const productStats = {};
 
-  sales.forEach((sale) => {
+  activeSales.forEach((sale) => {
     const items = sale.sale_items || [];
 
     items.forEach((item) => {
@@ -236,6 +243,11 @@ const expectedCash = todayReceived - todayChange;
         <KpiCard label="Venta del mes" value={money(monthSales)} />
         <KpiCard label="Utilidad del mes" value={money(monthProfit)} />
         <KpiCard label="Productos registrados" value={products.length} />
+        <KpiCard
+          label="Ventas anuladas"
+          value={voidedSales.length}
+          sub="Se conservan para auditoría"
+        />
       </div>
 
       <div
