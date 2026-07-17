@@ -287,7 +287,7 @@ function VentasDonatelloPOSApp() {
     setLoadingSales(true);
     const { data, error } = await supabase
       .from("sales")
-      .select("id, sale_date, total, profit, received, change_amount, items_count, subtotal_original, discount_percent, discount_amount, sale_items(code, name, qty, price, subtotal, profit)")
+      .select("id, sale_date, total, profit, received, change_amount, items_count, subtotal_original, discount_percent, discount_amount, status, void_reason, voided_at, updated_at, sale_items(id, product_id, code, name, qty, cost, price, subtotal, profit)")
       .order("sale_date", { ascending: false })
       .limit(50);
 
@@ -500,6 +500,32 @@ function VentasDonatelloPOSApp() {
   async function checkout() {
     if (cart.length === 0) return;
 
+    const cleanDiscount = Number(discountPercent || 0);
+
+    if (!Number.isFinite(cleanDiscount) || cleanDiscount < 0 || cleanDiscount > 100) {
+      alert("El descuento debe estar entre 0% y 100%.");
+      return;
+    }
+
+    if (!Number.isFinite(totalFinal) || totalFinal <= 0) {
+      alert("El total final debe ser mayor a $0. Revisa el descuento capturado.");
+      return;
+    }
+
+    if (saleMode === "sale") {
+      const receivedNumber = Number(received || 0);
+      const projectedChange = receivedNumber - totalFinal;
+      const unusualChangeLimit = Math.max(5000, totalFinal * 2);
+
+      if (projectedChange > unusualChangeLimit) {
+        const confirmed = window.confirm(
+          `⚠️ Revisa el monto recibido.\n\nTotal: ${money(totalFinal)}\nRecibido: ${money(receivedNumber)}\nCambio: ${money(projectedChange)}\n\n¿Deseas registrar la venta de todas formas?`
+        );
+
+        if (!confirmed) return;
+      }
+    }
+
     if (saleMode === "sale" && Number(received || 0) < totalFinal) {
       setScanStatus("Monto recibido insuficiente");
       return;
@@ -619,8 +645,17 @@ function VentasDonatelloPOSApp() {
       discount_percent: Number(discountPercent || 0),
       discount_amount: discountAmount,
       received: Number(received || 0),
+const salePayload = {
+      total: totalFinal,
+      profit: adjustedProfit,
+      subtotal_original: subtotal,
+      discount_percent: Number(discountPercent || 0),
+      discount_amount: discountAmount,
+      received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
+      status: "completed",
+      updated_at: new Date().toISOString(),
     };
 
     const { data: saleData, error: saleError } = await supabase
@@ -1352,7 +1387,14 @@ function VentasDonatelloPOSApp() {
 
         <Route
           path="/historial"
-          element={<SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
+          element={
+            <SalesSection
+              sales={sales}
+              loadingSales={loadingSales}
+              loadSales={loadSales}
+              loadProducts={loadProducts}
+            />
+          }
         />
         <Route
   path="/dashboard"
@@ -1923,6 +1965,12 @@ function ReceiptModal({ sale, onClose }) {
         </div>
 
         <div className="ticket-print-area" ref={ticketRef}>
+          {String(sale.status || "completed").toLowerCase() === "voided" && (
+            <div className="ticket-void-banner">
+              VENTA ANULADA
+              {sale.void_reason ? <span>{sale.void_reason}</span> : null}
+            </div>
+          )}
           <div className="ticket-header">
             <div className="ticket-logo ticket-logo-img">
               <img src={logoDonatello} alt="Ventas Donatello" />
@@ -2291,18 +2339,168 @@ function PaymentReceiptModal({ receipt, onClose }) {
   );
 }
 
-function SalesSection({ sales, loadingSales, loadSales }) {
+function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
-  const totalSold = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
-  const totalProfit = sales.reduce((sum, sale) => sum + Number(sale.profit || 0), 0);
-  const totalItems = sales.reduce((sum, sale) => sum + Number(sale.items_count || 0), 0);
+  const [editingSale, setEditingSale] = useState(null);
+  const [editForm, setEditForm] = useState({
+    discount_percent: 0,
+    received: 0,
+  });
+  const [savingSale, setSavingSale] = useState(false);
+  const [voidingSaleId, setVoidingSaleId] = useState(null);
+
+  const completedSales = sales.filter(
+    (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
+  );
+
+  const totalSold = completedSales.reduce(
+    (sum, sale) => sum + Number(sale.total || 0),
+    0
+  );
+  const totalProfit = completedSales.reduce(
+    (sum, sale) => sum + Number(sale.profit || 0),
+    0
+  );
+  const totalItems = completedSales.reduce(
+    (sum, sale) => sum + Number(sale.items_count || 0),
+    0
+  );
+
+  function openEditSale(sale) {
+    if (String(sale.status || "completed").toLowerCase() === "voided") {
+      alert("Una venta anulada no puede editarse.");
+      return;
+    }
+
+    setEditingSale(sale);
+    setEditForm({
+      discount_percent: Number(sale.discount_percent || 0),
+      received: Number(sale.received || 0),
+    });
+  }
+
+  async function saveSaleChanges() {
+    if (!editingSale || savingSale) return;
+
+    const subtotalOriginal = Number(
+      editingSale.subtotal_original ||
+        editingSale.sale_items?.reduce(
+          (sum, item) => sum + Number(item.subtotal || 0),
+          0
+        ) ||
+        0
+    );
+    const discountPercent = Number(editForm.discount_percent || 0);
+    const receivedAmount = Number(editForm.received || 0);
+
+    if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      alert("El descuento debe estar entre 0% y 100%.");
+      return;
+    }
+
+    const discountAmount = subtotalOriginal * (discountPercent / 100);
+    const total = subtotalOriginal - discountAmount;
+    const originalProfit = editingSale.sale_items?.reduce(
+      (sum, item) => sum + Number(item.profit || 0),
+      0
+    ) || 0;
+    const profit = originalProfit - discountAmount;
+    const changeAmount = receivedAmount - total;
+
+    if (total <= 0) {
+      alert("El total corregido debe ser mayor a $0.");
+      return;
+    }
+
+    if (!Number.isFinite(receivedAmount) || receivedAmount < total) {
+      alert(`El monto recibido no puede ser menor al total corregido de ${money(total)}.`);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Se actualizará la venta #${editingSale.id}:\\n\\nSubtotal: ${money(subtotalOriginal)}\\nDescuento: ${discountPercent}%\\nTotal: ${money(total)}\\nRecibido: ${money(receivedAmount)}\\nCambio: ${money(changeAmount)}\\nUtilidad: ${money(profit)}\\n\\n¿Confirmas la corrección?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSavingSale(true);
+
+      const { error } = await supabase
+        .from("sales")
+        .update({
+          subtotal_original: subtotalOriginal,
+          discount_percent: discountPercent,
+          discount_amount: discountAmount,
+          total,
+          profit,
+          received: receivedAmount,
+          change_amount: changeAmount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editingSale.id);
+
+      if (error) {
+        alert(`No se pudo corregir la venta: ${error.message}`);
+        return;
+      }
+
+      setEditingSale(null);
+      await loadSales();
+      alert("Venta corregida. Los indicadores ya fueron recalculados.");
+    } finally {
+      setSavingSale(false);
+    }
+  }
+
+  async function voidSale(sale) {
+    if (String(sale.status || "completed").toLowerCase() === "voided") return;
+
+    const reason = window.prompt(
+      `Motivo para anular la venta #${sale.id}:`,
+      "Error de captura"
+    );
+
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert("Debes escribir el motivo de la anulación.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Se anulará la venta #${sale.id} por ${money(sale.total)}.\\n\\nEl sistema devolverá ${sale.items_count || 0} pieza(s) al inventario y excluirá esta venta de todos los indicadores.\\n\\n¿Confirmas?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setVoidingSaleId(sale.id);
+
+      const { error } = await supabase.rpc("void_sale_transaction", {
+        p_sale_id: sale.id,
+        p_reason: reason.trim(),
+      });
+
+      if (error) {
+        alert(`No se pudo anular la venta: ${error.message}`);
+        return;
+      }
+
+      await Promise.all([loadSales(), loadProducts()]);
+      alert("Venta anulada y existencias devueltas al inventario.");
+    } finally {
+      setVoidingSaleId(null);
+    }
+  }
 
   return (
     <section className="inventory-section">
       <div className="sales-header">
         <div>
           <h2>Historial de ventas</h2>
-          <p className="muted">Últimas 50 ventas registradas.</p>
+          <p className="muted">
+            Últimas 50 ventas. Las anuladas permanecen visibles para auditoría.
+          </p>
         </div>
         <Button onClick={loadSales}>Actualizar ventas</Button>
       </div>
@@ -2328,49 +2526,216 @@ function SalesSection({ sales, loadingSales, loadSales }) {
         <Card><p className="muted">Todavía no hay ventas registradas.</p></Card>
       ) : (
         <div className="sales-list">
-          {sales.map((sale) => (
-            <Card key={sale.id}>
-              <div className="sale-card-header">
-                <div>
-                  <h3>Venta #{sale.id}</h3>
-                  <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
-                </div>
-                <div className="sale-total-box">
-                  <span>Total</span>
-                  <strong>{money(sale.total)}</strong>
-                  <button className="text-btn" onClick={() => setSelectedReceipt(sale)}>Ticket</button>
-                </div>
-              </div>
+          {sales.map((sale) => {
+            const isVoided =
+              String(sale.status || "completed").toLowerCase() === "voided";
 
-              <div className="sale-summary-grid">
-                <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
-                <div><span>Recibido</span><b>{money(sale.received)}</b></div>
-                <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
-                <div><span>Piezas</span><b>{sale.items_count}</b></div>
-              </div>
-
-              {sale.sale_items?.length > 0 && (
-                <div className="sale-items-list">
-                  {sale.sale_items.map((item, index) => (
-                    <div className="sale-item-row" key={`${sale.id}-${item.code}-${index}`}>
-                      <div>
-                        <strong>{item.name}</strong>
-                        <span>Cantidad: {item.qty}</span>
-                      </div>
-                      <b>{money(item.subtotal)}</b>
+            return (
+              <Card
+                key={sale.id}
+                className={isVoided ? "sale-card-voided" : ""}
+              >
+                <div className="sale-card-header">
+                  <div>
+                    <div className="sale-title-row">
+                      <h3>Venta #{sale.id}</h3>
+                      <span
+                        className={
+                          isVoided
+                            ? "sale-status sale-status-voided"
+                            : "sale-status sale-status-completed"
+                        }
+                      >
+                        {isVoided ? "ANULADA" : "COMPLETADA"}
+                      </span>
                     </div>
-                  ))}
+                    <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
+                    {isVoided && (
+                      <p className="void-reason">
+                        Motivo: {sale.void_reason || "Sin motivo registrado"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="sale-total-box">
+                    <span>Total</span>
+                    <strong>{money(sale.total)}</strong>
+                    <button
+                      className="text-btn"
+                      onClick={() => setSelectedReceipt(sale)}
+                    >
+                      Ticket
+                    </button>
+                  </div>
                 </div>
-              )}
-            </Card>
-          ))}
+
+                <div className="sale-summary-grid">
+                  <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
+                  <div><span>Recibido</span><b>{money(sale.received)}</b></div>
+                  <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
+                  <div><span>Piezas</span><b>{sale.items_count}</b></div>
+                </div>
+
+                {sale.sale_items?.length > 0 && (
+                  <div className="sale-items-list">
+                    {sale.sale_items.map((item, index) => (
+                      <div
+                        className="sale-item-row"
+                        key={`${sale.id}-${item.code}-${index}`}
+                      >
+                        <div>
+                          <strong>{item.name}</strong>
+                          <span>Cantidad: {item.qty}</span>
+                        </div>
+                        <b>{money(item.subtotal)}</b>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!isVoided && (
+                  <div className="sale-admin-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => openEditSale(sale)}
+                    >
+                      ✏️ Corregir venta
+                    </Button>
+
+                    <Button
+                      variant="danger"
+                      disabled={Number(voidingSaleId) === Number(sale.id)}
+                      onClick={() => voidSale(sale)}
+                    >
+                      {Number(voidingSaleId) === Number(sale.id)
+                        ? "Anulando..."
+                        : "❌ Anular venta"}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
-      {selectedReceipt && <ReceiptModal sale={selectedReceipt} onClose={() => setSelectedReceipt(null)} />}
+
+      {selectedReceipt && (
+        <ReceiptModal
+          sale={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+        />
+      )}
+
+      {editingSale && (
+        <div className="receipt-overlay">
+          <div className="receipt-panel sale-edit-panel">
+            <h2>Corregir venta #{editingSale.id}</h2>
+            <p className="muted">
+              Los productos y cantidades permanecen sin cambios. Se recalcularán
+              total, utilidad y cambio.
+            </p>
+
+            <div className="sale-edit-summary">
+              <div>
+                <span>Subtotal real</span>
+                <strong>
+                  {money(
+                    editingSale.subtotal_original ||
+                      editingSale.sale_items?.reduce(
+                        (sum, item) => sum + Number(item.subtotal || 0),
+                        0
+                      )
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Producto(s)</span>
+                <strong>{editingSale.items_count}</strong>
+              </div>
+            </div>
+
+            <label className="sale-edit-label">
+              Descuento %
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={editForm.discount_percent}
+                onChange={(e) =>
+                  setEditForm((current) => ({
+                    ...current,
+                    discount_percent: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="sale-edit-label">
+              Monto recibido
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editForm.received}
+                onChange={(e) =>
+                  setEditForm((current) => ({
+                    ...current,
+                    received: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <div className="sale-edit-preview">
+              {(() => {
+                const subtotalOriginal = Number(
+                  editingSale.subtotal_original ||
+                    editingSale.sale_items?.reduce(
+                      (sum, item) => sum + Number(item.subtotal || 0),
+                      0
+                    ) ||
+                    0
+                );
+                const discountAmount =
+                  subtotalOriginal *
+                  (Number(editForm.discount_percent || 0) / 100);
+                const correctedTotal = subtotalOriginal - discountAmount;
+                const correctedChange =
+                  Number(editForm.received || 0) - correctedTotal;
+
+                return (
+                  <>
+                    <div>
+                      <span>Total corregido</span>
+                      <strong>{money(correctedTotal)}</strong>
+                    </div>
+                    <div>
+                      <span>Cambio corregido</span>
+                      <strong>{money(Math.max(correctedChange, 0))}</strong>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="sale-edit-actions">
+              <Button
+                variant="secondary"
+                disabled={savingSale}
+                onClick={() => setEditingSale(null)}
+              >
+                Cancelar
+              </Button>
+              <Button disabled={savingSale} onClick={saveSaleChanges}>
+                {savingSale ? "Guardando..." : "Guardar corrección"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
-
 
 
 function LayawaysSection({ layaways, loadLayaways, loadSales }) {
@@ -2541,6 +2906,8 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           subtotal_original: total,
           discount_percent: 0,
           discount_amount: 0,
+          status: "completed",
+          updated_at: new Date().toISOString(),
         };
 
         const { data: saleData, error: saleError } = await supabase
@@ -4023,6 +4390,125 @@ const styles = `
     color: #8a6a2f !important;
   }
 
+
+  .sale-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .sale-status {
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .06em;
+  }
+
+  .sale-status-completed {
+    background: #e8f5ee;
+    color: #17633c;
+    border: 1px solid #b8dfc8;
+  }
+
+  .sale-status-voided {
+    background: #fdecec;
+    color: #a12622;
+    border: 1px solid #efb8b5;
+  }
+
+  .sale-card-voided {
+    opacity: .78;
+    border-color: #e5b5b0;
+    background: #fff8f7;
+  }
+
+  .sale-card-voided .sale-total-box,
+  .sale-card-voided .sale-summary-grid div {
+    background: #faeeee;
+  }
+
+  .void-reason {
+    color: #a12622 !important;
+    font-weight: 800;
+  }
+
+  .sale-admin-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .sale-edit-panel {
+    width: min(520px, 100%);
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .sale-edit-summary,
+  .sale-edit-preview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .sale-edit-summary div,
+  .sale-edit-preview div {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .sale-edit-summary span,
+  .sale-edit-preview span {
+    display: block;
+    color: var(--muted);
+    font-size: .8rem;
+    font-weight: 800;
+  }
+
+  .sale-edit-summary strong,
+  .sale-edit-preview strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 1.2rem;
+  }
+
+  .sale-edit-label {
+    display: grid;
+    gap: 7px;
+    margin-top: 12px;
+    font-weight: 900;
+  }
+
+  .sale-edit-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .ticket-void-banner {
+    background: #a12622;
+    color: white;
+    text-align: center;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-weight: 900;
+    letter-spacing: .08em;
+  }
+
+  .ticket-void-banner span {
+    display: block;
+    margin-top: 4px;
+    font-size: .72rem;
+    letter-spacing: 0;
+  }
+
   @media print {
     @page {
       margin: 0;
@@ -4428,6 +4914,12 @@ const styles = `
     .sale-card-header { flex-direction: column; }
     .sale-total-box { width: 100%; text-align: left; }
     .sale-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sale-admin-actions,
+    .sale-edit-actions,
+    .sale-edit-summary,
+    .sale-edit-preview {
+      grid-template-columns: 1fr;
+    }
   }
 
   .premium-nav {
