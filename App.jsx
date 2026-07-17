@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
+import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
@@ -270,7 +271,7 @@ function VentasDonatelloPOSApp() {
     setLoadingProducts(true);
     const { data, error } = await supabase
       .from("products")
-      .select("id, code, name, category, cost, price, stock, image_url")
+      .select("id, code, name, category, cost, price, stock, image_url, image_url_2, image_url_3, image_url_4")
       .order("id", { ascending: false });
 
     if (error) {
@@ -286,7 +287,7 @@ function VentasDonatelloPOSApp() {
     setLoadingSales(true);
     const { data, error } = await supabase
       .from("sales")
-      .select("id, sale_date, total, profit, received, change_amount, items_count, subtotal_original, discount_percent, discount_amount, sale_items(code, name, qty, price, subtotal, profit)")
+      .select("id, sale_date, total, profit, received, change_amount, items_count, subtotal_original, discount_percent, discount_amount, status, void_reason, voided_at, updated_at, sale_items(id, product_id, code, name, qty, cost, price, subtotal, profit)")
       .order("sale_date", { ascending: false })
       .limit(50);
 
@@ -499,6 +500,32 @@ function VentasDonatelloPOSApp() {
   async function checkout() {
     if (cart.length === 0) return;
 
+    const cleanDiscount = Number(discountPercent || 0);
+
+    if (!Number.isFinite(cleanDiscount) || cleanDiscount < 0 || cleanDiscount > 100) {
+      alert("El descuento debe estar entre 0% y 100%.");
+      return;
+    }
+
+    if (!Number.isFinite(totalFinal) || totalFinal <= 0) {
+      alert("El total final debe ser mayor a $0. Revisa el descuento capturado.");
+      return;
+    }
+
+    if (saleMode === "sale") {
+      const receivedNumber = Number(received || 0);
+      const projectedChange = receivedNumber - totalFinal;
+      const unusualChangeLimit = Math.max(5000, totalFinal * 2);
+
+      if (projectedChange > unusualChangeLimit) {
+        const confirmed = window.confirm(
+          `⚠️ Revisa el monto recibido.\n\nTotal: ${money(totalFinal)}\nRecibido: ${money(receivedNumber)}\nCambio: ${money(projectedChange)}\n\n¿Deseas registrar la venta de todas formas?`
+        );
+
+        if (!confirmed) return;
+      }
+    }
+
     if (saleMode === "sale" && Number(received || 0) < totalFinal) {
       setScanStatus("Monto recibido insuficiente");
       return;
@@ -611,7 +638,7 @@ function VentasDonatelloPOSApp() {
       return;
     }
 
-    const salePayload = {
+const salePayload = {
       total: totalFinal,
       profit: adjustedProfit,
       subtotal_original: subtotal,
@@ -620,6 +647,8 @@ function VentasDonatelloPOSApp() {
       received: Number(received || 0),
       change_amount: change,
       items_count: itemsCount,
+      status: "completed",
+      updated_at: new Date().toISOString(),
     };
 
     const { data: saleData, error: saleError } = await supabase
@@ -815,9 +844,9 @@ function VentasDonatelloPOSApp() {
               <div style={{ textAlign: "center" }}>
                 <div
                   style={{
-                    width: 110,
-                    height: 110,
-                    margin: "0 auto 14px",
+                    width: 88,
+                    height: 88,
+                    margin: "0 auto 12px",
                     borderRadius: 24,
                     background:
                       "linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%)",
@@ -831,8 +860,8 @@ function VentasDonatelloPOSApp() {
                     src={logoDonatello}
                     alt="Ventas Donatello"
                     style={{
-                      width: "140%",
-                      height: "140%",
+                      width: "106%",
+                      height: "106%",
                       objectFit: "contain",
                     }}
                   />
@@ -926,9 +955,9 @@ function VentasDonatelloPOSApp() {
 >
   <div
     style={{
-      width: 120,
-      minWidth: 120,
-      height: 120,
+      width: 92,
+      minWidth: 92,
+      height: 92,
       borderRadius: 16,
       background: "rgba(255,255,255,.14)",
       display: "flex",
@@ -942,8 +971,8 @@ function VentasDonatelloPOSApp() {
       src={logoDonatello}
       alt="Ventas Donatello"
       style={{
-        width: "140%",
-        height: "140%",
+        width: "112%",
+        height: "112%",
         objectFit: "contain",
         display: "block",
       }}
@@ -1351,7 +1380,14 @@ function VentasDonatelloPOSApp() {
 
         <Route
           path="/historial"
-          element={<SalesSection sales={sales} loadingSales={loadingSales} loadSales={loadSales} />}
+          element={
+            <SalesSection
+              sales={sales}
+              loadingSales={loadingSales}
+              loadSales={loadSales}
+              loadProducts={loadProducts}
+            />
+          }
         />
         <Route
   path="/dashboard"
@@ -1758,6 +1794,7 @@ function QRSection({ products }) {
 }
 function ReceiptModal({ sale, onClose }) {
   const printLockRef = useRef(false);
+  const ticketRef = useRef(null);
   const catalogUrl = "https://catalogo.ventasdonatello.com/";
   const [catalogQr, setCatalogQr] = useState("");
 
@@ -1788,11 +1825,117 @@ function ReceiptModal({ sale, onClose }) {
     if (printLockRef.current) return;
     printLockRef.current = true;
 
-    window.print();
+    const ticket = document.querySelector(".ticket-print-area");
 
-    window.setTimeout(() => {
+    if (!ticket) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=420,height=700");
+
+    if (!printWindow) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Ticket Ventas Donatello</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            * { box-sizing: border-box; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #111827;
+            }
+            .ticket-print-area {
+              width: 80mm;
+              max-width: 80mm;
+              margin: 0 auto;
+              padding: 10px;
+              background: #ffffff;
+              border: none;
+              box-shadow: none;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .ticket-header { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 10px; margin-bottom: 10px; }
+            .ticket-logo { width: 74px; height: 74px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+            .ticket-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+            .ticket-header h2 { font-size: 1.25rem; letter-spacing: 0.04em; margin: 0; color: #12372b; font-weight: 900; }
+            .ticket-brand-line { color: #6b5a35; font-size: 0.72rem; font-weight: 700; margin: 4px 0 0; }
+            .ticket-doc-title { color: #8a6a2f; font-weight: 700; margin: 4px 0 0; }
+            .ticket-meta { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .ticket-header p, .ticket-meta p, .ticket-footer { font-size: 0.8rem; margin: 3px 0; }
+            .ticket-items { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .ticket-item { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 0.82rem; margin-bottom: 8px; }
+            .ticket-item span { color: #555; font-size: 0.74rem; display: block; margin-top: 2px; }
+            .ticket-totals { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .ticket-totals div { display: flex; justify-content: space-between; gap: 10px; margin: 4px 0; font-size: 0.84rem; }
+            .ticket-totals span { color: #555; }
+            .ticket-totals b { font-size: 0.95rem; }
+            .ticket-total-label { color: #12372b !important; font-weight: 900 !important; text-transform: uppercase; }
+            .ticket-catalog-box { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 10px; margin-bottom: 8px; }
+            .ticket-catalog-box p { margin: 3px 0; font-size: 0.78rem; color: #12372b; font-weight: 800; }
+            .ticket-catalog-box img { width: 86px; height: 86px; object-fit: contain; display: block; margin: 5px auto; }
+            .ticket-catalog-box span { display: block; font-size: 0.68rem; color: #374151; word-break: break-word; }
+            .ticket-footer { text-align: center; padding-top: 4px; margin-top: 8px; font-weight: 700; color: #8a6a2f; }
+          </style>
+        </head>
+        <body>${ticket.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    printWindow.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
       printLockRef.current = false;
-    }, 1200);
+    }, 500);
+  }
+
+  async function downloadReceiptPng() {
+    const ticket = ticketRef.current;
+
+    if (!ticket) {
+      alert("No se encontró el ticket para descargar.");
+      return;
+    }
+
+    try {
+      const dataUrl = await toPng(ticket, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: "#ffffff",
+        style: {
+          margin: "0",
+          transform: "none",
+        },
+      });
+
+      const link = document.createElement("a");
+      const ticketType = sale.type === "layaway" ? "apartado" : "venta";
+      link.download = `ticket-donatello-${ticketType}-${sale.id}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Error al generar PNG del ticket:", error);
+      alert("No se pudo generar la imagen del ticket. Intenta de nuevo o usa Imprimir/PDF.");
+    }
   }
 
   const isLayaway = sale.type === "layaway";
@@ -1801,16 +1944,26 @@ function ReceiptModal({ sale, onClose }) {
     <div className="receipt-overlay">
       <div className="receipt-panel">
         <div className="receipt-actions no-print">
-          <Button variant="secondary" onClick={onClose}>
-            Cerrar
+          <Button onClick={downloadReceiptPng}>
+            Descargar PNG
           </Button>
 
           <Button onClick={printReceipt}>
-            Imprimir / Guardar PDF
+            Imprimir / PDF
+          </Button>
+
+          <Button variant="secondary" onClick={onClose}>
+            Cerrar
           </Button>
         </div>
 
-        <div className="ticket-print-area">
+        <div className="ticket-print-area" ref={ticketRef}>
+          {String(sale.status || "completed").toLowerCase() === "voided" && (
+            <div className="ticket-void-banner">
+              VENTA ANULADA
+              {sale.void_reason ? <span>{sale.void_reason}</span> : null}
+            </div>
+          )}
           <div className="ticket-header">
             <div className="ticket-logo ticket-logo-img">
               <img src={logoDonatello} alt="Ventas Donatello" />
@@ -1970,18 +2123,377 @@ function ReceiptModal({ sale, onClose }) {
   );
 }
 
-function SalesSection({ sales, loadingSales, loadSales }) {
+
+function PaymentReceiptModal({ receipt, onClose }) {
+  const printLockRef = useRef(false);
+  const ticketRef = useRef(null);
+  const isLiquidation = receipt.type === "liquidation";
+
+  function printReceipt() {
+    if (printLockRef.current) return;
+    printLockRef.current = true;
+
+    const ticket = ticketRef.current;
+
+    if (!ticket) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=420,height=700");
+
+    if (!printWindow) {
+      window.print();
+      window.setTimeout(() => {
+        printLockRef.current = false;
+      }, 1200);
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Recibo de Abono Ventas Donatello</title>
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            * { box-sizing: border-box; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+              font-family: Arial, Helvetica, sans-serif;
+              color: #111827;
+            }
+            .payment-ticket {
+              width: 80mm;
+              max-width: 80mm;
+              margin: 0 auto;
+              padding: 10px;
+              background: #ffffff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .payment-ticket-header { text-align: center; border-bottom: 1px dashed #aaa; padding-bottom: 10px; margin-bottom: 10px; }
+            .payment-ticket-logo { width: 76px; height: 76px; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+            .payment-ticket-logo img { width: 100%; height: 100%; object-fit: contain; display: block; }
+            .payment-ticket-header h2 { font-size: 1.25rem; letter-spacing: 0.04em; margin: 0; color: #12372b; font-weight: 900; }
+            .payment-ticket-title { color: #8a6a2f; font-weight: 900; margin: 4px 0 0; font-size: .85rem; }
+            .payment-ticket-section { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .payment-ticket-section p { font-size: 0.82rem; margin: 3px 0; }
+            .payment-ticket-row { display: flex; justify-content: space-between; gap: 10px; margin: 5px 0; font-size: 0.84rem; }
+            .payment-ticket-row span { color: #555; }
+            .payment-ticket-row b { font-size: .95rem; }
+            .payment-ticket-row.highlight { background: #fff4df; border: 1px solid #ead6ad; border-radius: 10px; padding: 8px; font-weight: 900; color: #12372b; }
+            .payment-ticket-row.highlight b { font-size: 1.12rem; }
+            .payment-ticket-items { border-bottom: 1px dashed #aaa; padding-bottom: 8px; margin-bottom: 8px; }
+            .payment-ticket-item { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0; font-size: .82rem; }
+            .payment-ticket-item span { color: #555; font-size: .74rem; }
+            .payment-ticket-note { font-size: .76rem; line-height: 1.35; color: #444; text-align: center; }
+            .payment-ticket-footer { text-align: center; padding-top: 8px; margin-top: 8px; font-weight: 800; color: #8a6a2f; font-size: .82rem; }
+          </style>
+        </head>
+        <body>${ticket.outerHTML}</body>
+      </html>
+    `);
+    printWindow.document.close();
+
+    printWindow.setTimeout(() => {
+      printWindow.focus();
+      printWindow.print();
+      printWindow.close();
+      printLockRef.current = false;
+    }, 500);
+  }
+
+  async function downloadReceiptPng() {
+    const ticket = ticketRef.current;
+
+    if (!ticket) {
+      alert("No se encontró el recibo para descargar.");
+      return;
+    }
+
+    try {
+      const dataUrl = await toPng(ticket, {
+        cacheBust: true,
+        pixelRatio: 3,
+        backgroundColor: "#ffffff",
+        style: {
+          margin: "0",
+          transform: "none",
+        },
+      });
+
+      const link = document.createElement("a");
+      const receiptType = isLiquidation ? "liquidacion" : "abono";
+      link.download = `recibo-donatello-${receiptType}-${receipt.id}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (error) {
+      console.error("Error al generar PNG del recibo:", error);
+      alert("No se pudo generar la imagen del recibo. Intenta de nuevo o usa Imprimir/PDF.");
+    }
+  }
+
+  return (
+    <div className="receipt-overlay">
+      <div className="receipt-panel">
+        <div className="receipt-actions no-print">
+          <Button onClick={downloadReceiptPng}>
+            Descargar PNG
+          </Button>
+
+          <Button onClick={printReceipt}>
+            Imprimir / PDF
+          </Button>
+
+          <Button variant="secondary" onClick={onClose}>
+            Cerrar
+          </Button>
+        </div>
+
+        <div className="payment-ticket" ref={ticketRef}>
+          <div className="payment-ticket-header">
+            <div className="payment-ticket-logo">
+              <img src={logoDonatello} alt="Ventas Donatello" />
+            </div>
+            <h2>VENTAS DONATELLO</h2>
+            <p className="ticket-brand-line">Bazar • Hogar • Muebles • Iluminación • Juguetes</p>
+            <p className="payment-ticket-title">
+              {isLiquidation ? "RECIBO DE LIQUIDACIÓN" : "RECIBO DE ABONO"}
+            </p>
+          </div>
+
+          <div className="payment-ticket-section">
+            {receipt.payment_id && <p><b>Recibo:</b> #{receipt.payment_id}</p>}
+            <p><b>Apartado:</b> #{receipt.id}</p>
+            {receipt.sale_id && <p><b>Venta final:</b> #{receipt.sale_id}</p>}
+            <p><b>Fecha:</b> {new Date(receipt.payment_date).toLocaleString("es-MX")}</p>
+            <p><b>Cliente:</b> {receipt.customer_name}</p>
+            {receipt.customer_phone && <p><b>Teléfono:</b> {receipt.customer_phone}</p>}
+            {receipt.due_date && (
+              <p><b>Vigencia:</b> {new Date(`${receipt.due_date}T00:00:00`).toLocaleDateString("es-MX")}</p>
+            )}
+          </div>
+
+          <div className="payment-ticket-section">
+            <div className="payment-ticket-row">
+              <span>Total apartado</span>
+              <b>{money(receipt.total)}</b>
+            </div>
+            <div className="payment-ticket-row">
+              <span>Abonado anterior</span>
+              <b>{money(receipt.previous_deposit)}</b>
+            </div>
+            <div className="payment-ticket-row highlight">
+              <span>{isLiquidation ? "Liquidación actual" : "Abono actual"}</span>
+              <b>{money(receipt.payment_amount)}</b>
+            </div>
+            <div className="payment-ticket-row">
+              <span>Total abonado</span>
+              <b>{money(receipt.total_deposit)}</b>
+            </div>
+            <div className="payment-ticket-row">
+              <span>Saldo pendiente</span>
+              <b>{money(receipt.balance)}</b>
+            </div>
+          </div>
+
+          {receipt.items?.length > 0 && (
+            <div className="payment-ticket-items">
+              {receipt.items.map((item, index) => (
+                <div className="payment-ticket-item" key={`${receipt.id}-${index}`}>
+                  <div>
+                    <b>{item.name}</b>
+                    <span>Cantidad: {item.qty}</span>
+                  </div>
+                  <b>{money(item.subtotal)}</b>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p className="payment-ticket-note">
+            Este recibo ampara únicamente el abono registrado sobre el apartado indicado.
+            Conserva este comprobante para cualquier aclaración.
+          </p>
+
+          <p className="payment-ticket-footer">
+            ✨ Gracias por confiar en Ventas Donatello ✨
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
-  const totalSold = sales.reduce((sum, sale) => sum + Number(sale.total || 0), 0);
-  const totalProfit = sales.reduce((sum, sale) => sum + Number(sale.profit || 0), 0);
-  const totalItems = sales.reduce((sum, sale) => sum + Number(sale.items_count || 0), 0);
+  const [editingSale, setEditingSale] = useState(null);
+  const [editForm, setEditForm] = useState({
+    discount_percent: 0,
+    received: 0,
+  });
+  const [savingSale, setSavingSale] = useState(false);
+  const [voidingSaleId, setVoidingSaleId] = useState(null);
+
+  const completedSales = sales.filter(
+    (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
+  );
+
+  const totalSold = completedSales.reduce(
+    (sum, sale) => sum + Number(sale.total || 0),
+    0
+  );
+  const totalProfit = completedSales.reduce(
+    (sum, sale) => sum + Number(sale.profit || 0),
+    0
+  );
+  const totalItems = completedSales.reduce(
+    (sum, sale) => sum + Number(sale.items_count || 0),
+    0
+  );
+
+  function openEditSale(sale) {
+    if (String(sale.status || "completed").toLowerCase() === "voided") {
+      alert("Una venta anulada no puede editarse.");
+      return;
+    }
+
+    setEditingSale(sale);
+    setEditForm({
+      discount_percent: Number(sale.discount_percent || 0),
+      received: Number(sale.received || 0),
+    });
+  }
+
+  async function saveSaleChanges() {
+    if (!editingSale || savingSale) return;
+
+    const subtotalOriginal = Number(
+      editingSale.subtotal_original ||
+        editingSale.sale_items?.reduce(
+          (sum, item) => sum + Number(item.subtotal || 0),
+          0
+        ) ||
+        0
+    );
+    const discountPercent = Number(editForm.discount_percent || 0);
+    const receivedAmount = Number(editForm.received || 0);
+
+    if (!Number.isFinite(discountPercent) || discountPercent < 0 || discountPercent > 100) {
+      alert("El descuento debe estar entre 0% y 100%.");
+      return;
+    }
+
+    const discountAmount = subtotalOriginal * (discountPercent / 100);
+    const total = subtotalOriginal - discountAmount;
+    const originalProfit = editingSale.sale_items?.reduce(
+      (sum, item) => sum + Number(item.profit || 0),
+      0
+    ) || 0;
+    const profit = originalProfit - discountAmount;
+    const changeAmount = receivedAmount - total;
+
+    if (total <= 0) {
+      alert("El total corregido debe ser mayor a $0.");
+      return;
+    }
+
+    if (!Number.isFinite(receivedAmount) || receivedAmount < total) {
+      alert(`El monto recibido no puede ser menor al total corregido de ${money(total)}.`);
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Se actualizará la venta #${editingSale.id}:\\n\\nSubtotal: ${money(subtotalOriginal)}\\nDescuento: ${discountPercent}%\\nTotal: ${money(total)}\\nRecibido: ${money(receivedAmount)}\\nCambio: ${money(changeAmount)}\\nUtilidad: ${money(profit)}\\n\\n¿Confirmas la corrección?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setSavingSale(true);
+
+      const { error } = await supabase
+        .from("sales")
+        .update({
+          subtotal_original: subtotalOriginal,
+          discount_percent: discountPercent,
+          discount_amount: discountAmount,
+          total,
+          profit,
+          received: receivedAmount,
+          change_amount: changeAmount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", editingSale.id);
+
+      if (error) {
+        alert(`No se pudo corregir la venta: ${error.message}`);
+        return;
+      }
+
+      setEditingSale(null);
+      await loadSales();
+      alert("Venta corregida. Los indicadores ya fueron recalculados.");
+    } finally {
+      setSavingSale(false);
+    }
+  }
+
+  async function voidSale(sale) {
+    if (String(sale.status || "completed").toLowerCase() === "voided") return;
+
+    const reason = window.prompt(
+      `Motivo para anular la venta #${sale.id}:`,
+      "Error de captura"
+    );
+
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert("Debes escribir el motivo de la anulación.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Se anulará la venta #${sale.id} por ${money(sale.total)}.\\n\\nEl sistema devolverá ${sale.items_count || 0} pieza(s) al inventario y excluirá esta venta de todos los indicadores.\\n\\n¿Confirmas?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setVoidingSaleId(sale.id);
+
+      const { error } = await supabase.rpc("void_sale_transaction", {
+        p_sale_id: sale.id,
+        p_reason: reason.trim(),
+      });
+
+      if (error) {
+        alert(`No se pudo anular la venta: ${error.message}`);
+        return;
+      }
+
+      await Promise.all([loadSales(), loadProducts()]);
+      alert("Venta anulada y existencias devueltas al inventario.");
+    } finally {
+      setVoidingSaleId(null);
+    }
+  }
 
   return (
     <section className="inventory-section">
       <div className="sales-header">
         <div>
           <h2>Historial de ventas</h2>
-          <p className="muted">Últimas 50 ventas registradas.</p>
+          <p className="muted">
+            Últimas 50 ventas. Las anuladas permanecen visibles para auditoría.
+          </p>
         </div>
         <Button onClick={loadSales}>Actualizar ventas</Button>
       </div>
@@ -2007,49 +2519,216 @@ function SalesSection({ sales, loadingSales, loadSales }) {
         <Card><p className="muted">Todavía no hay ventas registradas.</p></Card>
       ) : (
         <div className="sales-list">
-          {sales.map((sale) => (
-            <Card key={sale.id}>
-              <div className="sale-card-header">
-                <div>
-                  <h3>Venta #{sale.id}</h3>
-                  <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
-                </div>
-                <div className="sale-total-box">
-                  <span>Total</span>
-                  <strong>{money(sale.total)}</strong>
-                  <button className="text-btn" onClick={() => setSelectedReceipt(sale)}>Ticket</button>
-                </div>
-              </div>
+          {sales.map((sale) => {
+            const isVoided =
+              String(sale.status || "completed").toLowerCase() === "voided";
 
-              <div className="sale-summary-grid">
-                <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
-                <div><span>Recibido</span><b>{money(sale.received)}</b></div>
-                <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
-                <div><span>Piezas</span><b>{sale.items_count}</b></div>
-              </div>
-
-              {sale.sale_items?.length > 0 && (
-                <div className="sale-items-list">
-                  {sale.sale_items.map((item, index) => (
-                    <div className="sale-item-row" key={`${sale.id}-${item.code}-${index}`}>
-                      <div>
-                        <strong>{item.name}</strong>
-                        <span>Cantidad: {item.qty}</span>
-                      </div>
-                      <b>{money(item.subtotal)}</b>
+            return (
+              <Card
+                key={sale.id}
+                className={isVoided ? "sale-card-voided" : ""}
+              >
+                <div className="sale-card-header">
+                  <div>
+                    <div className="sale-title-row">
+                      <h3>Venta #{sale.id}</h3>
+                      <span
+                        className={
+                          isVoided
+                            ? "sale-status sale-status-voided"
+                            : "sale-status sale-status-completed"
+                        }
+                      >
+                        {isVoided ? "ANULADA" : "COMPLETADA"}
+                      </span>
                     </div>
-                  ))}
+                    <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
+                    {isVoided && (
+                      <p className="void-reason">
+                        Motivo: {sale.void_reason || "Sin motivo registrado"}
+                      </p>
+                    )}
+                  </div>
+                  <div className="sale-total-box">
+                    <span>Total</span>
+                    <strong>{money(sale.total)}</strong>
+                    <button
+                      className="text-btn"
+                      onClick={() => setSelectedReceipt(sale)}
+                    >
+                      Ticket
+                    </button>
+                  </div>
                 </div>
-              )}
-            </Card>
-          ))}
+
+                <div className="sale-summary-grid">
+                  <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
+                  <div><span>Recibido</span><b>{money(sale.received)}</b></div>
+                  <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
+                  <div><span>Piezas</span><b>{sale.items_count}</b></div>
+                </div>
+
+                {sale.sale_items?.length > 0 && (
+                  <div className="sale-items-list">
+                    {sale.sale_items.map((item, index) => (
+                      <div
+                        className="sale-item-row"
+                        key={`${sale.id}-${item.code}-${index}`}
+                      >
+                        <div>
+                          <strong>{item.name}</strong>
+                          <span>Cantidad: {item.qty}</span>
+                        </div>
+                        <b>{money(item.subtotal)}</b>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {!isVoided && (
+                  <div className="sale-admin-actions">
+                    <Button
+                      variant="secondary"
+                      onClick={() => openEditSale(sale)}
+                    >
+                      ✏️ Corregir venta
+                    </Button>
+
+                    <Button
+                      variant="danger"
+                      disabled={Number(voidingSaleId) === Number(sale.id)}
+                      onClick={() => voidSale(sale)}
+                    >
+                      {Number(voidingSaleId) === Number(sale.id)
+                        ? "Anulando..."
+                        : "❌ Anular venta"}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
-      {selectedReceipt && <ReceiptModal sale={selectedReceipt} onClose={() => setSelectedReceipt(null)} />}
+
+      {selectedReceipt && (
+        <ReceiptModal
+          sale={selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+        />
+      )}
+
+      {editingSale && (
+        <div className="receipt-overlay">
+          <div className="receipt-panel sale-edit-panel">
+            <h2>Corregir venta #{editingSale.id}</h2>
+            <p className="muted">
+              Los productos y cantidades permanecen sin cambios. Se recalcularán
+              total, utilidad y cambio.
+            </p>
+
+            <div className="sale-edit-summary">
+              <div>
+                <span>Subtotal real</span>
+                <strong>
+                  {money(
+                    editingSale.subtotal_original ||
+                      editingSale.sale_items?.reduce(
+                        (sum, item) => sum + Number(item.subtotal || 0),
+                        0
+                      )
+                  )}
+                </strong>
+              </div>
+              <div>
+                <span>Producto(s)</span>
+                <strong>{editingSale.items_count}</strong>
+              </div>
+            </div>
+
+            <label className="sale-edit-label">
+              Descuento %
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={editForm.discount_percent}
+                onChange={(e) =>
+                  setEditForm((current) => ({
+                    ...current,
+                    discount_percent: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="sale-edit-label">
+              Monto recibido
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={editForm.received}
+                onChange={(e) =>
+                  setEditForm((current) => ({
+                    ...current,
+                    received: e.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <div className="sale-edit-preview">
+              {(() => {
+                const subtotalOriginal = Number(
+                  editingSale.subtotal_original ||
+                    editingSale.sale_items?.reduce(
+                      (sum, item) => sum + Number(item.subtotal || 0),
+                      0
+                    ) ||
+                    0
+                );
+                const discountAmount =
+                  subtotalOriginal *
+                  (Number(editForm.discount_percent || 0) / 100);
+                const correctedTotal = subtotalOriginal - discountAmount;
+                const correctedChange =
+                  Number(editForm.received || 0) - correctedTotal;
+
+                return (
+                  <>
+                    <div>
+                      <span>Total corregido</span>
+                      <strong>{money(correctedTotal)}</strong>
+                    </div>
+                    <div>
+                      <span>Cambio corregido</span>
+                      <strong>{money(Math.max(correctedChange, 0))}</strong>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="sale-edit-actions">
+              <Button
+                variant="secondary"
+                disabled={savingSale}
+                onClick={() => setEditingSale(null)}
+              >
+                Cancelar
+              </Button>
+              <Button disabled={savingSale} onClick={saveSaleChanges}>
+                {savingSale ? "Guardando..." : "Guardar corrección"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
-
 
 
 function LayawaysSection({ layaways, loadLayaways, loadSales }) {
@@ -2057,15 +2736,97 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [payment, setPayment] = useState("");
   const [loadingLayaways, setLoadingLayaways] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [paymentReceipt, setPaymentReceipt] = useState(null);
+  const [recentPayments, setRecentPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+  const [expandedLayawayHistoryId, setExpandedLayawayHistoryId] = useState(null);
+
+  async function loadRecentPayments() {
+    setLoadingPayments(true);
+
+    const { data, error } = await supabase
+      .from("layaway_payments")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (error) {
+      console.error("Error cargando historial de abonos:", error);
+      setRecentPayments([]);
+    } else {
+      setRecentPayments(data || []);
+    }
+
+    setLoadingPayments(false);
+  }
 
   async function refreshLayaways() {
     setLoadingLayaways(true);
 
     try {
       await loadLayaways();
+      await loadRecentPayments();
     } finally {
       setLoadingLayaways(false);
     }
+  }
+
+  async function savePaymentHistory(receiptData, saleId = null) {
+    const payload = {
+      layaway_id: receiptData.id,
+      payment_amount: Number(receiptData.payment_amount || 0),
+      previous_balance: Number(receiptData.previous_balance || 0),
+      new_balance: Number(receiptData.balance || 0),
+      previous_deposit: Number(receiptData.previous_deposit || 0),
+      new_deposit: Number(receiptData.total_deposit || 0),
+      payment_type: receiptData.type === "liquidation" ? "liquidation" : "payment",
+      sale_id: saleId,
+      customer_name: receiptData.customer_name || "",
+      customer_phone: receiptData.customer_phone || "",
+      total: Number(receiptData.total || 0),
+      due_date: receiptData.due_date || null,
+      items: receiptData.items || [],
+    };
+
+    const { data, error } = await supabase
+      .from("layaway_payments")
+      .insert([payload])
+      .select("id, created_at")
+      .single();
+
+    if (error) {
+      console.error("Error guardando historial de abono:", error);
+      alert(`El pago se guardó, pero no se pudo guardar el historial del recibo: ${error.message}`);
+      return null;
+    }
+
+    return data;
+  }
+
+  function openPaymentReceiptFromHistory(payment) {
+    setPaymentReceipt({
+      id: payment.layaway_id,
+      payment_id: payment.id,
+      type: payment.payment_type === "liquidation" ? "liquidation" : "payment",
+      payment_date: payment.created_at,
+      customer_name: payment.customer_name,
+      customer_phone: payment.customer_phone,
+      total: Number(payment.total || 0),
+      previous_deposit: Number(payment.previous_deposit || 0),
+      payment_amount: Number(payment.payment_amount || 0),
+      total_deposit: Number(payment.new_deposit || 0),
+      previous_balance: Number(payment.previous_balance || 0),
+      balance: Number(payment.new_balance || 0),
+      due_date: payment.due_date,
+      items: Array.isArray(payment.items) ? payment.items : [],
+      sale_id: payment.sale_id,
+    });
+  }
+
+  function getPaymentsForLayaway(layawayId) {
+    return recentPayments.filter(
+      (payment) => Number(payment.layaway_id) === Number(layawayId)
+    );
   }
 
   useEffect(() => {
@@ -2073,10 +2834,6 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   }, []);
 
   async function liquidateLayaway() {
-    console.log("CLICK CONFIRMAR PAGO");
-    console.log("payment:", payment);
-    console.log("selected:", selected);
-
     if (processingPayment) return;
 
     if (!selected) {
@@ -2092,6 +2849,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     }
 
     const currentBalance = Number(selected.balance || 0);
+    const previousDeposit = Number(selected.deposit || 0);
 
     if (amount > currentBalance) {
       alert("El pago no puede ser mayor al saldo.");
@@ -2099,8 +2857,23 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     }
 
     const newBalance = Math.max(currentBalance - amount, 0);
-    const newDeposit = Number(selected.deposit || 0) + amount;
+    const newDeposit = previousDeposit + amount;
     const newStatus = newBalance <= 0 ? "paid" : "active";
+    const paymentReceiptData = {
+      id: selected.id,
+      type: newStatus === "paid" ? "liquidation" : "payment",
+      payment_date: new Date().toISOString(),
+      customer_name: selected.customer_name,
+      customer_phone: selected.customer_phone,
+      total: Number(selected.total || 0),
+      previous_deposit: previousDeposit,
+      payment_amount: amount,
+      total_deposit: newDeposit,
+      previous_balance: currentBalance,
+      balance: newBalance,
+      due_date: selected.due_date,
+      items: Array.isArray(selected.items) ? selected.items : [],
+    };
 
     try {
       setProcessingPayment(true);
@@ -2126,6 +2899,8 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           subtotal_original: total,
           discount_percent: 0,
           discount_amount: 0,
+          status: "completed",
+          updated_at: new Date().toISOString(),
         };
 
         const { data: saleData, error: saleError } = await supabase
@@ -2133,8 +2908,6 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           .insert([salePayload])
           .select("id")
           .single();
-
-        console.log("Respuesta insert venta apartado:", { saleData, saleError });
 
         if (saleError) {
           alert(`Error creando venta final: ${saleError.message}`);
@@ -2158,15 +2931,13 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             .from("sale_items")
             .insert(saleItems);
 
-          console.log("Respuesta insert detalle venta apartado:", { saleItems, itemsError });
-
           if (itemsError) {
             alert(`Venta creada, pero falló el detalle: ${itemsError.message}`);
             return;
           }
         }
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("layaways")
           .update({
             balance: 0,
@@ -2174,37 +2945,42 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             status: "paid",
             notes: `Apartado liquidado y registrado como venta #${saleData.id}`,
           })
-          .eq("id", selected.id)
-          .select()
-          .single();
-
-        console.log("Respuesta update layaway liquidado:", { data, error });
+          .eq("id", selected.id);
 
         if (error) {
           alert(`Venta creada, pero falló actualizar apartado: ${error.message}`);
           return;
         }
 
+        const savedPayment = await savePaymentHistory(paymentReceiptData, saleData.id);
+        setPaymentReceipt({
+          ...paymentReceiptData,
+          sale_id: saleData.id,
+          payment_id: savedPayment?.id,
+          payment_date: savedPayment?.created_at || paymentReceiptData.payment_date,
+        });
         alert(`Apartado liquidado correctamente. Venta #${saleData.id} creada en historial.`);
       } else {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("layaways")
           .update({
             balance: newBalance,
             deposit: newDeposit,
             status: "active",
           })
-          .eq("id", selected.id)
-          .select()
-          .single();
-
-        console.log("Respuesta update abono layaway:", { data, error });
+          .eq("id", selected.id);
 
         if (error) {
           alert(`Error actualizando apartado: ${error.message}`);
           return;
         }
 
+        const savedPayment = await savePaymentHistory(paymentReceiptData);
+        setPaymentReceipt({
+          ...paymentReceiptData,
+          payment_id: savedPayment?.id,
+          payment_date: savedPayment?.created_at || paymentReceiptData.payment_date,
+        });
         alert("Pago registrado correctamente.");
       }
 
@@ -2303,7 +3079,14 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                 </div>
               )}
 
-              <div style={{ marginTop: 14 }}>
+              <div
+                style={{
+                  marginTop: 14,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
                 <Button
                   onClick={() => {
                     setSelected(item);
@@ -2312,11 +3095,134 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                 >
                   Liquidar / Abonar
                 </Button>
+
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setExpandedLayawayHistoryId((current) =>
+                      Number(current) === Number(item.id) ? null : item.id
+                    );
+                  }}
+                >
+                  Historial / Reimprimir
+                </Button>
               </div>
+
+              {Number(expandedLayawayHistoryId) === Number(item.id) && (
+                <div
+                  style={{
+                    marginTop: 14,
+                    padding: 14,
+                    borderRadius: 18,
+                    background: "#fff7e8",
+                    border: "1px solid #ead6ad",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 10,
+                      marginBottom: 10,
+                    }}
+                  >
+                    <div>
+                      <h3 style={{ margin: 0 }}>Historial de abonos</h3>
+                      <p className="muted" style={{ marginTop: 4 }}>
+                        Reimprime o descarga el recibo de cada movimiento.
+                      </p>
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      onClick={loadRecentPayments}
+                      disabled={loadingPayments}
+                    >
+                      {loadingPayments ? "Cargando..." : "Actualizar"}
+                    </Button>
+                  </div>
+
+                  {getPaymentsForLayaway(item.id).length === 0 ? (
+                    <p className="muted">
+                      Este apartado aún no tiene abonos registrados en historial.
+                      Los pagos hechos antes de activar esta función no se pueden reimprimir.
+                    </p>
+                  ) : (
+                    <div className="sale-items-list">
+                      {getPaymentsForLayaway(item.id).map((payment) => (
+                        <div className="sale-item-row" key={payment.id}>
+                          <div>
+                            <strong>
+                              {payment.payment_type === "liquidation"
+                                ? "Liquidación"
+                                : "Abono"}{" "}
+                              {money(payment.payment_amount)}
+                            </strong>
+                            <span>
+                              {new Date(payment.created_at).toLocaleString("es-MX")} ·
+                              Saldo anterior {money(payment.previous_balance)} ·
+                              Saldo nuevo {money(payment.new_balance)}
+                            </span>
+                          </div>
+
+                          <div style={{ textAlign: "right" }}>
+                            <button
+                              className="text-btn"
+                              onClick={() => openPaymentReceiptFromHistory(payment)}
+                            >
+                              Reimprimir recibo
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>
       )}
+
+      <Card>
+        <div className="sales-header">
+          <div>
+            <h2>Historial de abonos</h2>
+            <p className="muted">Últimos 30 abonos registrados para reimprimir recibos.</p>
+          </div>
+
+          <Button onClick={loadRecentPayments} disabled={loadingPayments}>
+            {loadingPayments ? "Cargando..." : "Actualizar historial"}
+          </Button>
+        </div>
+
+        {recentPayments.length === 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>
+            Todavía no hay abonos registrados en historial.
+          </p>
+        ) : (
+          <div className="sale-items-list" style={{ marginTop: 12 }}>
+            {recentPayments.map((payment) => (
+              <div className="sale-item-row" key={payment.id}>
+                <div>
+                  <strong>{payment.customer_name || "Cliente sin nombre"}</strong>
+                  <span>
+                    {new Date(payment.created_at).toLocaleString("es-MX")} · {payment.payment_type === "liquidation" ? "Liquidación" : "Abono"} · Saldo {money(payment.new_balance)}
+                  </span>
+                </div>
+
+                <div style={{ textAlign: "right", display: "grid", gap: 6 }}>
+                  <b>{money(payment.payment_amount)}</b>
+                  <button className="text-btn" onClick={() => openPaymentReceiptFromHistory(payment)}>
+                    Reimprimir
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
       {selected && (
         <div className="receipt-overlay">
@@ -2360,6 +3266,13 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             </div>
           </div>
         </div>
+      )}
+
+      {paymentReceipt && (
+        <PaymentReceiptModal
+          receipt={paymentReceipt}
+          onClose={() => setPaymentReceipt(null)}
+        />
       )}
     </section>
   );
@@ -3295,7 +4208,7 @@ const styles = `
 
   .receipt-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
     margin-bottom: 12px;
   }
@@ -3470,6 +4383,125 @@ const styles = `
     color: #8a6a2f !important;
   }
 
+
+  .sale-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .sale-status {
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: .68rem;
+    font-weight: 900;
+    letter-spacing: .06em;
+  }
+
+  .sale-status-completed {
+    background: #e8f5ee;
+    color: #17633c;
+    border: 1px solid #b8dfc8;
+  }
+
+  .sale-status-voided {
+    background: #fdecec;
+    color: #a12622;
+    border: 1px solid #efb8b5;
+  }
+
+  .sale-card-voided {
+    opacity: .78;
+    border-color: #e5b5b0;
+    background: #fff8f7;
+  }
+
+  .sale-card-voided .sale-total-box,
+  .sale-card-voided .sale-summary-grid div {
+    background: #faeeee;
+  }
+
+  .void-reason {
+    color: #a12622 !important;
+    font-weight: 800;
+  }
+
+  .sale-admin-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .sale-edit-panel {
+    width: min(520px, 100%);
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  .sale-edit-summary,
+  .sale-edit-preview {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0;
+  }
+
+  .sale-edit-summary div,
+  .sale-edit-preview div {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 12px;
+  }
+
+  .sale-edit-summary span,
+  .sale-edit-preview span {
+    display: block;
+    color: var(--muted);
+    font-size: .8rem;
+    font-weight: 800;
+  }
+
+  .sale-edit-summary strong,
+  .sale-edit-preview strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 1.2rem;
+  }
+
+  .sale-edit-label {
+    display: grid;
+    gap: 7px;
+    margin-top: 12px;
+    font-weight: 900;
+  }
+
+  .sale-edit-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .ticket-void-banner {
+    background: #a12622;
+    color: white;
+    text-align: center;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 10px;
+    font-weight: 900;
+    letter-spacing: .08em;
+  }
+
+  .ticket-void-banner span {
+    display: block;
+    margin-top: 4px;
+    font-size: .72rem;
+    letter-spacing: 0;
+  }
+
   @media print {
     @page {
       margin: 0;
@@ -3520,7 +4552,8 @@ const styles = `
       background: white !important;
     }
 
-    .ticket-print-area {
+    .ticket-print-area,
+    .payment-ticket {
       width: 80mm !important;
       max-width: 80mm !important;
       border: none !important;
@@ -3534,6 +4567,132 @@ const styles = `
       display: none !important;
       visibility: hidden !important;
     }
+  }
+
+
+  .payment-ticket {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #eee;
+    border-radius: 18px;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+  }
+
+  .payment-ticket-header {
+    text-align: center;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .payment-ticket-logo {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .payment-ticket-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .payment-ticket-header h2 {
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+    margin: 0;
+    color: #12372b;
+    font-weight: 900;
+  }
+
+  .payment-ticket-title {
+    color: #8a6a2f;
+    font-weight: 900;
+    margin: 4px 0 0;
+    font-size: .86rem;
+  }
+
+  .payment-ticket-section {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-section p {
+    font-size: 0.82rem;
+    margin: 3px 0;
+  }
+
+  .payment-ticket-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 5px 0;
+    font-size: 0.84rem;
+  }
+
+  .payment-ticket-row span {
+    color: #555;
+  }
+
+  .payment-ticket-row b {
+    font-size: .95rem;
+  }
+
+  .payment-ticket-row.highlight {
+    background: #fff4df;
+    border: 1px solid #ead6ad;
+    border-radius: 10px;
+    padding: 8px;
+    font-weight: 900;
+    color: #12372b;
+  }
+
+  .payment-ticket-row.highlight b {
+    font-size: 1.12rem;
+  }
+
+  .payment-ticket-items {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: .82rem;
+  }
+
+  .payment-ticket-item span {
+    display: block;
+    color: #555;
+    font-size: .74rem;
+    margin-top: 2px;
+  }
+
+  .payment-ticket-note {
+    font-size: .76rem;
+    line-height: 1.35;
+    color: #444;
+    text-align: center;
+  }
+
+  .payment-ticket-footer {
+    text-align: center;
+    padding-top: 8px;
+    margin-top: 8px;
+    font-weight: 800;
+    color: #8a6a2f;
+    font-size: .82rem;
   }
 
   .qr-layout {
@@ -3617,11 +4776,143 @@ const styles = `
     .form-grid { grid-template-columns: 1fr; }
     .product-card.with-image { grid-template-columns: auto 1fr; }
     .stock-pill { grid-column: 1 / -1; }
-    .qr-layout { grid-template-columns: 1fr; }
+  
+  .payment-ticket {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #eee;
+    border-radius: 18px;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+  }
+
+  .payment-ticket-header {
+    text-align: center;
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+  }
+
+  .payment-ticket-logo {
+    width: 74px;
+    height: 74px;
+    margin: 0 auto 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .payment-ticket-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .payment-ticket-header h2 {
+    font-size: 1.25rem;
+    letter-spacing: 0.04em;
+    margin: 0;
+    color: #12372b;
+    font-weight: 900;
+  }
+
+  .payment-ticket-title {
+    color: #8a6a2f;
+    font-weight: 900;
+    margin: 4px 0 0;
+    font-size: .86rem;
+  }
+
+  .payment-ticket-section {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-section p {
+    font-size: 0.82rem;
+    margin: 3px 0;
+  }
+
+  .payment-ticket-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 5px 0;
+    font-size: 0.84rem;
+  }
+
+  .payment-ticket-row span {
+    color: #555;
+  }
+
+  .payment-ticket-row b {
+    font-size: .95rem;
+  }
+
+  .payment-ticket-row.highlight {
+    background: #fff4df;
+    border: 1px solid #ead6ad;
+    border-radius: 10px;
+    padding: 8px;
+    font-weight: 900;
+    color: #12372b;
+  }
+
+  .payment-ticket-row.highlight b {
+    font-size: 1.12rem;
+  }
+
+  .payment-ticket-items {
+    border-bottom: 1px dashed #aaa;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+  }
+
+  .payment-ticket-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 6px 0;
+    font-size: .82rem;
+  }
+
+  .payment-ticket-item span {
+    display: block;
+    color: #555;
+    font-size: .74rem;
+    margin-top: 2px;
+  }
+
+  .payment-ticket-note {
+    font-size: .76rem;
+    line-height: 1.35;
+    color: #444;
+    text-align: center;
+  }
+
+  .payment-ticket-footer {
+    text-align: center;
+    padding-top: 8px;
+    margin-top: 8px;
+    font-weight: 800;
+    color: #8a6a2f;
+    font-size: .82rem;
+  }
+
+  .qr-layout { grid-template-columns: 1fr; }
     .sales-header { flex-direction: column; align-items: stretch; }
     .sale-card-header { flex-direction: column; }
     .sale-total-box { width: 100%; text-align: left; }
     .sale-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .sale-admin-actions,
+    .sale-edit-actions,
+    .sale-edit-summary,
+    .sale-edit-preview {
+      grid-template-columns: 1fr;
+    }
   }
 
   .premium-nav {
