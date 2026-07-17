@@ -638,13 +638,6 @@ function VentasDonatelloPOSApp() {
       return;
     }
 
-    const salePayload = {
-      total: totalFinal,
-      profit: adjustedProfit,
-      subtotal_original: subtotal,
-      discount_percent: Number(discountPercent || 0),
-      discount_amount: discountAmount,
-      received: Number(received || 0),
 const salePayload = {
       total: totalFinal,
       profit: adjustedProfit,
