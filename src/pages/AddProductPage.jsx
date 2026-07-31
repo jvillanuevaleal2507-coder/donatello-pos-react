@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import DonatelloAtlas from "../components/DonatelloAtlas";
+import { saveAtlasIntelligence } from "../atlas/intelligenceService";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -48,7 +49,9 @@ async function uploadProductImage(file) {
   if (!file) return "";
 
   const fileExt = file.name.split(".").pop() || "jpg";
-  const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+  const safeName = `${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2)}.${fileExt}`;
   const filePath = `products/${safeName}`;
 
   const { error } = await supabase.storage
@@ -67,24 +70,27 @@ async function uploadProductImage(file) {
   return data.publicUrl;
 }
 
-export default function AddProductPage({ products, loadProducts }) {
-  const [form, setForm] = useState({
-    name: "",
-    category: "",
-    costUsd: "",
-    exchangeRate: "20.00",
-    commissionPercent: "15.00",
-    taxPercent: "8.25",
-    extraCostMxn: "0",
-    price: "",
-    stock: "1",
-    image_url: "",
-    image_url_2: "",
-    image_url_3: "",
-    image_url_4: "",
-  });
+const emptyForm = {
+  name: "",
+  category: "",
+  costUsd: "",
+  exchangeRate: "20.00",
+  commissionPercent: "15.00",
+  taxPercent: "8.25",
+  extraCostMxn: "0",
+  price: "",
+  stock: "1",
+  image_url: "",
+  image_url_2: "",
+  image_url_3: "",
+  image_url_4: "",
+};
 
+export default function AddProductPage({ products, loadProducts }) {
+  const [form, setForm] = useState(emptyForm);
+  const [atlasDraft, setAtlasDraft] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
 
   const labelStyle = {
     fontSize: "1.25rem",
@@ -111,7 +117,8 @@ export default function AddProductPage({ products, loadProducts }) {
   const baseCostMxn = costUsd * exchangeRate;
   const commissionMxn = baseCostMxn * (commissionPercent / 100);
   const taxMxn = baseCostMxn * (taxPercent / 100);
-  const totalCostMxn = baseCostMxn + commissionMxn + taxMxn + extraCostMxn;
+  const totalCostMxn =
+    baseCostMxn + commissionMxn + taxMxn + extraCostMxn;
   const profit = price - totalCostMxn;
   const margin = price > 0 ? (profit / price) * 100 : 0;
 
@@ -120,6 +127,8 @@ export default function AddProductPage({ products, loadProducts }) {
   }
 
   function applyAtlasResult(product) {
+    setAtlasDraft(product);
+
     setForm((prev) => ({
       ...prev,
       name: product.name || prev.name,
@@ -155,47 +164,94 @@ export default function AddProductPage({ products, loadProducts }) {
       return;
     }
 
-    const nextId = products.length ? Math.max(...products.map((p) => Number(p.id))) + 1 : 1;
-    const code = `DON-${String(nextId).padStart(6, "0")}`;
+    try {
+      setSavingProduct(true);
 
-    const newProduct = {
-      code,
-      name: form.name,
-      category: form.category || "General",
-      cost: Number(totalCostMxn.toFixed(2)),
-      price: Number(form.price || 0),
-      stock: Number(form.stock || 0),
-      image_url: form.image_url,
-      image_url_2: form.image_url_2,
-      image_url_3: form.image_url_3,
-      image_url_4: form.image_url_4,
-    };
+      const nextId = products.length
+        ? Math.max(...products.map((p) => Number(p.id))) + 1
+        : 1;
 
-    const { error } = await supabase.from("products").insert([newProduct]);
+      const code = `DON-${String(nextId).padStart(6, "0")}`;
 
-    if (error) {
-      alert(`Error guardando producto: ${error.message}`);
-      return;
+      const newProduct = {
+        code,
+        name: form.name.trim(),
+        category: form.category || "General",
+        cost: Number(totalCostMxn.toFixed(2)),
+        price: Number(form.price || 0),
+        stock: Number(form.stock || 0),
+        image_url: form.image_url,
+        image_url_2: form.image_url_2,
+        image_url_3: form.image_url_3,
+        image_url_4: form.image_url_4,
+      };
+
+      const { data: savedProduct, error: productError } = await supabase
+        .from("products")
+        .insert([newProduct])
+        .select()
+        .single();
+
+      if (productError) {
+        throw new Error(`Error guardando producto: ${productError.message}`);
+      }
+
+      let atlasWarning = "";
+
+      if (atlasDraft) {
+        try {
+          await saveAtlasIntelligence({
+            productId: savedProduct.id,
+            referenceStore: atlasDraft.source,
+            referenceUrl: atlasDraft.sourceUrl,
+            referencePrice:
+              atlasDraft.rawResult?.price ??
+              atlasDraft.referencePrice ??
+              null,
+            referenceCurrency:
+              atlasDraft.rawResult?.currency ||
+              atlasDraft.referenceCurrency ||
+              "USD",
+            atlasConfidence: atlasDraft.confidence,
+            atlasBrand:
+              atlasDraft.rawResult?.metadata?.brand ||
+              atlasDraft.atlasBrand ||
+              "",
+            atlasModel:
+              atlasDraft.rawResult?.metadata?.model ||
+              atlasDraft.atlasModel ||
+              "",
+            atlasCategory: form.category || atlasDraft.category || "General",
+            atlasDescription:
+              atlasDraft.description ||
+              atlasDraft.atlasDescription ||
+              "",
+            imageMain: form.image_url,
+            imageMeasurements: form.image_url_2,
+            imageEnvironment: form.image_url_3,
+            imageDetail: form.image_url_4,
+            suggestedPrice:
+              atlasDraft.suggestedPrice || form.price || null,
+            approvedPrice: form.price || null,
+          });
+        } catch (atlasError) {
+          console.error(atlasError);
+          atlasWarning =
+            "\n\nEl producto sí se guardó, pero Atlas no pudo guardar su memoria.";
+        }
+      }
+
+      setForm({ ...emptyForm });
+      setAtlasDraft(null);
+
+      await loadProducts();
+
+      alert(`Producto guardado correctamente.${atlasWarning}`);
+    } catch (error) {
+      alert(error.message || "No se pudo guardar el producto.");
+    } finally {
+      setSavingProduct(false);
     }
-
-    setForm({
-      name: "",
-      category: "",
-      costUsd: "",
-      exchangeRate: "20.00",
-      commissionPercent: "15.00",
-      taxPercent: "8.25",
-      extraCostMxn: "0",
-      price: "",
-      stock: "1",
-      image_url: "",
-      image_url_2: "",
-      image_url_3: "",
-      image_url_4: "",
-    });
-
-    await loadProducts();
-    alert("Producto guardado correctamente.");
   }
 
   return (
@@ -276,7 +332,9 @@ export default function AddProductPage({ products, loadProducts }) {
             style={inputStyle}
             type="number"
             value={form.commissionPercent}
-            onChange={(e) => updateField("commissionPercent", e.target.value)}
+            onChange={(e) =>
+              updateField("commissionPercent", e.target.value)
+            }
             placeholder="Ej. 3"
           />
         </label>
@@ -366,7 +424,14 @@ export default function AddProductPage({ products, loadProducts }) {
         </label>
       </div>
 
-      <div style={{ marginTop: 20, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12 }}>
+      <div
+        style={{
+          marginTop: 20,
+          display: "grid",
+          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+          gap: 12,
+        }}
+      >
         {[
           ["image_url", "Imagen principal"],
           ["image_url_2", "Imagen 2"],
@@ -405,19 +470,47 @@ export default function AddProductPage({ products, loadProducts }) {
         ))}
       </div>
 
-      {[form.image_url, form.image_url_2, form.image_url_3, form.image_url_4].filter(Boolean).length > 0 && (
+      {[
+        form.image_url,
+        form.image_url_2,
+        form.image_url_3,
+        form.image_url_4,
+      ].filter(Boolean).length > 0 && (
         <div style={{ marginTop: 16 }}>
           <strong>Vista previa de imágenes</strong>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10, marginTop: 10 }}>
-            {[form.image_url, form.image_url_2, form.image_url_3, form.image_url_4]
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: 10,
+              marginTop: 10,
+            }}
+          >
+            {[
+              form.image_url,
+              form.image_url_2,
+              form.image_url_3,
+              form.image_url_4,
+            ]
               .filter(Boolean)
               .map((url, index) => (
-                <div key={`${url}-${index}`} className="product-card with-image">
-                  <img src={url} alt={`Vista previa ${index + 1}`} className="product-img" />
+                <div
+                  key={`${url}-${index}`}
+                  className="product-card with-image"
+                >
+                  <img
+                    src={url}
+                    alt={`Vista previa ${index + 1}`}
+                    className="product-img"
+                  />
                 </div>
               ))}
           </div>
-          <p className="muted" style={{ marginTop: 8 }}>Se guardarán junto con el producto.</p>
+
+          <p className="muted" style={{ marginTop: 8 }}>
+            Se guardarán junto con el producto.
+          </p>
         </div>
       )}
 
@@ -456,6 +549,7 @@ export default function AddProductPage({ products, loadProducts }) {
       <div style={{ marginTop: 20 }}>
         <Button
           onClick={saveProduct}
+          disabled={savingProduct}
           style={{
             fontSize: "2rem",
             fontWeight: 900,
@@ -463,7 +557,7 @@ export default function AddProductPage({ products, loadProducts }) {
             padding: "18px 28px",
           }}
         >
-          Guardar producto
+          {savingProduct ? "Guardando..." : "Guardar producto"}
         </Button>
       </div>
     </Card>
