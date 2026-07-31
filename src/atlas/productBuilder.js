@@ -1,4 +1,8 @@
-import { IMAGE_SLOT_PRIORITY, MAX_PRODUCT_IMAGES } from "./constants";
+import {
+  IMAGE_SLOT_PRIORITY,
+  MAX_PRODUCT_IMAGES,
+} from "./constants";
+import { normalizeProductTitle } from "./titleNormalizer";
 
 function imagePriority(type = "") {
   const index = IMAGE_SLOT_PRIORITY.indexOf(type);
@@ -14,10 +18,11 @@ export function selectProductImages(images = []) {
 
 export function buildProductCandidate(result, context = {}) {
   if (!result) return null;
+
   const selectedImages = selectProductImages(result.images || []);
 
   return {
-    name: result.title || "",
+    name: normalizeProductTitle(result.title || ""),
     category: result.metadata?.category || "General",
     suggestedPrice: "",
     image_url: selectedImages[0]?.url || "",
