@@ -1,36 +1,84 @@
-/**
- * Sprint 2:
- * Esta capa queda preparada para conectar el proveedor real de búsqueda visual.
- * Nunca coloques claves privadas en el navegador.
- * La llamada real deberá ir a un endpoint seguro del backend.
- */
-export async function searchByImage({ photo, onProgress }) {
-  if (!photo) throw new Error("No se recibió una fotografía.");
+import { createClient } from "@supabase/supabase-js";
 
-  onProgress?.("analyzingImage");
-  await delay(350);
-  onProgress?.("searchingMatches");
-  await delay(450);
-  onProgress?.("checkingAmazon");
-  await delay(450);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-  return [
-    {
-      id: "demo-amazon-1",
-      source: "Amazon",
-      title: "Producto de demostración",
-      url: "",
-      price: null,
-      currency: "USD",
-      confidence: 96,
-      exactImageMatch: true,
-      hasTechnicalData: true,
-      images: [],
-      metadata: { brand: "", model: "", category: "General" },
-    },
-  ];
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+function safeExtension(file) {
+  const extension = file.name?.split(".").pop()?.toLowerCase();
+
+  if (["jpg", "jpeg", "png", "webp"].includes(extension)) {
+    return extension;
+  }
+
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+
+  return "jpg";
 }
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+async function uploadAtlasSourcePhoto(photo) {
+  const extension = safeExtension(photo);
+  const filename = `${Date.now()}_${Math.random()
+    .toString(36)
+    .slice(2)}.${extension}`;
+  const filePath = `atlas-source/${filename}`;
+
+  const { error } = await supabase.storage
+    .from("product-images")
+    .upload(filePath, photo, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: photo.type || undefined,
+    });
+
+  if (error) {
+    throw new Error(`No pude subir la foto para investigarla: ${error.message}`);
+  }
+
+  const { data } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(filePath);
+
+  if (!data?.publicUrl) {
+    throw new Error("No pude obtener la URL pública de la fotografía.");
+  }
+
+  return data.publicUrl;
+}
+
+export async function searchByImage({ photo, onProgress }) {
+  if (!photo) {
+    throw new Error("No se recibió una fotografía.");
+  }
+
+  onProgress?.("analyzingImage");
+
+  const imageUrl = await uploadAtlasSourcePhoto(photo);
+
+  onProgress?.("searchingMatches");
+  onProgress?.("checkingAmazon");
+
+  const response = await fetch("/api/atlas/search", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ imageUrl }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data.error || "Atlas API no pudo completar la búsqueda visual."
+    );
+  }
+
+  if (!Array.isArray(data.results)) {
+    throw new Error("Atlas API devolvió una respuesta inesperada.");
+  }
+
+  return data.results;
 }
