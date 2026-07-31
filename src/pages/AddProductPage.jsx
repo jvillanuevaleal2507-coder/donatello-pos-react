@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import DonatelloAtlas from "../components/DonatelloAtlas";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -118,6 +119,21 @@ export default function AddProductPage({ products, loadProducts }) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
+  function applyAtlasResult(product) {
+    setForm((prev) => ({
+      ...prev,
+      name: product.name || prev.name,
+      category: product.category || prev.category,
+      costUsd: product.costUsd ?? prev.costUsd,
+      stock: product.stock ?? prev.stock,
+      price: product.suggestedPrice || prev.price,
+      image_url: product.image_url || prev.image_url,
+      image_url_2: product.image_url_2 || prev.image_url_2,
+      image_url_3: product.image_url_3 || prev.image_url_3,
+      image_url_4: product.image_url_4 || prev.image_url_4,
+    }));
+  }
+
   async function handleImageFile(field, event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -187,6 +203,29 @@ export default function AddProductPage({ products, loadProducts }) {
       <h2 style={{ fontSize: "2.4rem", fontWeight: 900 }}>
         Agregar producto
       </h2>
+
+      <DonatelloAtlas
+        defaultCostUsd={form.costUsd}
+        defaultStock={form.stock}
+        onCostChange={(value) => updateField("costUsd", value)}
+        onStockChange={(value) => updateField("stock", value)}
+        onComplete={applyAtlasResult}
+      />
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          margin: "8px 0 18px",
+          color: "#756856",
+          fontWeight: 800,
+        }}
+      >
+        <span style={{ height: 1, background: "#d9cfb8", flex: 1 }} />
+        Registro manual
+        <span style={{ height: 1, background: "#d9cfb8", flex: 1 }} />
+      </div>
 
       <div className="form-grid" style={{ gap: "18px", marginTop: 18 }}>
         <label style={labelStyle}>
