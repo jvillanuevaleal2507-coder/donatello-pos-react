@@ -62,27 +62,24 @@ export default async function handler(req, res) {
   const prompt = `
 Eres Atlas, copiloto comercial de Ventas Donatello en México.
 
-Tu tarea es convertir una ficha comercial en inglés en información clara para un POS y una publicación de Facebook.
+Convierte la ficha encontrada en información clara para un POS y Facebook.
 
-Reglas:
+Reglas obligatorias:
 - Escribe en español natural de México.
-- El nombre para POS debe ser corto, claro y comercial, máximo 60 caracteres.
-- No incluyas Amazon, Lowe's, Walmart, Home Depot, Wayfair ni otra tienda en el nombre.
-- No inventes cantidad, material, medidas, marca o características.
-- Conserva la marca solamente cuando sea útil y esté claramente presente.
+- "name" debe ser corto, comercial y máximo 60 caracteres.
+- No incluyas nombres de tiendas.
+- Evita poner la marca dentro de "name"; guárdala en "brand".
+- No inventes cantidad, material, medidas, capacidad, marca o estilo.
 - Categorías permitidas:
   Muebles, Iluminación, Decoración, Cocina, Electrodomésticos,
   Organización, Exterior, Baño, Oficina, Infantil, Otros.
 - La descripción corta debe tener máximo 180 caracteres.
-- El post de Facebook debe sonar humano, directo y natural; máximo 450 caracteres.
-- No menciones que el producto fue encontrado con IA.
-- No menciones la tienda fuente en el post.
-- "needs_measurements" debe ser true para muebles, comedores, burós,
-  sillones, sillas, bancos, mecedoras, espejos, estantes y productos
-  donde las dimensiones influyen en la compra.
-- Si no estás seguro de un dato, déjalo vacío.
+- El post de Facebook debe sonar humano y natural; máximo 450 caracteres.
+- No menciones IA ni la tienda fuente.
+- "needsMeasurements" debe ser true cuando las dimensiones influyen en la compra.
+- Si no estás seguro de un dato, usa una cadena vacía.
 
-Datos encontrados:
+Datos:
 Título: ${rawTitle}
 Fuente: ${source}
 URL: ${sourceUrl}
@@ -110,13 +107,8 @@ Precio mostrado: ${price ?? "No disponible"} ${currency}
       body: JSON.stringify({
         model: "gpt-5.6",
         reasoning: { effort: "low" },
-        max_output_tokens: 500,
-        input: [
-          {
-            role: "user",
-            content,
-          },
-        ],
+        max_output_tokens: 650,
+        input: [{ role: "user", content }],
         text: {
           format: {
             type: "json_schema",
@@ -129,6 +121,10 @@ Precio mostrado: ${price ?? "No disponible"} ${currency}
                 name: { type: "string" },
                 category: { type: "string" },
                 brand: { type: "string" },
+                model: { type: "string" },
+                style: { type: "string" },
+                material: { type: "string" },
+                capacity: { type: "string" },
                 shortDescription: { type: "string" },
                 facebookPost: { type: "string" },
                 keywords: {
@@ -141,6 +137,10 @@ Precio mostrado: ${price ?? "No disponible"} ${currency}
                 "name",
                 "category",
                 "brand",
+                "model",
+                "style",
+                "material",
+                "capacity",
                 "shortDescription",
                 "facebookPost",
                 "keywords",
@@ -170,11 +170,9 @@ Precio mostrado: ${price ?? "No disponible"} ${currency}
       });
     }
 
-    const enriched = JSON.parse(text);
-
     return sendJson(res, 200, {
       ok: true,
-      enriched,
+      enriched: JSON.parse(text),
       usage: data.usage || null,
     });
   } catch (error) {
@@ -188,4 +186,3 @@ Precio mostrado: ${price ?? "No disponible"} ${currency}
     });
   }
 }
-
