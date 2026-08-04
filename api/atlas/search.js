@@ -1,3 +1,5 @@
+import { enrichResultWithGallery } from "./galleryExtractor.js";
+
 const SERPAPI_ENDPOINT = "https://serpapi.com/search.json";
 
 function sendJson(res, status, payload) {
@@ -193,15 +195,62 @@ export default async function handler(req, res) {
       ? data.visual_matches
       : [];
 
-    const results = visualMatches
+    const normalizedResults = visualMatches
       .slice(0, 25)
       .map(normalizeMatch)
       .filter((item) => item.url || item.images.length);
+
+    // Extraemos la galería completa únicamente de las primeras coincidencias.
+    // Así mejoramos Target, Amazon, Lowe's, Walmart y Home Depot sin abrir
+    // 25 páginas ni arriesgar el tiempo máximo de Vercel.
+    const galleryLimit = Math.min(
+      6,
+      Number(process.env.ATLAS_GALLERY_LIMIT || 6)
+    );
+
+    const candidatesForGallery = normalizedResults.slice(0, galleryLimit);
+    const remainingResults = normalizedResults.slice(galleryLimit);
+
+    const enrichedTopResults = await Promise.all(
+      candidatesForGallery.map(async (result) => {
+        try {
+          return await enrichResultWithGallery(result, {
+            timeoutMs: 9000,
+            maximum: 30,
+          });
+        } catch (error) {
+          console.warn(
+            `Atlas gallery warning for ${result.source || result.url}:`,
+            error
+          );
+
+          return {
+            ...result,
+            galleryExtraction: {
+              ok: false,
+              count: 0,
+              url: result.url || "",
+              error:
+                error instanceof Error
+                  ? error.message
+                  : "No se pudo extraer la galería.",
+            },
+          };
+        }
+      })
+    );
+
+    const results = [
+      ...enrichedTopResults,
+      ...remainingResults,
+    ];
 
     return sendJson(res, 200, {
       ok: true,
       searchId: data.search_metadata?.id || null,
       imageUrl,
+      galleryExtractionEnabled: true,
+      galleryCandidatesProcessed: candidatesForGallery.length,
       results,
     });
   } catch (error) {
