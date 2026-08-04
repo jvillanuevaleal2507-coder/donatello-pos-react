@@ -6,44 +6,7 @@ import { enrichProductCandidate } from "./productEnrichment";
 import { applyPricingToProduct } from "./pricingEngine";
 import { applySelectedPhotos } from "./photoSelector";
 
-function buildPricingContext(product = {}) {
-  return {
-    fixedReferencePrice: product.referencePrice || null,
-    fixedReferenceCurrency:
-      product.referenceCurrency || "USD",
-    fixedSuggestedPrice:
-      product.suggestedPrice || null,
-    pricing: product.pricing || null,
-  };
-}
-
-function buildDecisionContext({
-  bestResult,
-  product,
-  results,
-}) {
-  return {
-    bestResultId: bestResult?.id || null,
-    bestSource:
-      bestResult?.source || product?.source || "",
-    bestSourceUrl:
-      bestResult?.url || product?.sourceUrl || "",
-    confidence:
-      bestResult?.confidence ??
-      product?.confidence ??
-      0,
-    exactImageMatch:
-      Boolean(bestResult?.exactImageMatch),
-    resultCount: results.length,
-    pricing: buildPricingContext(product),
-  };
-}
-
-function notifyProgress(
-  onProgress,
-  step,
-  customMessage = ""
-) {
+function notifyProgress(onProgress, step, customMessage = "") {
   onProgress?.({
     step,
     message:
@@ -59,11 +22,22 @@ function buildBaseCandidate(result, context) {
   return {
     ...candidate,
     atlasScore:
-      result?.atlasScore ?? candidate.atlasScore ?? 0,
+      result?.atlasScore ??
+      candidate.atlasScore ??
+      0,
     sourceKey:
-      result?.sourceKey ?? candidate.sourceKey ?? "",
+      result?.sourceKey ??
+      candidate.sourceKey ??
+      "",
     promotional:
       Boolean(result?.promotional),
+    productCompatibility:
+      result?.productCompatibility ??
+      candidate.productCompatibility ??
+      0,
+    compatibleWithAnchor:
+      result?.compatibleWithAnchor ??
+      true,
   };
 }
 
@@ -87,10 +61,7 @@ async function enrichSafely(
   }
 }
 
-function preparePhotos(
-  product,
-  searchResults
-) {
+function preparePhotos(product, searchResults) {
   return applySelectedPhotos(
     product,
     searchResults,
@@ -98,13 +69,78 @@ function preparePhotos(
   );
 }
 
-function preparePricing(
-  product,
-  pricingOptions
-) {
+function preparePricing(product, pricingOptions) {
   return applyPricingToProduct(
     product,
     pricingOptions
+  );
+}
+
+function buildPricingContext(product = {}) {
+  return {
+    fixedReferencePrice:
+      product.referencePrice || null,
+    fixedReferenceCurrency:
+      product.referenceCurrency || "USD",
+    fixedSuggestedPrice:
+      product.suggestedPrice || null,
+    fixedMarketValueMxn:
+      product.pricing?.marketValueMxn || null,
+    pricing:
+      product.pricing || null,
+  };
+}
+
+function buildDecisionContext({
+  bestResult,
+  product,
+  results,
+  rejected,
+}) {
+  return {
+    bestResultId:
+      bestResult?.id || null,
+    bestSource:
+      bestResult?.source ||
+      product?.source ||
+      "",
+    bestSourceUrl:
+      bestResult?.url ||
+      product?.sourceUrl ||
+      "",
+    confidence:
+      bestResult?.confidence ??
+      product?.confidence ??
+      0,
+    exactImageMatch:
+      Boolean(bestResult?.exactImageMatch),
+    productCompatibility:
+      bestResult?.productCompatibility ??
+      null,
+    resultCount:
+      results.length,
+    rejectedCount:
+      rejected.length,
+    pricing:
+      buildPricingContext(product),
+    photoSourcesMixed:
+      Boolean(product?.photoSourcesMixed),
+  };
+}
+
+function buildAlternativeCandidates(
+  alternatives,
+  candidateContext,
+  results
+) {
+  return alternatives.map((item) =>
+    preparePhotos(
+      buildBaseCandidate(
+        item,
+        candidateContext
+      ),
+      results
+    )
   );
 }
 
@@ -133,6 +169,8 @@ export async function prepareAtlasAlternative({
       pricingContext.fixedReferenceCurrency,
     fixedSuggestedPrice:
       pricingContext.fixedSuggestedPrice,
+    fixedMarketValueMxn:
+      pricingContext.fixedMarketValueMxn,
   });
 
   return preparePhotos(
@@ -190,6 +228,7 @@ export async function runAtlas({
           "No encontré coincidencias claras.",
         best: null,
         alternatives: [],
+        rejected: [],
         pricingContext: null,
         decisionContext: null,
         searchResults: [],
@@ -199,12 +238,13 @@ export async function runAtlas({
     notifyProgress(
       onProgress,
       "comparingImages",
-      `Encontré ${results.length} coincidencias. Estoy comparando similitud, modelo, marca y datos técnicos.`
+      `Encontré ${results.length} coincidencias. Estoy validando similitud visual, modelo, marca, capacidad y forma.`
     );
 
     const {
       best,
       alternatives,
+      rejected = [],
     } = chooseBestResult(results);
 
     if (!best) {
@@ -216,6 +256,7 @@ export async function runAtlas({
           "No encontré una coincidencia suficientemente confiable.",
         best: null,
         alternatives: [],
+        rejected,
         pricingContext: null,
         decisionContext: null,
         searchResults: results,
@@ -225,7 +266,7 @@ export async function runAtlas({
     notifyProgress(
       onProgress,
       "selectingSource",
-      `Elegí ${best.source || "la mejor fuente"} por coincidencia, no por precio.`
+      `Elegí ${best.source || "la mejor fuente"} por coincidencia del producto, no por precio ni por tienda.`
     );
 
     let product = buildBaseCandidate(
@@ -265,17 +306,14 @@ export async function runAtlas({
         bestResult: best,
         product,
         results,
+        rejected,
       });
 
     const preparedAlternatives =
-      alternatives.map((item) =>
-        preparePhotos(
-          buildBaseCandidate(
-            item,
-            candidateContext
-          ),
-          results
-        )
+      buildAlternativeCandidates(
+        alternatives,
+        candidateContext,
+        results
       );
 
     notifyProgress(
@@ -298,13 +336,19 @@ export async function runAtlas({
           ).toFixed(2)}%.`
         : "";
 
+    const sourceMessage =
+      product.photoSourcesMixed
+        ? " Se utilizó una imagen externa únicamente para medidas."
+        : "";
+
     return {
       status: "result",
       message: product.aiEnriched
-        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}`
-        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}`,
+        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}${sourceMessage}`
+        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}${sourceMessage}`,
       best: product,
       alternatives: preparedAlternatives,
+      rejected,
       pricingContext,
       decisionContext,
       searchResults: results,

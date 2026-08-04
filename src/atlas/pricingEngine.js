@@ -7,6 +7,7 @@ const DEFAULTS = {
   opportunityThresholdMxn: 5000,
   marketFraction: 0.5,
   roundingStep: 50,
+  maximumMarketFraction: 0.85,
 };
 
 function number(value, fallback = 0) {
@@ -16,6 +17,10 @@ function number(value, fallback = 0) {
 
 function clamp(value, minimum, maximum) {
   return Math.min(Math.max(value, minimum), maximum);
+}
+
+function money(value) {
+  return Number(number(value).toFixed(2));
 }
 
 function roundPriceUp(value, step = DEFAULTS.roundingStep) {
@@ -30,6 +35,7 @@ function roundPriceUp(value, step = DEFAULTS.roundingStep) {
 function getReferencePrice(product = {}, options = {}) {
   const candidates = [
     options.fixedReferencePrice,
+    options.referencePrice,
     product.referencePrice,
     product.rawResult?.price,
     product.rawResult?.extracted_price,
@@ -49,6 +55,7 @@ function getReferencePrice(product = {}, options = {}) {
 function getReferenceCurrency(product = {}, options = {}) {
   return String(
     options.fixedReferenceCurrency ||
+      options.referenceCurrency ||
       product.referenceCurrency ||
       product.rawResult?.currency ||
       product.rawResult?.raw?.price?.currency ||
@@ -65,6 +72,15 @@ function calculateMarginPercent(salePrice, totalCostMxn) {
   return ((price - cost) / price) * 100;
 }
 
+function calculateMarkupPercent(salePrice, totalCostMxn) {
+  const price = Math.max(0, number(salePrice));
+  const cost = Math.max(0, number(totalCostMxn));
+
+  if (cost <= 0) return 0;
+
+  return ((price - cost) / cost) * 100;
+}
+
 function enforceMinimumMargin({
   candidatePrice,
   totalCostMxn,
@@ -77,15 +93,13 @@ function enforceMinimumMargin({
     95
   );
 
-  const marginDecimal = targetMargin / 100;
-
   const exactMinimumPrice =
     totalCostMxn > 0
-      ? totalCostMxn / (1 - marginDecimal)
+      ? totalCostMxn / (1 - targetMargin / 100)
       : 0;
 
   let safePrice = roundPriceUp(
-    Math.max(candidatePrice, exactMinimumPrice),
+    Math.max(number(candidatePrice), exactMinimumPrice),
     roundingStep
   );
 
@@ -93,13 +107,70 @@ function enforceMinimumMargin({
     safePrice > 0 &&
     calculateMarginPercent(safePrice, totalCostMxn) + 1e-9 < targetMargin
   ) {
-    safePrice += Math.max(1, number(roundingStep, 50));
+    safePrice += Math.max(1, number(roundingStep, DEFAULTS.roundingStep));
   }
 
   return {
-    exactMinimumPrice: Number(exactMinimumPrice.toFixed(2)),
+    exactMinimumPrice: money(exactMinimumPrice),
     safeMinimumPrice: safePrice,
     targetMarginPercent: targetMargin,
+  };
+}
+
+function resolveMarketValueMxn({
+  referencePrice,
+  referenceCurrency,
+  fixedMarketValueMxn,
+  exchangeRate,
+}) {
+  const lockedMarketValue = number(fixedMarketValueMxn, 0);
+
+  if (lockedMarketValue > 0) {
+    return money(lockedMarketValue);
+  }
+
+  if (!(referencePrice > 0)) return 0;
+
+  return money(
+    referenceCurrency === "MXN"
+      ? referencePrice
+      : referencePrice * exchangeRate
+  );
+}
+
+function buildStrategy({
+  fixedSuggestedPrice,
+  marketValueMxn,
+  opportunityThresholdMxn,
+  marketOpportunityPrice,
+}) {
+  if (number(fixedSuggestedPrice, 0) > 0) {
+    return {
+      candidatePrice: number(fixedSuggestedPrice),
+      strategy: "locked_reference",
+    };
+  }
+
+  if (
+    marketValueMxn >= opportunityThresholdMxn &&
+    marketOpportunityPrice > 0
+  ) {
+    return {
+      candidatePrice: marketOpportunityPrice,
+      strategy: "market_opportunity",
+    };
+  }
+
+  if (marketOpportunityPrice > 0) {
+    return {
+      candidatePrice: marketOpportunityPrice,
+      strategy: "balanced_market",
+    };
+  }
+
+  return {
+    candidatePrice: 0,
+    strategy: "minimum_margin",
   };
 }
 
@@ -126,27 +197,21 @@ export function calculateTotalCostMxn({
   const normalizedExtra = Math.max(0, number(extraCostMxn));
 
   const baseCostMxn = normalizedCostUsd * normalizedExchangeRate;
-  const commissionMxn =
-    baseCostMxn * (normalizedCommission / 100);
-  const taxMxn =
-    baseCostMxn * (normalizedTax / 100);
-
+  const commissionMxn = baseCostMxn * (normalizedCommission / 100);
+  const taxMxn = baseCostMxn * (normalizedTax / 100);
   const totalCostMxn =
-    baseCostMxn +
-    commissionMxn +
-    taxMxn +
-    normalizedExtra;
+    baseCostMxn + commissionMxn + taxMxn + normalizedExtra;
 
   return {
     costUsd: normalizedCostUsd,
     exchangeRate: normalizedExchangeRate,
     commissionPercent: normalizedCommission,
     taxPercent: normalizedTax,
-    baseCostMxn: Number(baseCostMxn.toFixed(2)),
-    commissionMxn: Number(commissionMxn.toFixed(2)),
-    taxMxn: Number(taxMxn.toFixed(2)),
-    extraCostMxn: normalizedExtra,
-    totalCostMxn: Number(totalCostMxn.toFixed(2)),
+    baseCostMxn: money(baseCostMxn),
+    commissionMxn: money(commissionMxn),
+    taxMxn: money(taxMxn),
+    extraCostMxn: money(normalizedExtra),
+    totalCostMxn: money(totalCostMxn),
   };
 }
 
@@ -161,78 +226,98 @@ export function applyPricingToProduct(product = {}, options = {}) {
     extraCostMxn: config.extraCostMxn,
   });
 
+  const exchangeRate = Math.max(
+    0,
+    number(config.exchangeRate, DEFAULTS.exchangeRate)
+  );
+
   const referencePrice = getReferencePrice(product, config);
   const referenceCurrency = getReferenceCurrency(product, config);
 
-  const marketValueMxn =
-    referencePrice > 0
-      ? referenceCurrency === "MXN"
-        ? referencePrice
-        : referencePrice * number(config.exchangeRate, DEFAULTS.exchangeRate)
-      : 0;
+  const marketValueMxn = resolveMarketValueMxn({
+    referencePrice,
+    referenceCurrency,
+    fixedMarketValueMxn: config.fixedMarketValueMxn,
+    exchangeRate,
+  });
+
+  const marketFraction = clamp(
+    number(config.marketFraction, DEFAULTS.marketFraction),
+    0.25,
+    number(config.maximumMarketFraction, DEFAULTS.maximumMarketFraction)
+  );
 
   const marketOpportunityPrice =
     marketValueMxn > 0
       ? roundPriceUp(
-          marketValueMxn *
-            clamp(
-              number(config.marketFraction, DEFAULTS.marketFraction),
-              0.25,
-              0.9
-            ),
+          marketValueMxn * marketFraction,
           config.roundingStep
         )
       : 0;
 
-  let candidatePrice = 0;
-  let strategy = "minimum_margin";
-
-  if (number(config.fixedSuggestedPrice, 0) > 0) {
-    candidatePrice = number(config.fixedSuggestedPrice);
-    strategy = "locked_reference";
-  } else if (
-    marketValueMxn >=
-      number(
-        config.opportunityThresholdMxn,
-        DEFAULTS.opportunityThresholdMxn
-      ) &&
-    marketOpportunityPrice > 0
-  ) {
-    candidatePrice = marketOpportunityPrice;
-    strategy = "market_opportunity";
-  } else if (marketOpportunityPrice > 0) {
-    candidatePrice = marketOpportunityPrice;
-    strategy = "balanced_market";
-  }
+  const initialStrategy = buildStrategy({
+    fixedSuggestedPrice: config.fixedSuggestedPrice,
+    marketValueMxn,
+    opportunityThresholdMxn: number(
+      config.opportunityThresholdMxn,
+      DEFAULTS.opportunityThresholdMxn
+    ),
+    marketOpportunityPrice,
+  });
 
   const marginGuard = enforceMinimumMargin({
-    candidatePrice,
+    candidatePrice: initialStrategy.candidatePrice,
     totalCostMxn: costBreakdown.totalCostMxn,
     minimumMarginPercent: config.minimumMarginPercent,
     roundingStep: config.roundingStep,
   });
 
-  const suggestedPrice = marginGuard.safeMinimumPrice;
+  let suggestedPrice = marginGuard.safeMinimumPrice;
+  let strategy = initialStrategy.strategy;
 
   if (
     strategy !== "locked_reference" &&
-    candidatePrice < marginGuard.safeMinimumPrice
+    initialStrategy.candidatePrice < marginGuard.safeMinimumPrice
   ) {
     strategy = "minimum_margin";
   }
 
-  const profitMxn =
-    suggestedPrice - costBreakdown.totalCostMxn;
+  // Nunca sugerir por encima del valor de mercado salvo que el costo real
+  // exija un precio mayor para respetar el margen mínimo.
+  const exceedsMarketBecauseOfCost =
+    marketValueMxn > 0 &&
+    marginGuard.safeMinimumPrice > marketValueMxn;
 
+  if (
+    marketValueMxn > 0 &&
+    suggestedPrice > marketValueMxn &&
+    !exceedsMarketBecauseOfCost
+  ) {
+    suggestedPrice = roundPriceUp(
+      marketValueMxn,
+      config.roundingStep
+    );
+  }
+
+  // Segunda validación obligatoria después de cualquier ajuste.
+  const finalGuard = enforceMinimumMargin({
+    candidatePrice: suggestedPrice,
+    totalCostMxn: costBreakdown.totalCostMxn,
+    minimumMarginPercent: config.minimumMarginPercent,
+    roundingStep: config.roundingStep,
+  });
+
+  suggestedPrice = finalGuard.safeMinimumPrice;
+
+  const profitMxn = suggestedPrice - costBreakdown.totalCostMxn;
   const marginPercent = calculateMarginPercent(
     suggestedPrice,
     costBreakdown.totalCostMxn
   );
-
-  const markupPercent =
-    costBreakdown.totalCostMxn > 0
-      ? (profitMxn / costBreakdown.totalCostMxn) * 100
-      : 0;
+  const markupPercent = calculateMarkupPercent(
+    suggestedPrice,
+    costBreakdown.totalCostMxn
+  );
 
   const savingsMxn =
     marketValueMxn > 0
@@ -255,11 +340,13 @@ export function applyPricingToProduct(product = {}, options = {}) {
 
   const explanation =
     strategy === "locked_reference"
-      ? "La alternativa conserva la decisión comercial de la mejor coincidencia, pero Atlas eleva el precio si fuera necesario para respetar el margen mínimo."
+      ? "La alternativa conserva el precio comercial de la mejor coincidencia. Atlas solo lo eleva si fuera necesario para proteger el margen mínimo."
       : strategy === "market_opportunity"
-      ? "El producto tiene un valor de mercado alto y el precio sugerido aprovecha esa oportunidad sin bajar del margen mínimo."
+      ? "El valor de mercado permite vender cerca de la mitad de su precio normal, manteniendo el margen mínimo."
       : strategy === "balanced_market"
-      ? "El precio mantiene una ventaja frente al mercado y respeta el margen mínimo."
+      ? "El precio mantiene una ventaja clara frente al mercado y respeta el margen mínimo."
+      : exceedsMarketBecauseOfCost
+      ? "El costo real obliga a superar el valor de mercado detectado para no vender por debajo del margen mínimo."
       : "El precio fue redondeado hacia arriba para garantizar el margen mínimo configurado.";
 
   return {
@@ -271,20 +358,28 @@ export function applyPricingToProduct(product = {}, options = {}) {
       strategy,
       strategyLabel,
       explanation,
-      minimumMarginPercent: marginGuard.targetMarginPercent,
-      exactMinimumPrice: marginGuard.exactMinimumPrice,
-      minimumPrice: marginGuard.safeMinimumPrice,
-      marketValueMxn: Number(marketValueMxn.toFixed(2)),
+      minimumMarginPercent: finalGuard.targetMarginPercent,
+      exactMinimumPrice: finalGuard.exactMinimumPrice,
+      minimumPrice: finalGuard.safeMinimumPrice,
+      referencePrice: referencePrice || null,
+      referenceCurrency,
+      marketValueMxn,
+      marketFraction: money(marketFraction),
       marketOpportunityPrice,
       suggestedPrice,
-      profitMxn: Number(profitMxn.toFixed(2)),
-      marginPercent: Number(marginPercent.toFixed(2)),
-      markupPercent: Number(markupPercent.toFixed(2)),
-      savingsMxn: Number(savingsMxn.toFixed(2)),
-      savingsPercent: Number(savingsPercent.toFixed(2)),
+      profitMxn: money(profitMxn),
+      marginPercent: money(marginPercent),
+      markupPercent: money(markupPercent),
+      savingsMxn: money(savingsMxn),
+      savingsPercent: money(savingsPercent),
       costBreakdown,
       marginGuaranteed:
-        marginPercent + 1e-9 >= marginGuard.targetMarginPercent,
+        marginPercent + 1e-9 >= finalGuard.targetMarginPercent,
+      marketValueLocked:
+        number(config.fixedMarketValueMxn, 0) > 0,
+      priceLocked:
+        number(config.fixedSuggestedPrice, 0) > 0,
+      exceedsMarketBecauseOfCost,
     },
   };
 }
