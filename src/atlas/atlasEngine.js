@@ -3,11 +3,13 @@ import { searchByImage } from "./imageSearch";
 import { chooseBestResult } from "./ranking";
 import { buildProductCandidate } from "./productBuilder";
 import { enrichProductCandidate } from "./productEnrichment";
+import { applyPricingToProduct } from "./pricingEngine";
 
 export async function runAtlas({
   photo,
   costUsd,
   stock = "1",
+  pricingOptions = {},
   onProgress,
 }) {
   if (!photo) {
@@ -73,16 +75,30 @@ export async function runAtlas({
       };
     }
 
+    notify(
+      "pricingProduct",
+      "Estoy calculando un precio Donatello con tu costo y el valor de mercado..."
+    );
+
+    product = applyPricingToProduct(product, pricingOptions);
+
     notify("buildingProduct");
+
+    const pricingMessage = product.suggestedPrice
+      ? ` Precio sugerido: $${Number(product.suggestedPrice).toLocaleString("es-MX")} MXN.`
+      : "";
 
     return {
       status: "result",
       message: product.aiEnriched
-        ? "Ya entendí el producto y preparé una opción clara para que la revises."
-        : "Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.",
+        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}`
+        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}`,
       best: product,
       alternatives: alternatives.map((item) =>
-        buildProductCandidate(item, { costUsd, stock })
+        applyPricingToProduct(
+          buildProductCandidate(item, { costUsd, stock }),
+          pricingOptions
+        )
       ),
     };
   } catch (error) {
