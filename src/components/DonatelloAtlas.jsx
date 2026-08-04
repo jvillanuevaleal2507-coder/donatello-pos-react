@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { runAtlas } from "../atlas/atlasEngine";
+import {
+  prepareAtlasAlternative,
+  runAtlas,
+} from "../atlas/atlasEngine";
 
 const initialResult = {
   name: "",
@@ -47,6 +50,8 @@ export default function DonatelloAtlas({
   const [alternatives, setAlternatives] = useState([]);
   const [progressMessage, setProgressMessage] = useState("");
   const [error, setError] = useState("");
+  const [pricingContext, setPricingContext] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
 
   const canAnalyze = useMemo(
     () => Boolean(photo) && Number(costUsd) > 0 && status !== "analyzing",
@@ -75,6 +80,8 @@ export default function DonatelloAtlas({
     setStatus("idle");
     setResult(initialResult);
     setAlternatives([]);
+    setPricingContext(null);
+    setSearchResults([]);
     setProgressMessage("");
   }
 
@@ -113,6 +120,8 @@ export default function DonatelloAtlas({
 
       setResult(response.best || initialResult);
       setAlternatives(response.alternatives || []);
+      setPricingContext(response.pricingContext || null);
+      setSearchResults(response.searchResults || []);
       setStatus("result");
       setProgressMessage(response.message || "");
     } catch (err) {
@@ -128,6 +137,8 @@ export default function DonatelloAtlas({
     setStatus("idle");
     setResult(initialResult);
     setAlternatives([]);
+    setPricingContext(null);
+    setSearchResults([]);
     setProgressMessage("");
     setError("");
   }
@@ -151,19 +162,39 @@ export default function DonatelloAtlas({
     setStatus("approved");
   }
 
-  function showNextAlternative() {
+  async function showNextAlternative() {
     if (!alternatives.length) {
-      setError(
-        "No tengo más opciones por ahora. En el siguiente sprint conectaremos la búsqueda visual real."
-      );
+      setError("No tengo más opciones para mostrar.");
       return;
     }
 
     const [next, ...rest] = alternatives;
-    setResult(next);
-    setAlternatives(rest);
-    setError("");
-    setProgressMessage("Te muestro la siguiente opción que encontré.");
+
+    try {
+      setError("");
+      setStatus("analyzing");
+      setProgressMessage(
+        "Estoy preparando la siguiente opción con IA, sin cambiar el precio comercial validado..."
+      );
+
+      const prepared = await prepareAtlasAlternative({
+        alternative: next,
+        pricingContext,
+        searchResults,
+      });
+
+      setResult(prepared);
+      setAlternatives(rest);
+      setStatus("result");
+      setProgressMessage(
+        "Te muestro la siguiente opción. El nombre y la categoría fueron preparados con IA, y el precio se conserva con base en la mejor coincidencia."
+      );
+    } catch (err) {
+      setStatus("result");
+      setError(
+        err.message || "No pude preparar la siguiente alternativa."
+      );
+    }
   }
 
   const inputStyle = {
