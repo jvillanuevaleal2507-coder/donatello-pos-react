@@ -410,7 +410,12 @@ export function selectProductPhotos({
         image.identity === candidate.identity
     );
 
-    if (!duplicate) selected.push(candidate);
+    if (!duplicate) {
+      const sameIdentity = selected.some(
+        (img) => img.identity && img.identity === candidate.identity
+      );
+      if (!sameIdentity) selected.push(candidate);
+    }
   }
 
   if (
