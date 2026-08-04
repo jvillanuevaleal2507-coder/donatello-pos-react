@@ -271,7 +271,13 @@ function collectSelectedResultImages(product = {}) {
     if (normalized) output.push(normalized);
   }
 
-  return uniqueImages(output);
+  const unique = uniqueImages(output);
+  const directImages = unique.filter((image) => !image.thumbnail);
+
+  // Si existe al menos una imagen directa de la tienda, descartamos
+  // por completo miniaturas de Google. Esas miniaturas suelen ser
+  // la misma foto principal con otra URL y provocan duplicados visuales.
+  return directImages.length ? directImages : unique;
 }
 
 function sameModel(a = {}, b = {}) {
@@ -410,12 +416,7 @@ export function selectProductPhotos({
         image.identity === candidate.identity
     );
 
-    if (!duplicate) {
-      const sameIdentity = selected.some(
-        (img) => img.identity && img.identity === candidate.identity
-      );
-      if (!sameIdentity) selected.push(candidate);
-    }
+    if (!duplicate) selected.push(candidate);
   }
 
   if (
