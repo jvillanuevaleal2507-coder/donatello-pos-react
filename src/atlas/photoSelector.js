@@ -1,8 +1,73 @@
-const GOOGLE_IMAGE_HOSTS = [
-  "gstatic.com",
-  "googleusercontent.com",
-  "google.com",
+const IMAGE_TYPE_PRIORITY = {
+  main: 500,
+  measurements: 400,
+  environment: 300,
+  detail: 200,
+  other: 100,
+};
+
+const MEASUREMENT_TERMS = [
+  "dimension",
+  "dimensions",
+  "measurement",
+  "measurements",
+  "size",
+  "width",
+  "height",
+  "depth",
+  "length",
+  "inch",
+  "inches",
+  "cm",
+  "mm",
+  "medidas",
+  "dimensiones",
+  "ancho",
+  "alto",
+  "profundidad",
+  "largo",
 ];
+
+const ENVIRONMENT_TERMS = [
+  "living room",
+  "dining room",
+  "bedroom",
+  "office",
+  "kitchen",
+  "room",
+  "lifestyle",
+  "in use",
+  "ambiente",
+  "sala",
+  "comedor",
+  "recamara",
+  "recámara",
+];
+
+const DETAIL_TERMS = [
+  "detail",
+  "close up",
+  "close-up",
+  "texture",
+  "finish",
+  "material",
+  "wood grain",
+  "fabric",
+  "metal",
+  "detalle",
+  "acabado",
+  "textura",
+  "madera",
+];
+
+function normalizeText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function normalizeUrl(value = "") {
   try {
@@ -14,101 +79,285 @@ function normalizeUrl(value = "") {
   }
 }
 
-function imageKey(value = "") {
+function getHost(value = "") {
   try {
-    const url = new URL(value);
-    const fileName = url.pathname.split("/").filter(Boolean).pop() || "";
-    return fileName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    return new URL(value).hostname
+      .toLowerCase()
+      .replace(/^www\./, "");
   } catch {
     return "";
   }
 }
 
-function isGoogleThumbnail(value = "") {
+function normalizeSource(value = "") {
+  return normalizeText(value)
+    .replace(/\s+/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function getResultSourceKey(result = {}) {
+  return normalizeSource(
+    result.sourceKey ||
+      result.source ||
+      getHost(result.url)
+  );
+}
+
+function classifyImage(image = {}) {
+  const explicitType = normalizeText(image.type);
+
+  if (
+    ["main", "measurements", "environment", "detail"].includes(
+      explicitType
+    )
+  ) {
+    return explicitType;
+  }
+
+  const text = normalizeText(
+    [image.alt, image.title, image.url]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (MEASUREMENT_TERMS.some((term) => text.includes(term))) {
+    return "measurements";
+  }
+
+  if (ENVIRONMENT_TERMS.some((term) => text.includes(term))) {
+    return "environment";
+  }
+
+  if (DETAIL_TERMS.some((term) => text.includes(term))) {
+    return "detail";
+  }
+
+  return "other";
+}
+
+function getImageIdentity(value = "") {
   try {
-    const host = new URL(value).hostname.toLowerCase();
-    return GOOGLE_IMAGE_HOSTS.some((item) => host.includes(item));
+    const url = new URL(value);
+
+    const cleanPath = url.pathname
+      .toLowerCase()
+      .replace(/\/+/g, "/")
+      .replace(/[-_](small|medium|large|thumb|thumbnail|preview)(?=\.|$)/g, "")
+      .replace(/[^a-z0-9/.]/g, "");
+
+    const fileName =
+      cleanPath.split("/").filter(Boolean).pop() || "";
+
+    return `${url.hostname.replace(/^www\./, "")}:${fileName}`;
   } catch {
-    return false;
+    return normalizeText(value);
   }
 }
 
-function flattenImageCandidates(product = {}, searchResults = []) {
-  const candidates = [];
+function isLikelyThumbnail(value = "") {
+  const text = normalizeText(value);
 
-  const push = (url, type = "other", source = "") => {
-    const normalized = normalizeUrl(url);
-    if (!normalized) return;
+  return [
+    "gstatic.com",
+    "googleusercontent.com",
+    "encrypted-tbn",
+    "thumbnail",
+    "thumb",
+    "small",
+  ].some((term) => text.includes(term));
+}
 
-    candidates.push({
-      url: normalized,
-      type,
-      source,
-      googleThumbnail: isGoogleThumbnail(normalized),
-      key: imageKey(normalized),
-    });
+function buildImageCandidate({
+  image,
+  result,
+  selectedSourceKey,
+  selectedResultUrl,
+}) {
+  const rawUrl =
+    typeof image === "string" ? image : image?.url;
+
+  const url = normalizeUrl(rawUrl);
+  if (!url) return null;
+
+  const type = classifyImage(
+    typeof image === "string"
+      ? { url }
+      : { ...image, url }
+  );
+
+  const sourceKey = getResultSourceKey(result);
+  const sameSource =
+    Boolean(selectedSourceKey) &&
+    sourceKey === selectedSourceKey;
+
+  const sameResult =
+    Boolean(selectedResultUrl) &&
+    normalizeUrl(result?.url) === normalizeUrl(selectedResultUrl);
+
+  const candidate = {
+    url,
+    type,
+    source: result?.source || "",
+    sourceKey,
+    resultUrl: result?.url || "",
+    sameSource,
+    sameResult,
+    thumbnail: isLikelyThumbnail(url),
+    identity: getImageIdentity(url),
   };
 
-  push(product.image_url, "main", product.source);
-  push(product.image_url_2, "other", product.source);
-  push(product.image_url_3, "other", product.source);
-  push(product.image_url_4, "other", product.source);
+  let score = IMAGE_TYPE_PRIORITY[type] || IMAGE_TYPE_PRIORITY.other;
 
-  for (const image of product.rawResult?.images || []) {
-    push(
-      typeof image === "string" ? image : image?.url,
-      typeof image === "string" ? "other" : image?.type || "other",
-      product.rawResult?.source || product.source
-    );
-  }
+  if (sameResult) score += 1000;
+  else if (sameSource) score += 700;
 
-  for (const result of searchResults || []) {
-    for (const image of result?.images || []) {
-      push(
-        typeof image === "string" ? image : image?.url,
-        typeof image === "string" ? "other" : image?.type || "other",
-        result?.source || ""
-      );
+  if (!candidate.thumbnail) score += 100;
+
+  candidate.score = score;
+
+  return candidate;
+}
+
+function collectCandidates({
+  product = {},
+  searchResults = [],
+}) {
+  const selectedResult = product.rawResult || {};
+  const selectedSourceKey = getResultSourceKey(selectedResult) ||
+    normalizeSource(product.source);
+  const selectedResultUrl =
+    selectedResult.url || product.sourceUrl || "";
+
+  const candidates = [];
+
+  const addFromResult = (result) => {
+    const images = Array.isArray(result?.images)
+      ? result.images
+      : [];
+
+    for (const image of images) {
+      const candidate = buildImageCandidate({
+        image,
+        result,
+        selectedSourceKey,
+        selectedResultUrl,
+      });
+
+      if (candidate) candidates.push(candidate);
+    }
+  };
+
+  // Primero: fotografías del resultado seleccionado.
+  addFromResult(selectedResult);
+
+  // Segundo: fotografías de la misma fuente.
+  for (const result of searchResults) {
+    if (result === selectedResult) continue;
+
+    if (
+      getResultSourceKey(result) === selectedSourceKey
+    ) {
+      addFromResult(result);
     }
   }
 
-  return candidates;
+  // Tercero: otras fuentes. Solo serán consideradas después
+  // para una imagen de medidas y bajo condiciones estrictas.
+  for (const result of searchResults) {
+    if (
+      getResultSourceKey(result) !== selectedSourceKey
+    ) {
+      addFromResult(result);
+    }
+  }
+
+  return {
+    candidates,
+    selectedSourceKey,
+    selectedResultUrl,
+  };
 }
 
-function distinctImages(candidates = []) {
-  const directImagesExist = candidates.some(
-    (image) => !image.googleThumbnail
-  );
-
+function uniqueCandidates(candidates = []) {
   const seenUrls = new Set();
-  const seenKeys = new Set();
+  const seenIdentities = new Set();
   const output = [];
 
-  for (const image of candidates) {
-    if (directImagesExist && image.googleThumbnail) continue;
-    if (seenUrls.has(image.url)) continue;
+  for (const candidate of candidates) {
+    if (!candidate?.url) continue;
+    if (seenUrls.has(candidate.url)) continue;
 
-    // Evita la misma fotografía servida por dos URLs diferentes.
-    if (image.key && seenKeys.has(image.key)) continue;
+    if (
+      candidate.identity &&
+      seenIdentities.has(candidate.identity)
+    ) {
+      continue;
+    }
 
-    seenUrls.add(image.url);
-    if (image.key) seenKeys.add(image.key);
-    output.push(image);
+    seenUrls.add(candidate.url);
+    if (candidate.identity) {
+      seenIdentities.add(candidate.identity);
+    }
+
+    output.push(candidate);
   }
 
   return output;
 }
 
-function scoreImage(image = {}, index = 0) {
-  let score = 100 - index;
+function chooseFromSameProductSource(candidates = []) {
+  const preferred = candidates
+    .filter((candidate) => candidate.sameSource)
+    .sort((a, b) => b.score - a.score);
 
-  if (image.type === "main") score += 500;
-  if (image.type === "measurements") score += 400;
-  if (image.type === "environment") score += 300;
-  if (image.type === "detail") score += 200;
-  if (!image.googleThumbnail) score += 100;
+  return uniqueCandidates(preferred);
+}
 
-  return score;
+function chooseMeasurementFallback({
+  candidates = [],
+  alreadySelected = [],
+}) {
+  const usedUrls = new Set(
+    alreadySelected.map((image) => image.url)
+  );
+  const usedIdentities = new Set(
+    alreadySelected
+      .map((image) => image.identity)
+      .filter(Boolean)
+  );
+
+  return (
+    candidates
+      .filter(
+        (candidate) =>
+          candidate.type === "measurements" &&
+          !candidate.sameSource &&
+          !usedUrls.has(candidate.url) &&
+          !usedIdentities.has(candidate.identity) &&
+          !candidate.thumbnail
+      )
+      .sort((a, b) => b.score - a.score)[0] || null
+  );
+}
+
+function orderSelectedImages(images = []) {
+  const typeOrder = {
+    main: 0,
+    measurements: 1,
+    environment: 2,
+    detail: 3,
+    other: 4,
+  };
+
+  return [...images].sort((a, b) => {
+    const typeDifference =
+      (typeOrder[a.type] ?? 99) -
+      (typeOrder[b.type] ?? 99);
+
+    if (typeDifference !== 0) return typeDifference;
+
+    return b.score - a.score;
+  });
 }
 
 export function selectProductPhotos({
@@ -116,21 +365,89 @@ export function selectProductPhotos({
   searchResults = [],
   maximum = 4,
 } = {}) {
-  const candidates = flattenImageCandidates(product, searchResults);
-  const selected = distinctImages(candidates)
-    .map((image, index) => ({
-      ...image,
-      score: scoreImage(image, index),
-    }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, Math.max(1, Number(maximum) || 4));
+  const {
+    candidates,
+    selectedSourceKey,
+    selectedResultUrl,
+  } = collectCandidates({
+    product,
+    searchResults,
+  });
+
+  const sameSourceImages =
+    chooseFromSameProductSource(candidates);
+
+  const selected = [];
+  const usedTypes = new Set();
+
+  const addBestType = (type) => {
+    const candidate = sameSourceImages.find(
+      (image) =>
+        image.type === type &&
+        !selected.some(
+          (selectedImage) =>
+            selectedImage.url === image.url ||
+            selectedImage.identity === image.identity
+        )
+    );
+
+    if (candidate) {
+      selected.push(candidate);
+      usedTypes.add(type);
+    }
+  };
+
+  addBestType("main");
+  addBestType("measurements");
+  addBestType("environment");
+  addBestType("detail");
+
+  // Completar con fotografías distintas de la misma fuente.
+  for (const candidate of sameSourceImages) {
+    if (selected.length >= maximum) break;
+
+    const duplicated = selected.some(
+      (image) =>
+        image.url === candidate.url ||
+        image.identity === candidate.identity
+    );
+
+    if (!duplicated) selected.push(candidate);
+  }
+
+  // Única excepción: foto de medidas de otra tienda.
+  // Nunca se usan fotos de ambiente, detalle o principal
+  // de una fuente distinta.
+  if (
+    selected.length < maximum &&
+    !usedTypes.has("measurements")
+  ) {
+    const measurementFallback =
+      chooseMeasurementFallback({
+        candidates,
+        alreadySelected: selected,
+      });
+
+    if (measurementFallback) {
+      selected.push({
+        ...measurementFallback,
+        crossSourceMeasurement: true,
+      });
+    }
+  }
+
+  const finalSelection = orderSelectedImages(
+    uniqueCandidates(selected)
+  ).slice(0, Math.max(1, Number(maximum) || 4));
 
   return {
-    selected,
-    image_url: selected[0]?.url || "",
-    image_url_2: selected[1]?.url || "",
-    image_url_3: selected[2]?.url || "",
-    image_url_4: selected[3]?.url || "",
+    selectedSourceKey,
+    selectedResultUrl,
+    selected: finalSelection,
+    image_url: finalSelection[0]?.url || "",
+    image_url_2: finalSelection[1]?.url || "",
+    image_url_3: finalSelection[2]?.url || "",
+    image_url_4: finalSelection[3]?.url || "",
   };
 }
 
@@ -152,5 +469,6 @@ export function applySelectedPhotos(
     image_url_3: selection.image_url_3,
     image_url_4: selection.image_url_4,
     photoSelection: selection.selected,
+    photoSourceKey: selection.selectedSourceKey,
   };
 }

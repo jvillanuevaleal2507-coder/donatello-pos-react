@@ -9,10 +9,103 @@ import { applySelectedPhotos } from "./photoSelector";
 function buildPricingContext(product = {}) {
   return {
     fixedReferencePrice: product.referencePrice || null,
-    fixedReferenceCurrency: product.referenceCurrency || "USD",
-    fixedSuggestedPrice: product.suggestedPrice || null,
+    fixedReferenceCurrency:
+      product.referenceCurrency || "USD",
+    fixedSuggestedPrice:
+      product.suggestedPrice || null,
     pricing: product.pricing || null,
   };
+}
+
+function buildDecisionContext({
+  bestResult,
+  product,
+  results,
+}) {
+  return {
+    bestResultId: bestResult?.id || null,
+    bestSource:
+      bestResult?.source || product?.source || "",
+    bestSourceUrl:
+      bestResult?.url || product?.sourceUrl || "",
+    confidence:
+      bestResult?.confidence ??
+      product?.confidence ??
+      0,
+    exactImageMatch:
+      Boolean(bestResult?.exactImageMatch),
+    resultCount: results.length,
+    pricing: buildPricingContext(product),
+  };
+}
+
+function notifyProgress(
+  onProgress,
+  step,
+  customMessage = ""
+) {
+  onProgress?.({
+    step,
+    message:
+      customMessage ||
+      ATLAS_MESSAGES[step] ||
+      "Atlas está trabajando...",
+  });
+}
+
+function buildBaseCandidate(result, context) {
+  const candidate = buildProductCandidate(result, context);
+
+  return {
+    ...candidate,
+    atlasScore:
+      result?.atlasScore ?? candidate.atlasScore ?? 0,
+    sourceKey:
+      result?.sourceKey ?? candidate.sourceKey ?? "",
+    promotional:
+      Boolean(result?.promotional),
+  };
+}
+
+async function enrichSafely(
+  product,
+  warningPrefix = "Atlas AI enrichment warning"
+) {
+  try {
+    return await enrichProductCandidate(product);
+  } catch (error) {
+    console.error(`${warningPrefix}:`, error);
+
+    return {
+      ...product,
+      aiEnriched: false,
+      aiWarning:
+        error instanceof Error
+          ? error.message
+          : "La mejora con IA no estuvo disponible.",
+    };
+  }
+}
+
+function preparePhotos(
+  product,
+  searchResults
+) {
+  return applySelectedPhotos(
+    product,
+    searchResults,
+    4
+  );
+}
+
+function preparePricing(
+  product,
+  pricingOptions
+) {
+  return applyPricingToProduct(
+    product,
+    pricingOptions
+  );
 }
 
 export async function prepareAtlasAlternative({
@@ -22,38 +115,31 @@ export async function prepareAtlasAlternative({
   searchResults = [],
 }) {
   if (!alternative) {
-    throw new Error("Atlas no recibió una alternativa para preparar.");
+    throw new Error(
+      "Atlas no recibió una alternativa para preparar."
+    );
   }
 
-  let product = alternative;
+  const enriched = await enrichSafely(
+    alternative,
+    "Atlas alternative enrichment warning"
+  );
 
-  try {
-    product = await enrichProductCandidate(alternative);
-  } catch (aiError) {
-    console.error("Atlas alternative enrichment warning:", aiError);
-    product = {
-      ...alternative,
-      aiEnriched: false,
-      aiWarning:
-        aiError instanceof Error
-          ? aiError.message
-          : "No pude mejorar esta alternativa con IA.",
-    };
-  }
-
-  product = applyPricingToProduct(product, {
+  const priced = preparePricing(enriched, {
     ...pricingOptions,
-    fixedReferencePrice: pricingContext.fixedReferencePrice,
-    fixedReferenceCurrency: pricingContext.fixedReferenceCurrency,
-    fixedSuggestedPrice: pricingContext.fixedSuggestedPrice,
+    fixedReferencePrice:
+      pricingContext.fixedReferencePrice,
+    fixedReferenceCurrency:
+      pricingContext.fixedReferenceCurrency,
+    fixedSuggestedPrice:
+      pricingContext.fixedSuggestedPrice,
   });
 
-  return applySelectedPhotos(
-    product,
+  return preparePhotos(
+    priced,
     searchResults.length
       ? searchResults
-      : [alternative.rawResult].filter(Boolean),
-    4
+      : [alternative.rawResult].filter(Boolean)
   );
 }
 
@@ -65,109 +151,171 @@ export async function runAtlas({
   onProgress,
 }) {
   if (!photo) {
-    throw new Error("Atlas necesita una fotografía para comenzar.");
+    throw new Error(
+      "Atlas necesita una fotografía para comenzar."
+    );
   }
 
   if (!(Number(costUsd) > 0)) {
-    throw new Error("Atlas necesita el costo en USD.");
+    throw new Error(
+      "Atlas necesita el costo en USD."
+    );
   }
 
-  const notify = (step, customMessage = "") => {
-    onProgress?.({
-      step,
-      message:
-        customMessage ||
-        ATLAS_MESSAGES[step] ||
-        "Atlas está trabajando...",
-    });
+  const candidateContext = {
+    costUsd,
+    stock,
   };
 
   try {
+    notifyProgress(
+      onProgress,
+      "analyzingImage",
+      "Déjame investigar este producto..."
+    );
+
     const results = await searchByImage({
       photo,
-      onProgress: (step) => notify(step),
+      onProgress: (step) =>
+        notifyProgress(onProgress, step),
     });
 
-    if (!results.length) {
-      notify("noResults");
+    if (!Array.isArray(results) || !results.length) {
+      notifyProgress(onProgress, "noResults");
 
       return {
         status: "no_results",
-        message: ATLAS_MESSAGES.noResults,
+        message:
+          ATLAS_MESSAGES.noResults ||
+          "No encontré coincidencias claras.",
         best: null,
         alternatives: [],
+        pricingContext: null,
+        decisionContext: null,
+        searchResults: [],
       };
     }
 
-    notify("comparingImages");
+    notifyProgress(
+      onProgress,
+      "comparingImages",
+      `Encontré ${results.length} coincidencias. Estoy comparando similitud, modelo, marca y datos técnicos.`
+    );
 
-    const { best, alternatives } = chooseBestResult(results);
+    const {
+      best,
+      alternatives,
+    } = chooseBestResult(results);
 
-    notify("selectingSource");
+    if (!best) {
+      notifyProgress(onProgress, "noResults");
 
-    const baseProduct = buildProductCandidate(best, {
-      costUsd,
-      stock,
-    });
+      return {
+        status: "no_results",
+        message:
+          "No encontré una coincidencia suficientemente confiable.",
+        best: null,
+        alternatives: [],
+        pricingContext: null,
+        decisionContext: null,
+        searchResults: results,
+      };
+    }
 
-    notify(
+    notifyProgress(
+      onProgress,
+      "selectingSource",
+      `Elegí ${best.source || "la mejor fuente"} por coincidencia, no por precio.`
+    );
+
+    let product = buildBaseCandidate(
+      best,
+      candidateContext
+    );
+
+    notifyProgress(
+      onProgress,
       "understandingProduct",
-      "Ya encontré una coincidencia. Ahora estoy entendiendo el producto y preparando un nombre claro en español..."
+      "Estoy preparando el nombre, la categoría y la información comercial..."
     );
 
-    let product = baseProduct;
+    product = await enrichSafely(product);
 
-    try {
-      product = await enrichProductCandidate(baseProduct);
-    } catch (aiError) {
-      console.error("Atlas AI enrichment warning:", aiError);
-
-      product = {
-        ...baseProduct,
-        aiEnriched: false,
-        aiWarning:
-          aiError instanceof Error
-            ? aiError.message
-            : "La mejora con IA no estuvo disponible.",
-      };
-    }
-
-    notify(
+    notifyProgress(
+      onProgress,
       "pricingProduct",
-      "Estoy calculando un precio Donatello con tu costo y el valor de mercado..."
+      "Estoy calculando el precio Donatello y garantizando el margen mínimo..."
     );
 
-    product = applyPricingToProduct(product, pricingOptions);
-    product = applySelectedPhotos(product, results, 4);
+    product = preparePricing(
+      product,
+      pricingOptions
+    );
 
-    const pricingContext = buildPricingContext(product);
+    product = preparePhotos(
+      product,
+      results
+    );
 
-    notify("buildingProduct");
+    const pricingContext =
+      buildPricingContext(product);
 
-    const pricingMessage = product.suggestedPrice
-      ? ` Precio sugerido: $${Number(
-          product.suggestedPrice
-        ).toLocaleString("es-MX")} MXN.`
-      : "";
+    const decisionContext =
+      buildDecisionContext({
+        bestResult: best,
+        product,
+        results,
+      });
+
+    const preparedAlternatives =
+      alternatives.map((item) =>
+        preparePhotos(
+          buildBaseCandidate(
+            item,
+            candidateContext
+          ),
+          results
+        )
+      );
+
+    notifyProgress(
+      onProgress,
+      "buildingProduct",
+      "Ya organicé la fuente, el precio y las fotografías válidas."
+    );
+
+    const pricingMessage =
+      product.suggestedPrice
+        ? ` Precio sugerido: $${Number(
+            product.suggestedPrice
+          ).toLocaleString("es-MX")} MXN.`
+        : "";
+
+    const marginMessage =
+      product.pricing?.marginGuaranteed
+        ? ` Margen mínimo garantizado: ${Number(
+            product.pricing.marginPercent
+          ).toFixed(2)}%.`
+        : "";
 
     return {
       status: "result",
       message: product.aiEnriched
-        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}`
-        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}`,
+        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}`
+        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}`,
       best: product,
+      alternatives: preparedAlternatives,
       pricingContext,
+      decisionContext,
       searchResults: results,
-      alternatives: alternatives.map((item) =>
-        applySelectedPhotos(
-          buildProductCandidate(item, { costUsd, stock }),
-          results,
-          4
-        )
-      ),
     };
   } catch (error) {
-    notify("error");
+    notifyProgress(
+      onProgress,
+      "error",
+      "Algo no salió bien. No guardaré nada sin tu aprobación."
+    );
+
     throw error;
   }
 }
