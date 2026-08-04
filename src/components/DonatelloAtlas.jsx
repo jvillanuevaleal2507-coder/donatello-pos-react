@@ -54,6 +54,8 @@ export default function DonatelloAtlas({
   const [searchResults, setSearchResults] = useState([]);
   const [currentOption, setCurrentOption] = useState(1);
   const [totalOptions, setTotalOptions] = useState(1);
+  const [decisionContext, setDecisionContext] = useState(null);
+  const [rejectedCount, setRejectedCount] = useState(0);
 
   const canAnalyze = useMemo(
     () => Boolean(photo) && Number(costUsd) > 0 && status !== "analyzing",
@@ -86,6 +88,8 @@ export default function DonatelloAtlas({
     setSearchResults([]);
     setCurrentOption(1);
     setTotalOptions(1);
+    setDecisionContext(null);
+    setRejectedCount(0);
     setProgressMessage("");
   }
 
@@ -128,6 +132,8 @@ export default function DonatelloAtlas({
       setSearchResults(response.searchResults || []);
       setCurrentOption(1);
       setTotalOptions(1 + (response.alternatives?.length || 0));
+      setDecisionContext(response.decisionContext || null);
+      setRejectedCount(response.rejected?.length || 0);
       setStatus("result");
       setProgressMessage(response.message || "");
     } catch (err) {
@@ -147,6 +153,8 @@ export default function DonatelloAtlas({
     setSearchResults([]);
     setCurrentOption(1);
     setTotalOptions(1);
+    setDecisionContext(null);
+    setRejectedCount(0);
     setProgressMessage("");
     setError("");
   }
@@ -182,7 +190,7 @@ export default function DonatelloAtlas({
       setError("");
       setStatus("analyzing");
       setProgressMessage(
-        "Estoy preparando la siguiente opción con IA, sin cambiar el precio comercial validado..."
+        "Estoy preparando la siguiente opción con IA, conservando el precio y el valor de mercado validados..."
       );
 
       const prepared = await prepareAtlasAlternative({
@@ -196,7 +204,7 @@ export default function DonatelloAtlas({
       setCurrentOption((value) => Math.min(value + 1, totalOptions));
       setStatus("result");
       setProgressMessage(
-        "Te muestro la siguiente opción. El nombre y la categoría fueron preparados con IA, y el precio se conserva con base en la mejor coincidencia."
+        "Te muestro la siguiente opción. La IA limpió el nombre y la categoría; el precio y el valor de mercado se mantienen bloqueados."
       );
     } catch (err) {
       setStatus("result");
@@ -217,8 +225,30 @@ export default function DonatelloAtlas({
       totalCost: Number(pricing.costBreakdown?.totalCostMxn || 0),
       strategy: pricing.strategyLabel || "",
       guaranteed: Boolean(pricing.marginGuaranteed),
+      priceLocked: Boolean(pricing.priceLocked),
+      marketLocked: Boolean(pricing.marketValueLocked),
+      explanation: pricing.explanation || "",
     };
   }, [result]);
+
+  const sourceAudit = useMemo(() => {
+    return {
+      confidence: Number(
+        decisionContext?.confidence ??
+          result?.confidence ??
+          0
+      ),
+      exact: Boolean(
+        decisionContext?.exactImageMatch ??
+          result?.exactImageMatch
+      ),
+      compatibility:
+        decisionContext?.productCompatibility ??
+        result?.productCompatibility ??
+        null,
+      photosMixed: Boolean(result?.photoSourcesMixed),
+    };
+  }, [decisionContext, result]);
 
   const inputStyle = {
     width: "100%",
@@ -490,6 +520,61 @@ export default function DonatelloAtlas({
             <p style={{ margin: "8px 0 0", color: "#4f6559" }}>
               {progressMessage}
             </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+                marginTop: 12,
+              }}
+            >
+              <span
+                style={{
+                  borderRadius: 999,
+                  padding: "6px 10px",
+                  background: "#ffffff",
+                  border: "1px solid #bdd8c7",
+                  color: "#315b49",
+                  fontWeight: 900,
+                  fontSize: ".82rem",
+                }}
+              >
+                Coincidencia {sourceAudit.confidence.toFixed(0)}%
+              </span>
+
+              {sourceAudit.exact && (
+                <span
+                  style={{
+                    borderRadius: 999,
+                    padding: "6px 10px",
+                    background: "#e4f5ea",
+                    border: "1px solid #9dc4ad",
+                    color: "#244c3d",
+                    fontWeight: 900,
+                    fontSize: ".82rem",
+                  }}
+                >
+                  Imagen exacta
+                </span>
+              )}
+
+              {rejectedCount > 0 && (
+                <span
+                  style={{
+                    borderRadius: 999,
+                    padding: "6px 10px",
+                    background: "#fff8e8",
+                    border: "1px solid #d5b86a",
+                    color: "#6a5521",
+                    fontWeight: 900,
+                    fontSize: ".82rem",
+                  }}
+                >
+                  {rejectedCount} resultado(s) descartado(s)
+                </span>
+              )}
+            </div>
           </div>
 
           <div
@@ -607,6 +692,53 @@ export default function DonatelloAtlas({
                 <strong>Estrategia:</strong>{" "}
                 {pricingSummary.strategy || "Precio comercial Atlas"}
               </div>
+
+              {(pricingSummary.priceLocked ||
+                pricingSummary.marketLocked) && (
+                <div>
+                  <strong>Protección:</strong>{" "}
+                  {pricingSummary.priceLocked
+                    ? "precio bloqueado"
+                    : ""}
+                  {pricingSummary.priceLocked &&
+                  pricingSummary.marketLocked
+                    ? " · "
+                    : ""}
+                  {pricingSummary.marketLocked
+                    ? "valor de mercado bloqueado"
+                    : ""}
+                </div>
+              )}
+
+              {pricingSummary.explanation && (
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    color: "#6a5b46",
+                    fontSize: ".92rem",
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {pricingSummary.explanation}
+                </div>
+              )}
+            </div>
+          )}
+
+          {sourceAudit.photosMixed && (
+            <div
+              style={{
+                marginTop: 14,
+                borderRadius: 14,
+                padding: "11px 13px",
+                background: "#fff8e8",
+                border: "1px solid #d5b86a",
+                color: "#665326",
+                fontWeight: 800,
+                fontSize: ".9rem",
+              }}
+            >
+              Atlas utilizó una imagen externa únicamente para mostrar medidas.
             </div>
           )}
 
