@@ -52,6 +52,8 @@ export default function DonatelloAtlas({
   const [error, setError] = useState("");
   const [pricingContext, setPricingContext] = useState(null);
   const [searchResults, setSearchResults] = useState([]);
+  const [currentOption, setCurrentOption] = useState(1);
+  const [totalOptions, setTotalOptions] = useState(1);
 
   const canAnalyze = useMemo(
     () => Boolean(photo) && Number(costUsd) > 0 && status !== "analyzing",
@@ -82,6 +84,8 @@ export default function DonatelloAtlas({
     setAlternatives([]);
     setPricingContext(null);
     setSearchResults([]);
+    setCurrentOption(1);
+    setTotalOptions(1);
     setProgressMessage("");
   }
 
@@ -122,6 +126,8 @@ export default function DonatelloAtlas({
       setAlternatives(response.alternatives || []);
       setPricingContext(response.pricingContext || null);
       setSearchResults(response.searchResults || []);
+      setCurrentOption(1);
+      setTotalOptions(1 + (response.alternatives?.length || 0));
       setStatus("result");
       setProgressMessage(response.message || "");
     } catch (err) {
@@ -139,6 +145,8 @@ export default function DonatelloAtlas({
     setAlternatives([]);
     setPricingContext(null);
     setSearchResults([]);
+    setCurrentOption(1);
+    setTotalOptions(1);
     setProgressMessage("");
     setError("");
   }
@@ -164,7 +172,7 @@ export default function DonatelloAtlas({
 
   async function showNextAlternative() {
     if (!alternatives.length) {
-      setError("No tengo más opciones para mostrar.");
+      setError("Ya revisaste todas las opciones encontradas.");
       return;
     }
 
@@ -185,6 +193,7 @@ export default function DonatelloAtlas({
 
       setResult(prepared);
       setAlternatives(rest);
+      setCurrentOption((value) => Math.min(value + 1, totalOptions));
       setStatus("result");
       setProgressMessage(
         "Te muestro la siguiente opción. El nombre y la categoría fueron preparados con IA, y el precio se conserva con base en la mejor coincidencia."
@@ -196,6 +205,20 @@ export default function DonatelloAtlas({
       );
     }
   }
+
+  const pricingSummary = useMemo(() => {
+    const pricing = result?.pricing;
+
+    if (!pricing) return null;
+
+    return {
+      margin: Number(pricing.marginPercent || 0),
+      marketValue: Number(pricing.marketValueMxn || 0),
+      totalCost: Number(pricing.costBreakdown?.totalCostMxn || 0),
+      strategy: pricing.strategyLabel || "",
+      guaranteed: Boolean(pricing.marginGuaranteed),
+    };
+  }, [result]);
 
   const inputStyle = {
     width: "100%",
@@ -469,9 +492,34 @@ export default function DonatelloAtlas({
             </p>
           </div>
 
-          <h4 style={{ margin: "0 0 14px", fontSize: "1.25rem" }}>
-            Coincidencia propuesta
-          </h4>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 14,
+            }}
+          >
+            <h4 style={{ margin: 0, fontSize: "1.25rem" }}>
+              Coincidencia propuesta
+            </h4>
+
+            <span
+              style={{
+                borderRadius: 999,
+                padding: "7px 11px",
+                background: "#fffaf0",
+                border: "1px solid #cfb97a",
+                color: "#59482f",
+                fontWeight: 900,
+                fontSize: ".9rem",
+              }}
+            >
+              Opción {currentOption} de {totalOptions}
+            </span>
+          </div>
 
           <div
             style={{
@@ -526,6 +574,42 @@ export default function DonatelloAtlas({
             </Field>
           </div>
 
+          {pricingSummary && (
+            <div
+              style={{
+                marginTop: 16,
+                borderRadius: 16,
+                padding: 14,
+                background: "#fffdf7",
+                border: "1px solid #dfd2ac",
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: 10,
+                color: "#514331",
+              }}
+            >
+              <div>
+                <strong>Costo total:</strong>{" "}
+                ${pricingSummary.totalCost.toLocaleString("es-MX")} MXN
+              </div>
+              <div>
+                <strong>Margen:</strong>{" "}
+                {pricingSummary.margin.toFixed(2)}%
+                {pricingSummary.guaranteed ? " ✓" : ""}
+              </div>
+              {pricingSummary.marketValue > 0 && (
+                <div>
+                  <strong>Valor de mercado:</strong>{" "}
+                  ${pricingSummary.marketValue.toLocaleString("es-MX")} MXN
+                </div>
+              )}
+              <div>
+                <strong>Estrategia:</strong>{" "}
+                {pricingSummary.strategy || "Precio comercial Atlas"}
+              </div>
+            </div>
+          )}
+
           <div
             style={{
               display: "grid",
@@ -549,17 +633,20 @@ export default function DonatelloAtlas({
             <button
               type="button"
               onClick={showNextAlternative}
+              disabled={!alternatives.length}
               style={{
                 minHeight: 58,
                 borderRadius: 18,
                 border: "1px solid #bfa45f",
-                background: "#fffaf0",
-                color: "#3e3022",
+                background: alternatives.length ? "#fffaf0" : "#eee8dc",
+                color: alternatives.length ? "#3e3022" : "#8c8375",
                 fontWeight: 900,
-                cursor: "pointer",
+                cursor: alternatives.length ? "pointer" : "not-allowed",
               }}
             >
-              No, mostrar otra opción
+              {alternatives.length
+                ? "No, mostrar otra opción"
+                : "No hay más opciones"}
             </button>
           </div>
         </div>
