@@ -140,6 +140,18 @@ export function applyPricingToProduct(product = {}, options = {}) {
     suggestedPrice: suggestedPrice || "",
     pricing: {
       strategy,
+      strategyLabel:
+        strategy === "market_opportunity"
+          ? "Aproximadamente la mitad del valor de mercado"
+          : strategy === "balanced_market"
+          ? "Equilibrio entre margen y valor de mercado"
+          : "Margen mínimo objetivo",
+      explanation:
+        strategy === "market_opportunity"
+          ? "El producto tiene valor de mercado alto; Atlas sugiere vender cerca de la mitad de su valor real."
+          : strategy === "balanced_market"
+          ? "El precio conserva el margen mínimo y mantiene una ventaja clara frente al mercado."
+          : "El precio se calculó para conservar al menos el margen objetivo.",
       minimumPrice,
       marketValueMxn: Number(marketValueMxn.toFixed(2)),
       marketOpportunityPrice,

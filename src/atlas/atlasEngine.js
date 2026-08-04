@@ -4,6 +4,7 @@ import { chooseBestResult } from "./ranking";
 import { buildProductCandidate } from "./productBuilder";
 import { enrichProductCandidate } from "./productEnrichment";
 import { applyPricingToProduct } from "./pricingEngine";
+import { applySelectedPhotos } from "./photoSelector";
 
 export async function runAtlas({
   photo,
@@ -81,6 +82,7 @@ export async function runAtlas({
     );
 
     product = applyPricingToProduct(product, pricingOptions);
+    product = applySelectedPhotos(product, results, 4);
 
     notify("buildingProduct");
 
@@ -94,12 +96,14 @@ export async function runAtlas({
         ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}`
         : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}`,
       best: product,
-      alternatives: alternatives.map((item) =>
-        applyPricingToProduct(
+      alternatives: alternatives.map((item) => {
+        const alternative = applyPricingToProduct(
           buildProductCandidate(item, { costUsd, stock }),
           pricingOptions
-        )
-      ),
+        );
+
+        return applySelectedPhotos(alternative, results, 4);
+      }),
     };
   } catch (error) {
     notify("error");
