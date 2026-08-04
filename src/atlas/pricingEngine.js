@@ -19,8 +19,9 @@ function roundPrice(value, step = DEFAULTS.roundingStep) {
   return Math.round(number(value) / safeStep) * safeStep;
 }
 
-function getReferencePrice(product = {}) {
+function getReferencePrice(product = {}, options = {}) {
   const candidates = [
+    options.fixedReferencePrice,
     product.referencePrice,
     product.rawResult?.price,
     product.rawResult?.extracted_price,
@@ -37,8 +38,9 @@ function getReferencePrice(product = {}) {
   return 0;
 }
 
-function getReferenceCurrency(product = {}) {
+function getReferenceCurrency(product = {}, options = {}) {
   return (
+    options.fixedReferenceCurrency ||
     product.referenceCurrency ||
     product.rawResult?.currency ||
     product.rawResult?.raw?.price?.currency ||
@@ -53,11 +55,23 @@ export function calculateTotalCostMxn({
   taxPercent = DEFAULTS.taxPercent,
   extraCostMxn = DEFAULTS.extraCostMxn,
 } = {}) {
-  const baseCostMxn = Math.max(0, number(costUsd)) * Math.max(0, number(exchangeRate, 20));
-  const commissionMxn = baseCostMxn * (Math.max(0, number(commissionPercent, 15)) / 100);
-  const taxMxn = baseCostMxn * (Math.max(0, number(taxPercent, 8.25)) / 100);
+  const baseCostMxn =
+    Math.max(0, number(costUsd)) *
+    Math.max(0, number(exchangeRate, 20));
+
+  const commissionMxn =
+    baseCostMxn *
+    (Math.max(0, number(commissionPercent, 15)) / 100);
+
+  const taxMxn =
+    baseCostMxn *
+    (Math.max(0, number(taxPercent, 8.25)) / 100);
+
   const totalCostMxn =
-    baseCostMxn + commissionMxn + taxMxn + Math.max(0, number(extraCostMxn));
+    baseCostMxn +
+    commissionMxn +
+    taxMxn +
+    Math.max(0, number(extraCostMxn));
 
   return {
     baseCostMxn: Number(baseCostMxn.toFixed(2)),
@@ -89,8 +103,12 @@ export function applyPricingToProduct(product = {}, options = {}) {
     config.roundingStep
   );
 
-  const referencePrice = getReferencePrice(product);
-  const referenceCurrency = getReferenceCurrency(product).toUpperCase();
+  const referencePrice = getReferencePrice(product, config);
+  const referenceCurrency = getReferenceCurrency(
+    product,
+    config
+  ).toUpperCase();
+
   const marketValueMxn =
     referencePrice > 0
       ? referenceCurrency === "MXN"
@@ -123,15 +141,37 @@ export function applyPricingToProduct(product = {}, options = {}) {
     strategy = "balanced_market";
   }
 
+  // Al navegar entre alternativas se conserva la decisión comercial
+  // de la primera coincidencia validada.
+  if (number(config.fixedSuggestedPrice, 0) > 0) {
+    suggestedPrice = number(config.fixedSuggestedPrice);
+    strategy = "locked_reference";
+  }
+
   suggestedPrice = Math.max(minimumPrice, suggestedPrice);
 
   const profitMxn = suggestedPrice - costBreakdown.totalCostMxn;
   const marginPercent =
     suggestedPrice > 0 ? (profitMxn / suggestedPrice) * 100 : 0;
+
   const savingsMxn =
-    marketValueMxn > 0 ? Math.max(0, marketValueMxn - suggestedPrice) : 0;
+    marketValueMxn > 0
+      ? Math.max(0, marketValueMxn - suggestedPrice)
+      : 0;
+
   const savingsPercent =
-    marketValueMxn > 0 ? (savingsMxn / marketValueMxn) * 100 : 0;
+    marketValueMxn > 0
+      ? (savingsMxn / marketValueMxn) * 100
+      : 0;
+
+  const strategyLabel =
+    strategy === "locked_reference"
+      ? "Precio conservado de la mejor coincidencia"
+      : strategy === "market_opportunity"
+      ? "Aproximadamente la mitad del valor de mercado"
+      : strategy === "balanced_market"
+      ? "Equilibrio entre margen y valor de mercado"
+      : "Margen mínimo objetivo";
 
   return {
     ...product,
@@ -140,14 +180,11 @@ export function applyPricingToProduct(product = {}, options = {}) {
     suggestedPrice: suggestedPrice || "",
     pricing: {
       strategy,
-      strategyLabel:
-        strategy === "market_opportunity"
-          ? "Aproximadamente la mitad del valor de mercado"
-          : strategy === "balanced_market"
-          ? "Equilibrio entre margen y valor de mercado"
-          : "Margen mínimo objetivo",
+      strategyLabel,
       explanation:
-        strategy === "market_opportunity"
+        strategy === "locked_reference"
+          ? "Esta alternativa conserva el precio calculado con la mejor coincidencia; no usa un precio aislado más bajo."
+          : strategy === "market_opportunity"
           ? "El producto tiene valor de mercado alto; Atlas sugiere vender cerca de la mitad de su valor real."
           : strategy === "balanced_market"
           ? "El precio conserva el margen mínimo y mantiene una ventaja clara frente al mercado."
