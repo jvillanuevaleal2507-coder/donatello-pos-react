@@ -13,6 +13,11 @@ import {
   extractTargetGallery,
 } from "./providers/targetProvider.js";
 
+import {
+  canHandleWalmartUrl,
+  extractWalmartGallery,
+} from "./providers/walmartProvider.js";
+
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 40;
@@ -413,6 +418,23 @@ export async function extractGalleryFromUrl({
       }
     }
 
+    // Provider específico de Walmart.
+    if (canHandleWalmartUrl(url)) {
+      const walmartGallery = extractWalmartGallery({
+        html,
+        url,
+        maximum,
+      });
+
+      if (walmartGallery.ok && walmartGallery.images.length) {
+        return {
+          ...walmartGallery,
+          providerUsed: "walmart",
+          fallbackUsed: false,
+        };
+      }
+    }
+
     // Respaldo genérico si un provider no obtiene imágenes
     // y para las tiendas que todavía no tienen provider específico.
     const images = [];
@@ -441,7 +463,8 @@ export async function extractGalleryFromUrl({
       fallbackUsed:
         canHandleAmazonUrl(url) ||
         canHandleLowesUrl(url) ||
-        canHandleTargetUrl(url),
+        canHandleTargetUrl(url) ||
+        canHandleWalmartUrl(url),
       error:
         selected.length > 0
           ? ""
@@ -507,6 +530,8 @@ export async function enrichResultWithGallery(
         gallery.productId || "",
       tcin:
         gallery.tcin || "",
+      itemId:
+        gallery.itemId || "",
     },
   };
 }
