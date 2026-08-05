@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import DonatelloAtlas from "../components/DonatelloAtlas";
 import { saveAtlasIntelligence } from "../atlas/intelligenceService";
@@ -85,6 +85,133 @@ const emptyForm = {
   image_url_3: "",
   image_url_4: "",
 };
+
+
+function normalizePreviewUrl(value = "") {
+  return String(value || "")
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .replace(/\\u002F/g, "/")
+    .replace(/\\\//g, "/")
+    .replace(/^http:\/\//i, "https://");
+}
+
+function buildPreviewCandidates(value = "") {
+  const original = normalizePreviewUrl(value);
+  if (!original) return [];
+
+  const candidates = [original];
+
+  try {
+    const parsed = new URL(original);
+    const host = parsed.hostname.toLowerCase();
+
+    if (
+      host === "images-na.ssl-images-amazon.com" ||
+      host === "images.amazon.com"
+    ) {
+      const alternative = new URL(original);
+      alternative.hostname = "m.media-amazon.com";
+      candidates.push(alternative.toString());
+    }
+
+    if (host === "m.media-amazon.com") {
+      const alternative = new URL(original);
+      alternative.hostname = "images-na.ssl-images-amazon.com";
+      candidates.push(alternative.toString());
+    }
+  } catch {
+    // La URL se conserva tal como fue recibida.
+  }
+
+  return [...new Set(candidates)];
+}
+
+function PreviewImage({ url, label }) {
+  const candidates = useMemo(
+    () => buildPreviewCandidates(url),
+    [url]
+  );
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setCandidateIndex(0);
+    setFailed(false);
+  }, [url]);
+
+  const currentUrl = candidates[candidateIndex] || "";
+
+  function handleError() {
+    if (candidateIndex + 1 < candidates.length) {
+      setCandidateIndex((value) => value + 1);
+      return;
+    }
+
+    setFailed(true);
+  }
+
+  if (!currentUrl || failed) {
+    return (
+      <div
+        style={{
+          width: "100%",
+          minHeight: 130,
+          borderRadius: 16,
+          border: "1px dashed #cfb97a",
+          background: "#fffaf0",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8,
+          padding: 12,
+          textAlign: "center",
+          color: "#6d5d48",
+        }}
+      >
+        <strong>{label}</strong>
+        <span style={{ fontSize: ".85rem" }}>
+          La URL está guardada, pero esta tienda bloqueó la miniatura.
+        </span>
+        {normalizePreviewUrl(url) && (
+          <a
+            href={normalizePreviewUrl(url)}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              color: "#244c3d",
+              fontWeight: 900,
+              fontSize: ".85rem",
+            }}
+          >
+            Abrir imagen
+          </a>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={currentUrl}
+      alt={label}
+      className="product-img"
+      referrerPolicy="no-referrer"
+      loading="eager"
+      decoding="async"
+      onError={handleError}
+      style={{
+        display: "block",
+        width: "100%",
+        height: 150,
+        objectFit: "contain",
+        borderRadius: 14,
+        background: "#fff",
+      }}
+    />
+  );
+}
 
 export default function AddProductPage({ products, loadProducts }) {
   const [form, setForm] = useState(emptyForm);
@@ -488,21 +615,25 @@ export default function AddProductPage({ products, loadProducts }) {
             }}
           >
             {[
-              form.image_url,
-              form.image_url_2,
-              form.image_url_3,
-              form.image_url_4,
+              ["Imagen principal", form.image_url],
+              ["Imagen 2", form.image_url_2],
+              ["Imagen 3", form.image_url_3],
+              ["Imagen 4", form.image_url_4],
             ]
-              .filter(Boolean)
-              .map((url, index) => (
+              .filter(([, url]) => Boolean(url))
+              .map(([label, url]) => (
                 <div
-                  key={`${url}-${index}`}
+                  key={`${label}-${url}`}
                   className="product-card with-image"
+                  style={{
+                    overflow: "hidden",
+                    padding: 8,
+                    minWidth: 0,
+                  }}
                 >
-                  <img
-                    src={url}
-                    alt={`Vista previa ${index + 1}`}
-                    className="product-img"
+                  <PreviewImage
+                    url={url}
+                    label={label}
                   />
                 </div>
               ))}
