@@ -141,6 +141,142 @@ function normalizeMatch(match, index) {
   };
 }
 
+
+const BLOCKED_SOCIAL_HOSTS = [
+  "tiktok.com",
+  "pinterest.com",
+  "pin.it",
+  "facebook.com",
+  "instagram.com",
+  "youtube.com",
+  "youtu.be",
+  "x.com",
+  "twitter.com",
+  "reddit.com",
+];
+
+const COMMERCIAL_STORE_ORDER = [
+  "amazon",
+  "homedepot",
+  "walmart",
+  "lowes",
+  "target",
+  "wayfair",
+];
+
+function normalizeSourceKey(result = {}) {
+  const text = [
+    result.source,
+    result.title,
+    result.url,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  if (text.includes("amazon")) return "amazon";
+  if (text.includes("homedepot")) return "homedepot";
+  if (text.includes("walmart")) return "walmart";
+  if (text.includes("lowes") || text.includes("lowe")) return "lowes";
+  if (text.includes("target")) return "target";
+  if (text.includes("wayfair")) return "wayfair";
+
+  return "other";
+}
+
+function isBlockedSocialResult(result = {}) {
+  try {
+    const hostname = new URL(result.url).hostname
+      .toLowerCase()
+      .replace(/^www\./, "");
+
+    if (
+      BLOCKED_SOCIAL_HOSTS.some(
+        (host) =>
+          hostname === host ||
+          hostname.endsWith(`.${host}`)
+      )
+    ) {
+      return true;
+    }
+  } catch {
+    // Si no hay URL válida, todavía revisamos texto.
+  }
+
+  const text = [
+    result.source,
+    result.title,
+    result.url,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return BLOCKED_SOCIAL_HOSTS.some((host) =>
+    text.includes(host.replace(".com", ""))
+  );
+}
+
+function preliminaryCompatibilityScore(result = {}) {
+  const sourceKey = normalizeSourceKey(result);
+  const position = Number(result.metadata?.position || 99);
+  const confidence = Number(result.confidence || 0);
+  const exact = result.exactImageMatch ? 1000 : 0;
+  const commercialSource =
+    sourceKey === "other" ? 0 : 150;
+  const hasPrice = Number(result.price) > 0 ? 25 : 0;
+  const initialImages = Array.isArray(result.images)
+    ? Math.min(result.images.length, 4) * 8
+    : 0;
+
+  return (
+    exact +
+    commercialSource +
+    confidence * 5 +
+    hasPrice +
+    initialImages -
+    position
+  );
+}
+
+function selectGalleryCandidates(results = [], limit = 8) {
+  const selected = [];
+  const selectedIds = new Set();
+
+  function add(result) {
+    if (!result || selectedIds.has(result.id)) return;
+    selected.push(result);
+    selectedIds.add(result.id);
+  }
+
+  const ordered = [...results].sort(
+    (a, b) =>
+      preliminaryCompatibilityScore(b) -
+      preliminaryCompatibilityScore(a)
+  );
+
+  // Garantiza que las tiendas prioritarias compitan con galería enriquecida,
+  // aunque SerpAPI las coloque abajo.
+  for (const store of COMMERCIAL_STORE_ORDER) {
+    const candidate = ordered.find(
+      (result) => normalizeSourceKey(result) === store
+    );
+
+    add(candidate);
+
+    if (selected.length >= limit) return selected;
+  }
+
+  // Completa con las mejores coincidencias restantes.
+  for (const result of ordered) {
+    add(result);
+    if (selected.length >= limit) break;
+  }
+
+  return selected;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -196,22 +332,34 @@ export default async function handler(req, res) {
       : [];
 
     const normalizedResults = visualMatches
-      .slice(0, 25)
+      .slice(0, 30)
       .map(normalizeMatch)
-      .filter((item) => item.url || item.images.length);
+      .filter((item) => item.url || item.images.length)
+      .filter((item) => !isBlockedSocialResult(item));
 
-    // Extraemos la galería completa únicamente de las primeras coincidencias.
-    // Así mejoramos Target, Amazon, Lowe's, Walmart y Home Depot sin abrir
-    // 25 páginas ni arriesgar el tiempo máximo de Vercel.
-    const galleryLimit = Math.min(
-      6,
-      Number(process.env.ATLAS_GALLERY_LIMIT || 6)
+    const galleryLimit = Math.max(
+      1,
+      Math.min(
+        10,
+        Number(process.env.ATLAS_GALLERY_LIMIT || 8)
+      )
     );
 
-    const candidatesForGallery = normalizedResults.slice(0, galleryLimit);
-    const remainingResults = normalizedResults.slice(galleryLimit);
+    const candidatesForGallery =
+      selectGalleryCandidates(
+        normalizedResults,
+        galleryLimit
+      );
 
-    const enrichedTopResults = await Promise.all(
+    const candidateIds = new Set(
+      candidatesForGallery.map((result) => result.id)
+    );
+
+    const remainingResults = normalizedResults.filter(
+      (result) => !candidateIds.has(result.id)
+    );
+
+    const enrichedCandidates = await Promise.all(
       candidatesForGallery.map(async (result) => {
         try {
           return await enrichResultWithGallery(result, {
@@ -230,6 +378,7 @@ export default async function handler(req, res) {
               ok: false,
               count: 0,
               url: result.url || "",
+              provider: "none",
               error:
                 error instanceof Error
                   ? error.message
@@ -241,7 +390,7 @@ export default async function handler(req, res) {
     );
 
     const results = [
-      ...enrichedTopResults,
+      ...enrichedCandidates,
       ...remainingResults,
     ];
 
@@ -250,7 +399,12 @@ export default async function handler(req, res) {
       searchId: data.search_metadata?.id || null,
       imageUrl,
       galleryExtractionEnabled: true,
+      galleryCandidateStrategy: "commercial-store-coverage",
       galleryCandidatesProcessed: candidatesForGallery.length,
+      blockedSocialResults:
+        visualMatches.length - normalizedResults.length,
+      enrichedStores:
+        candidatesForGallery.map(normalizeSourceKey),
       results,
     });
   } catch (error) {
