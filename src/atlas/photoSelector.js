@@ -2,16 +2,16 @@ const IMAGE_TYPE_ORDER = {
   main: 0,
   measurements: 1,
   environment: 2,
-  detail: 3,
-  other: 4,
+  other: 3,
+  detail: 4,
 };
 
 const TYPE_SCORE = {
   main: 500,
-  measurements: 400,
-  environment: 300,
-  detail: 200,
-  other: 100,
+  measurements: 450,
+  environment: 400,
+  other: 300,
+  detail: 100,
 };
 
 const MEASUREMENT_TERMS = [
@@ -67,6 +67,33 @@ const DETAIL_TERMS = [
   "textura",
   "madera",
 ];
+
+const LOW_VALUE_DETAIL_TERMS = [
+  "texture",
+  "wood grain",
+  "fabric swatch",
+  "material sample",
+  "close up",
+  "close-up",
+  "macro",
+  "surface",
+  "finish sample",
+  "textura",
+  "muestra",
+  "acercamiento",
+];
+
+function isLowValueDetail(image = {}) {
+  const text = normalizeText(
+    [image.alt, image.title, image.url]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  return LOW_VALUE_DETAIL_TERMS.some((term) =>
+    text.includes(normalizeText(term))
+  );
+}
 
 function normalizeText(value = "") {
   return String(value || "")
@@ -185,13 +212,14 @@ function normalizeImage(image, result, origin) {
   const url = normalizeUrl(rawUrl);
   if (!url) return null;
 
+  const sourceImage =
+    typeof image === "string"
+      ? { url }
+      : { ...image, url };
+
   const normalized = {
     url,
-    type: classifyImage(
-      typeof image === "string"
-        ? { url }
-        : { ...image, url }
-    ),
+    type: classifyImage(sourceImage),
     source: result?.source || "",
     sourceKey: getSourceKey(result),
     resultUrl: normalizeUrl(result?.url),
@@ -199,12 +227,14 @@ function normalizeImage(image, result, origin) {
     identity: imageIdentity(url),
     thumbnail: isThumbnail(url),
     origin,
+    lowValueDetail: isLowValueDetail(sourceImage),
   };
 
   normalized.score =
     (TYPE_SCORE[normalized.type] || TYPE_SCORE.other) +
     (origin === "selected_result" ? 1000 : 0) +
-    (!normalized.thumbnail ? 100 : 0);
+    (!normalized.thumbnail ? 100 : 0) -
+    (normalized.lowValueDetail ? 900 : 0);
 
   return normalized;
 }
@@ -380,6 +410,7 @@ export function selectProductPhotos({
 
   const selectedResultImages =
     collectSelectedResultImages(product)
+      .filter((image) => !image.lowValueDetail)
       .sort((a, b) => b.score - a.score);
 
   const selected = [];
@@ -405,7 +436,6 @@ export function selectProductPhotos({
   addType("main");
   addType("measurements");
   addType("environment");
-  addType("detail");
 
   for (const candidate of selectedResultImages) {
     if (selected.length >= limit) break;
@@ -416,7 +446,31 @@ export function selectProductPhotos({
         image.identity === candidate.identity
     );
 
-    if (!duplicate) selected.push(candidate);
+    if (duplicate) continue;
+
+    // Evita llenar espacios con texturas o close-ups cuando todavía
+    // hay vistas completas o ambientes disponibles.
+    if (candidate.type === "detail") continue;
+
+    selected.push(candidate);
+  }
+
+  // Solo usa un detalle cuando no hay suficientes imágenes comerciales.
+  if (selected.length < limit) {
+    const usefulDetail = collectSelectedResultImages(product)
+      .filter(
+        (image) =>
+          image.type === "detail" &&
+          !image.lowValueDetail &&
+          !selected.some(
+            (chosen) =>
+              chosen.url === image.url ||
+              chosen.identity === image.identity
+          )
+      )
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (usefulDetail) selected.push(usefulDetail);
   }
 
   if (
