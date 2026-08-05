@@ -61,10 +61,15 @@ async function enrichSafely(
   }
 }
 
-function preparePhotos(product, searchResults) {
+function preparePhotos(product, selectedResult = null) {
+  const result =
+    selectedResult ||
+    product?.rawResult ||
+    null;
+
   return applySelectedPhotos(
     product,
-    searchResults,
+    result ? [result] : [],
     4
   );
 }
@@ -130,8 +135,7 @@ function buildDecisionContext({
 
 function buildAlternativeCandidates(
   alternatives,
-  candidateContext,
-  results
+  candidateContext
 ) {
   return alternatives.map((item) =>
     preparePhotos(
@@ -139,7 +143,7 @@ function buildAlternativeCandidates(
         item,
         candidateContext
       ),
-      results
+      item
     )
   );
 }
@@ -175,9 +179,7 @@ export async function prepareAtlasAlternative({
 
   return preparePhotos(
     priced,
-    searchResults.length
-      ? searchResults
-      : [alternative.rawResult].filter(Boolean)
+    alternative.rawResult || null
   );
 }
 
@@ -295,7 +297,7 @@ export async function runAtlas({
 
     product = preparePhotos(
       product,
-      results
+      best
     );
 
     const pricingContext =
@@ -312,8 +314,7 @@ export async function runAtlas({
     const preparedAlternatives =
       buildAlternativeCandidates(
         alternatives,
-        candidateContext,
-        results
+        candidateContext
       );
 
     notifyProgress(
