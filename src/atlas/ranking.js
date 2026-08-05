@@ -5,8 +5,8 @@ const STORE_TIE_BREAK_PRIORITY = [
   "lowes",
   "target",
   "wayfair",
-  "mercadolibre",
   "manufacturer",
+  "mercadolibre",
   "other",
 ];
 
@@ -32,10 +32,13 @@ const GENERIC_WORDS = new Set([
   "color", "style", "room", "people", "personas",
 ]);
 
-const CONFLICT_GROUPS = [
+const SHAPE_GROUPS = [
   ["round", "redonda", "circular"],
   ["rectangular", "rectangle", "rectangulo"],
   ["square", "cuadrada", "cuadrado"],
+];
+
+const FEATURE_GROUPS = [
   ["extendable", "extensible", "extension"],
   ["folding", "foldable", "plegable"],
 ];
@@ -72,11 +75,9 @@ function normalizeSource(source = "") {
   return "other";
 }
 
-function getStoreTieBreakScore(sourceKey) {
+function getStorePriority(sourceKey) {
   const index = STORE_TIE_BREAK_PRIORITY.indexOf(sourceKey);
-  return index === -1
-    ? 0
-    : STORE_TIE_BREAK_PRIORITY.length - index;
+  return index === -1 ? STORE_TIE_BREAK_PRIORITY.length : index;
 }
 
 function getSearchableText(result = {}) {
@@ -98,6 +99,7 @@ function getSearchableText(result = {}) {
 
 function isPromotional(result = {}) {
   const text = getSearchableText(result);
+
   return PROMOTION_TERMS.some((term) =>
     text.includes(normalizeText(term))
   );
@@ -105,6 +107,7 @@ function isPromotional(result = {}) {
 
 function getConfidence(result = {}) {
   const value = Number(result.confidence || 0);
+
   return Number.isFinite(value)
     ? Math.max(0, Math.min(100, value))
     : 0;
@@ -143,11 +146,13 @@ function jaccardSimilarity(a, b) {
   if (!a.size || !b.size) return 0;
 
   let intersection = 0;
+
   for (const token of a) {
     if (b.has(token)) intersection += 1;
   }
 
   const union = new Set([...a, ...b]).size;
+
   return union ? intersection / union : 0;
 }
 
@@ -182,69 +187,112 @@ function numericCompatibility(a, b) {
   return -1;
 }
 
-function detectConflict(resultA = {}, resultB = {}) {
-  const textA = getSearchableText(resultA);
-  const textB = getSearchableText(resultB);
+function detectGroup(text, groups) {
+  return groups.findIndex((group) =>
+    group.some((term) => text.includes(term))
+  );
+}
 
-  const activeA = CONFLICT_GROUPS
-    .map((group, index) => ({
-      index,
-      found: group.some((term) => textA.includes(term)),
-    }))
-    .filter((item) => item.found)
-    .map((item) => item.index);
+function detectConflict(a = {}, b = {}) {
+  const textA = getSearchableText(a);
+  const textB = getSearchableText(b);
 
-  const activeB = CONFLICT_GROUPS
-    .map((group, index) => ({
-      index,
-      found: group.some((term) => textB.includes(term)),
-    }))
-    .filter((item) => item.found)
-    .map((item) => item.index);
+  const shapeA = detectGroup(textA, SHAPE_GROUPS);
+  const shapeB = detectGroup(textB, SHAPE_GROUPS);
 
-  const shapeGroups = new Set([0, 1, 2]);
-  const shapeA = activeA.find((index) => shapeGroups.has(index));
-  const shapeB = activeB.find((index) => shapeGroups.has(index));
+  if (shapeA >= 0 && shapeB >= 0 && shapeA !== shapeB) {
+    return true;
+  }
 
-  if (
-    shapeA !== undefined &&
-    shapeB !== undefined &&
-    shapeA !== shapeB
-  ) {
+  const featureA = detectGroup(textA, FEATURE_GROUPS);
+  const featureB = detectGroup(textB, FEATURE_GROUPS);
+
+  if (featureA >= 0 && featureB >= 0 && featureA !== featureB) {
     return true;
   }
 
   return false;
 }
 
-function getMetadataScore(result = {}) {
-  let score = 0;
-  if (result.metadata?.model) score += 18;
-  if (result.metadata?.brand) score += 10;
-  if (result.metadata?.category) score += 4;
-  if (result.hasTechnicalData) score += 8;
-  return score;
+function deterministicKey(result = {}) {
+  return [
+    normalizeSource(result.source),
+    normalizeText(result.metadata?.brand),
+    normalizeText(result.metadata?.model),
+    normalizeText(result.title),
+    normalizeText(result.url),
+  ].join("|");
 }
 
-function getQualityScore(result = {}) {
-  let score = 0;
-  if (Number(result.price) > 0) score += 3;
-  if (getImageCount(result) > 0) {
-    score += Math.min(getImageCount(result), 4);
-  }
-  if (result.inStock === false) score -= 4;
-  if (isPromotional(result)) score -= 30;
-  return score;
+function compareStableText(a, b) {
+  return deterministicKey(a).localeCompare(
+    deterministicKey(b),
+    "en",
+    { sensitivity: "base" }
+  );
 }
 
-function findVisualAnchor(results = []) {
-  return [...results].sort((a, b) => {
-    if (Boolean(a.exactImageMatch) !== Boolean(b.exactImageMatch)) {
-      return a.exactImageMatch ? -1 : 1;
+function getConsensusScore(result, results) {
+  let score = 0;
+
+  for (const other of results) {
+    if (other === result) continue;
+    if (detectConflict(result, other)) continue;
+
+    const titleSimilarity = jaccardSimilarity(
+      getTokens(result),
+      getTokens(other)
+    );
+
+    const numeric = numericCompatibility(result, other);
+
+    score += titleSimilarity * 100;
+    if (numeric > 0) score += 20;
+    if (
+      normalizeText(result.metadata?.model) &&
+      normalizeText(result.metadata?.model) ===
+        normalizeText(other.metadata?.model)
+    ) {
+      score += 40;
     }
+    if (
+      normalizeText(result.metadata?.brand) &&
+      normalizeText(result.metadata?.brand) ===
+        normalizeText(other.metadata?.brand)
+    ) {
+      score += 15;
+    }
+  }
 
-    return getConfidence(b) - getConfidence(a);
-  })[0] || null;
+  return score;
+}
+
+function findStableAnchor(results = []) {
+  const decorated = results.map((result) => ({
+    result,
+    exact: Boolean(result.exactImageMatch),
+    confidence: getConfidence(result),
+    consensus: getConsensusScore(result, results),
+    sourcePriority: getStorePriority(
+      normalizeSource(result.source)
+    ),
+  }));
+
+  decorated.sort((a, b) => {
+    if (a.exact !== b.exact) return a.exact ? -1 : 1;
+    if (a.consensus !== b.consensus) {
+      return b.consensus - a.consensus;
+    }
+    if (a.confidence !== b.confidence) {
+      return b.confidence - a.confidence;
+    }
+    if (a.sourcePriority !== b.sourcePriority) {
+      return a.sourcePriority - b.sourcePriority;
+    }
+    return compareStableText(a.result, b.result);
+  });
+
+  return decorated[0]?.result || null;
 }
 
 function productCompatibility(result, anchor) {
@@ -269,24 +317,39 @@ function productCompatibility(result, anchor) {
   );
 }
 
+function getMetadataScore(result = {}) {
+  let score = 0;
+
+  if (result.metadata?.model) score += 18;
+  if (result.metadata?.brand) score += 10;
+  if (result.metadata?.category) score += 4;
+  if (result.hasTechnicalData) score += 8;
+
+  return score;
+}
+
+function getQualityScore(result = {}) {
+  let score = 0;
+
+  if (Number(result.price) > 0) score += 3;
+  if (getImageCount(result) > 0) {
+    score += Math.min(getImageCount(result), 4);
+  }
+  if (result.inStock === false) score -= 4;
+  if (isPromotional(result)) score -= 30;
+
+  return score;
+}
+
 export function scoreResult(result = {}, anchor = null) {
-  const sourceKey = normalizeSource(result.source);
   const compatibility = productCompatibility(result, anchor);
 
-  const exactImageScore = result.exactImageMatch ? 100000 : 0;
-  const confidenceScore = getConfidence(result) * 100;
-  const compatibilityScore = compatibility * 5000;
-  const metadataScore = getMetadataScore(result) * 10;
-  const qualityScore = getQualityScore(result) * 10;
-  const storeTieBreakScore = getStoreTieBreakScore(sourceKey);
-
   return (
-    exactImageScore +
-    confidenceScore +
-    compatibilityScore +
-    metadataScore +
-    qualityScore +
-    storeTieBreakScore
+    (result.exactImageMatch ? 100000 : 0) +
+    compatibility * 10000 +
+    getConfidence(result) * 100 +
+    getMetadataScore(result) * 10 +
+    getQualityScore(result) * 10
   );
 }
 
@@ -302,7 +365,7 @@ function compareResults(a, b) {
   const confidenceDifference =
     getConfidence(b) - getConfidence(a);
 
-  if (Math.abs(confidenceDifference) >= 3) {
+  if (confidenceDifference !== 0) {
     return confidenceDifference;
   }
 
@@ -320,11 +383,8 @@ function compareResults(a, b) {
     return brandA ? -1 : 1;
   }
 
-  const promotionDifference =
-    Number(a.promotional) - Number(b.promotional);
-
-  if (promotionDifference !== 0) {
-    return promotionDifference;
+  if (a.promotional !== b.promotional) {
+    return a.promotional ? 1 : -1;
   }
 
   const imageDifference =
@@ -334,14 +394,19 @@ function compareResults(a, b) {
     return imageDifference;
   }
 
-  return (
-    getStoreTieBreakScore(b.sourceKey) -
-    getStoreTieBreakScore(a.sourceKey)
-  );
+  const sourceDifference =
+    getStorePriority(a.sourceKey) -
+    getStorePriority(b.sourceKey);
+
+  if (sourceDifference !== 0) {
+    return sourceDifference;
+  }
+
+  return compareStableText(a, b);
 }
 
 export function rankResults(results = []) {
-  const anchor = findVisualAnchor(results);
+  const anchor = findStableAnchor(results);
 
   return [...results]
     .map((result) => {
@@ -355,6 +420,7 @@ export function rankResults(results = []) {
         productCompatibility: compatibility,
         compatibleWithAnchor: compatibility >= 0,
         atlasScore: scoreResult(result, anchor),
+        deterministicKey: deterministicKey(result),
       };
     })
     .sort(compareResults);
