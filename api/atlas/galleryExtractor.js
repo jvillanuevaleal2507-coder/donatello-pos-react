@@ -3,6 +3,11 @@ import {
   extractAmazonGallery,
 } from "./providers/amazonProvider.js";
 
+import {
+  canHandleLowesUrl,
+  extractLowesGallery,
+} from "./providers/lowesProvider.js";
+
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 40;
@@ -367,8 +372,26 @@ export async function extractGalleryFromUrl({
       }
     }
 
-    // Respaldo genérico para Amazon si el provider no obtiene imágenes
-    // y para todas las demás tiendas mientras no tengan provider propio.
+    // Provider específico de Lowe's.
+    // Si funciona, usa la galería estructurada y evita imágenes genéricas.
+    if (canHandleLowesUrl(url)) {
+      const lowesGallery = extractLowesGallery({
+        html,
+        url,
+        maximum,
+      });
+
+      if (lowesGallery.ok && lowesGallery.images.length) {
+        return {
+          ...lowesGallery,
+          providerUsed: "lowes",
+          fallbackUsed: false,
+        };
+      }
+    }
+
+    // Respaldo genérico si un provider no obtiene imágenes
+    // y para las tiendas que todavía no tienen provider específico.
     const images = [];
 
     extractJsonLd(html, url, images);
@@ -392,7 +415,7 @@ export async function extractGalleryFromUrl({
       count: selected.length,
       provider: "generic",
       providerUsed: "generic",
-      fallbackUsed: canHandleAmazonUrl(url),
+      fallbackUsed: canHandleAmazonUrl(url) || canHandleLowesUrl(url),
       error:
         selected.length > 0
           ? ""
@@ -454,6 +477,8 @@ export async function enrichResultWithGallery(
         Boolean(gallery.fallbackUsed),
       asin:
         gallery.asin || "",
+      productId:
+        gallery.productId || "",
     },
   };
 }
