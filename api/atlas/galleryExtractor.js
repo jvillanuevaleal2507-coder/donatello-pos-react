@@ -8,6 +8,12 @@ import {
   extractLowesGallery,
 } from "./providers/lowesProvider.js";
 
+import {
+  canHandleHomeDepotUrl,
+  extractHomeDepotGallery,
+} from "./providers/homeDepotProvider.js";
+
+
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 40;
@@ -390,6 +396,23 @@ export async function extractGalleryFromUrl({
       }
     }
 
+    // Provider específico de Home Depot.
+    if (canHandleHomeDepotUrl(url)) {
+      const homeDepotGallery = extractHomeDepotGallery({
+        html,
+        url,
+        maximum,
+      });
+
+      if (homeDepotGallery.ok && homeDepotGallery.images.length) {
+        return {
+          ...homeDepotGallery,
+          providerUsed: "homedepot",
+          fallbackUsed: false,
+        };
+      }
+    }
+
     // Respaldo genérico si un provider no obtiene imágenes
     // y para las tiendas que todavía no tienen provider específico.
     const images = [];
@@ -415,7 +438,7 @@ export async function extractGalleryFromUrl({
       count: selected.length,
       provider: "generic",
       providerUsed: "generic",
-      fallbackUsed: canHandleAmazonUrl(url) || canHandleLowesUrl(url),
+      fallbackUsed: canHandleAmazonUrl(url) || canHandleLowesUrl(url) || canHandleHomeDepotUrl(url),
       error:
         selected.length > 0
           ? ""
