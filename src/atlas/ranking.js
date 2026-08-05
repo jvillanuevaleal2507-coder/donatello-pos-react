@@ -341,13 +341,66 @@ function getQualityScore(result = {}) {
   return score;
 }
 
+
+function hasMeasurementImage(result = {}) {
+  return Array.isArray(result.images) && result.images.some((image) => {
+    const type = String(image?.type || "").toLowerCase();
+    const text = [
+      image?.url,
+      image?.alt,
+      image?.title,
+      image?.variant,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return (
+      type === "measurements" ||
+      /dimension|dimensions|measurement|measurements|size chart|width|height|depth|length|inch|inches|medidas|dimensiones/.test(
+        text
+      )
+    );
+  });
+}
+
+function getCommercialUtilityScore(result = {}) {
+  const images = Array.isArray(result.images)
+    ? result.images
+    : [];
+  const source = normalizeSource(result.source);
+
+  let score = 0;
+
+  if (images.length >= 4) score += 45;
+  else if (images.length === 3) score += 34;
+  else if (images.length === 2) score += 18;
+  else if (images.length === 1) score += 4;
+
+  if (hasMeasurementImage(result)) score += 35;
+
+  if (source === "amazon") score += 28;
+  else if (source === "homedepot") score += 18;
+  else if (source === "walmart") score += 12;
+  else if (source === "lowes") score += 6;
+  else if (source === "target") score += 5;
+  else if (source === "manufacturer") score += 10;
+
+  // Penaliza coincidencias comercialmente pobres cuando solo traen una imagen.
+  if (images.length <= 1 && source !== "amazon") score -= 6;
+
+  return score;
+}
+
 export function scoreResult(result = {}, anchor = null) {
   const compatibility = productCompatibility(result, anchor);
+  const commercialUtility = getCommercialUtilityScore(result);
 
   return (
     (result.exactImageMatch ? 100000 : 0) +
     compatibility * 10000 +
-    getConfidence(result) * 100 +
+    commercialUtility * 180 +
+    getConfidence(result) * 35 +
     getMetadataScore(result) * 10 +
     getQualityScore(result) * 10
   );
@@ -360,6 +413,14 @@ function compareResults(a, b) {
 
   if (a.productCompatibility !== b.productCompatibility) {
     return b.productCompatibility - a.productCompatibility;
+  }
+
+  const commercialDifference =
+    getCommercialUtilityScore(b) -
+    getCommercialUtilityScore(a);
+
+  if (commercialDifference !== 0) {
+    return commercialDifference;
   }
 
   const confidenceDifference =
@@ -419,6 +480,10 @@ export function rankResults(results = []) {
         promotional: isPromotional(result),
         productCompatibility: compatibility,
         compatibleWithAnchor: compatibility >= 0,
+        commercialUtilityScore:
+          getCommercialUtilityScore(result),
+        hasMeasurementImage:
+          hasMeasurementImage(result),
         atlasScore: scoreResult(result, anchor),
         deterministicKey: deterministicKey(result),
       };
