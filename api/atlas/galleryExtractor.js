@@ -9,10 +9,9 @@ import {
 } from "./providers/lowesProvider.js";
 
 import {
-  canHandleHomeDepotUrl,
-  extractHomeDepotGallery,
-} from "./providers/homeDepotProvider.js";
-
+  canHandleTargetUrl,
+  extractTargetGallery,
+} from "./providers/targetProvider.js";
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
@@ -396,18 +395,19 @@ export async function extractGalleryFromUrl({
       }
     }
 
-    // Provider específico de Home Depot.
-    if (canHandleHomeDepotUrl(url)) {
-      const homeDepotGallery = extractHomeDepotGallery({
+    // Provider específico de Target.
+    // Prioriza la galería estructurada y sus imágenes Scene7.
+    if (canHandleTargetUrl(url)) {
+      const targetGallery = extractTargetGallery({
         html,
         url,
         maximum,
       });
 
-      if (homeDepotGallery.ok && homeDepotGallery.images.length) {
+      if (targetGallery.ok && targetGallery.images.length) {
         return {
-          ...homeDepotGallery,
-          providerUsed: "homedepot",
+          ...targetGallery,
+          providerUsed: "target",
           fallbackUsed: false,
         };
       }
@@ -438,7 +438,10 @@ export async function extractGalleryFromUrl({
       count: selected.length,
       provider: "generic",
       providerUsed: "generic",
-      fallbackUsed: canHandleAmazonUrl(url) || canHandleLowesUrl(url) || canHandleHomeDepotUrl(url),
+      fallbackUsed:
+        canHandleAmazonUrl(url) ||
+        canHandleLowesUrl(url) ||
+        canHandleTargetUrl(url),
       error:
         selected.length > 0
           ? ""
@@ -502,6 +505,8 @@ export async function enrichResultWithGallery(
         gallery.asin || "",
       productId:
         gallery.productId || "",
+      tcin:
+        gallery.tcin || "",
     },
   };
 }
