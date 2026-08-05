@@ -1,3 +1,8 @@
+import {
+  canHandleAmazonUrl,
+  extractAmazonGallery,
+} from "./providers/amazonProvider.js";
+
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
 const MAX_IMAGES = 40;
@@ -343,6 +348,27 @@ export async function extractGalleryFromUrl({
 
   try {
     const html = await fetchHtml(url, timeoutMs);
+
+    // Provider específico de Amazon.
+    // Si funciona, evita mezclar recomendaciones y usa la galería real.
+    if (canHandleAmazonUrl(url)) {
+      const amazonGallery = extractAmazonGallery({
+        html,
+        url,
+        maximum,
+      });
+
+      if (amazonGallery.ok && amazonGallery.images.length) {
+        return {
+          ...amazonGallery,
+          providerUsed: "amazon",
+          fallbackUsed: false,
+        };
+      }
+    }
+
+    // Respaldo genérico para Amazon si el provider no obtiene imágenes
+    // y para todas las demás tiendas mientras no tengan provider propio.
     const images = [];
 
     extractJsonLd(html, url, images);
@@ -360,10 +386,17 @@ export async function extractGalleryFromUrl({
       .map(({ identity, ...image }) => image);
 
     return {
-      ok: true,
+      ok: selected.length > 0,
       url,
       images: selected,
       count: selected.length,
+      provider: "generic",
+      providerUsed: "generic",
+      fallbackUsed: canHandleAmazonUrl(url),
+      error:
+        selected.length > 0
+          ? ""
+          : "No se encontraron imágenes utilizables en la página.",
     };
   } catch (error) {
     return {
@@ -413,6 +446,14 @@ export async function enrichResultWithGallery(
       ok: true,
       count: gallery.count,
       url: gallery.url,
+      provider:
+        gallery.providerUsed ||
+        gallery.provider ||
+        "generic",
+      fallbackUsed:
+        Boolean(gallery.fallbackUsed),
+      asin:
+        gallery.asin || "",
     },
   };
 }
