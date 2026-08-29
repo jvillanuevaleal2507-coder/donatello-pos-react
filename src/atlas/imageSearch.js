@@ -48,7 +48,7 @@ async function uploadAtlasSourcePhoto(photo) {
   return data.publicUrl;
 }
 
-export async function searchByImage({ photo, onProgress }) {
+export async function searchByImage({ photo, titleHint = "", onProgress }) {
   if (!photo) {
     throw new Error("No se recibió una fotografía.");
   }
@@ -65,7 +65,10 @@ export async function searchByImage({ photo, onProgress }) {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ imageUrl }),
+    body: JSON.stringify({
+      imageUrl,
+      titleHint: String(titleHint || "").trim(),
+    }),
   });
 
   const data = await response.json().catch(() => ({}));
