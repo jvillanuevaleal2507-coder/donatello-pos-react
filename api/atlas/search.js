@@ -42,11 +42,7 @@ function usefulTitleTokens(value = "") {
     normalizeText(value)
       .split(" ")
       .map((token) => token.trim())
-      .filter(
-        (token) =>
-          token.length >= 2 &&
-          !TITLE_NOISE_WORDS.has(token)
-      )
+      .filter((token) => token.length >= 2 && !TITLE_NOISE_WORDS.has(token))
   );
 }
 
@@ -64,16 +60,12 @@ function titleHintCompatibility(resultTitle = "", titleHint = "") {
 
   const hintTokens = usefulTitleTokens(hint);
   const resultTokens = usefulTitleTokens(resultTitle);
-
   if (!hintTokens.size || !resultTokens.size) return 0;
 
   let matched = 0;
-  for (const token of hintTokens) {
-    if (resultTokens.has(token)) matched += 1;
-  }
+  for (const token of hintTokens) if (resultTokens.has(token)) matched += 1;
 
   const coverage = matched / hintTokens.size;
-
   const hintNumbers = extractTitleNumbers(hint);
   const resultNumbers = extractTitleNumbers(resultTitle);
   let numericBonus = 0;
@@ -88,13 +80,8 @@ function titleHintCompatibility(resultTitle = "", titleHint = "") {
 
 function toNumber(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-
   if (typeof value !== "string") return null;
-
-  const normalized = value
-    .replace(/[^0-9.,-]/g, "")
-    .replace(/,/g, "");
-
+  const normalized = value.replace(/[^0-9.,-]/g, "").replace(/,/g, "");
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -107,27 +94,19 @@ function extractPrice(match = {}) {
     match.price,
     match.product_price,
   ];
-
   for (const candidate of candidates) {
     const value = toNumber(candidate);
     if (value !== null && value > 0) return value;
   }
-
   return null;
 }
 
 function extractCurrency(match = {}) {
-  return (
-    match.price?.currency ||
-    match.currency ||
-    match.product_currency ||
-    "USD"
-  );
+  return match.price?.currency || match.currency || match.product_currency || "USD";
 }
 
 function confidenceFor(match, index) {
   if (match.exact_matches === true) return 99;
-
   const position = Number(match.position || index + 1);
   return Math.max(60, 93 - (position - 1) * 3);
 }
@@ -153,7 +132,6 @@ function normalizeImages(match = {}) {
   }
 
   const seen = new Set();
-
   return candidates.filter((image) => {
     if (!isValidPublicImageUrl(image.url) || seen.has(image.url)) return false;
     seen.add(image.url);
@@ -161,31 +139,27 @@ function normalizeImages(match = {}) {
   });
 }
 
-function normalizeMatch(match, index, titleHint = "") {
+function normalizeMatch(match, index, titleHint = "", idPrefix = "lens") {
   const priceValue = extractPrice(match);
   const currency = extractCurrency(match);
   const images = normalizeImages(match);
   const titleHintScore = titleHintCompatibility(match.title || "", titleHint);
   const baseConfidence = confidenceFor(match, index);
-  const confidence = Math.min(
-    99,
-    Math.round(baseConfidence + titleHintScore * 10)
-  );
+  const confidence = Math.min(99, Math.round(baseConfidence + titleHintScore * 10));
+  const titleHintUsed = Boolean(String(titleHint || "").trim());
 
   return {
-    id: `lens-${match.position || index + 1}`,
-    source: match.source || match.store || "Otra fuente",
+    id: `${idPrefix}-${match.position || index + 1}`,
+    source: match.source || match.store || match.merchant || "Otra fuente",
     title: match.title || "Producto encontrado",
-    url: match.link || match.product_link || "",
+    url: match.link || match.product_link || match.serpapi_product_api || "",
     price: priceValue,
     currency,
-    priceLabel:
-      match.price?.value ||
-      match.price?.displayed_price ||
-      match.price_string ||
-      "",
+    priceLabel: match.price?.value || match.price?.displayed_price || match.price_string || "",
     confidence,
     titleHintScore,
+    titleHintUsed,
+    searchOrigin: idPrefix === "title" ? "title" : "visual",
     exactImageMatch: match.exact_matches === true,
     hasTechnicalData: Boolean(match.title),
     inStock:
@@ -203,94 +177,44 @@ function normalizeMatch(match, index, titleHint = "") {
       rating: match.rating ?? null,
       reviews: match.reviews ?? null,
       titleHintScore,
-      priceLabel:
-        match.price?.value ||
-        match.price?.displayed_price ||
-        match.price_string ||
-        "",
-      availability:
-        match.availability ||
-        match.stock ||
-        "",
+      titleHintUsed,
+      searchOrigin: idPrefix === "title" ? "title" : "visual",
+      priceLabel: match.price?.value || match.price?.displayed_price || match.price_string || "",
+      availability: match.availability || match.stock || "",
     },
     raw: match,
   };
 }
 
 const BLOCKED_SOCIAL_HOSTS = [
-  "tiktok.com",
-  "pinterest.com",
-  "pin.it",
-  "facebook.com",
-  "instagram.com",
-  "youtube.com",
-  "youtu.be",
-  "x.com",
-  "twitter.com",
-  "reddit.com",
+  "tiktok.com", "pinterest.com", "pin.it", "facebook.com", "instagram.com",
+  "youtube.com", "youtu.be", "x.com", "twitter.com", "reddit.com",
 ];
 
 const COMMERCIAL_STORE_ORDER = [
-  "amazon",
-  "homedepot",
-  "walmart",
-  "lowes",
-  "target",
-  "wayfair",
+  "amazon", "homedepot", "walmart", "lowes", "target", "wayfair",
 ];
 
 function normalizeSourceKey(result = {}) {
-  const text = [
-    result.source,
-    result.title,
-    result.url,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, "");
-
+  const text = [result.source, result.title, result.url]
+    .filter(Boolean).join(" ").toLowerCase().replace(/[^a-z0-9]/g, "");
   if (text.includes("amazon")) return "amazon";
   if (text.includes("homedepot")) return "homedepot";
   if (text.includes("walmart")) return "walmart";
   if (text.includes("lowes") || text.includes("lowe")) return "lowes";
   if (text.includes("target")) return "target";
   if (text.includes("wayfair")) return "wayfair";
-
   return "other";
 }
 
 function isBlockedSocialResult(result = {}) {
   try {
-    const hostname = new URL(result.url).hostname
-      .toLowerCase()
-      .replace(/^www\./, "");
+    const hostname = new URL(result.url).hostname.toLowerCase().replace(/^www\./, "");
+    if (BLOCKED_SOCIAL_HOSTS.some((host) => hostname === host || hostname.endsWith(`.${host}`))) return true;
+  } catch {}
 
-    if (
-      BLOCKED_SOCIAL_HOSTS.some(
-        (host) =>
-          hostname === host ||
-          hostname.endsWith(`.${host}`)
-      )
-    ) {
-      return true;
-    }
-  } catch {
-    // Si no hay URL válida, todavía revisamos texto.
-  }
-
-  const text = [
-    result.source,
-    result.title,
-    result.url,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return BLOCKED_SOCIAL_HOSTS.some((host) =>
-    text.includes(host.replace(".com", ""))
-  );
+  const text = [result.source, result.title, result.url].filter(Boolean).join(" ").toLowerCase();
+  return BLOCKED_SOCIAL_HOSTS.some((host) => text.includes(host.replace(".com", "")));
 }
 
 function preliminaryCompatibilityScore(result = {}) {
@@ -298,50 +222,29 @@ function preliminaryCompatibilityScore(result = {}) {
   const position = Number(result.metadata?.position || 99);
   const confidence = Number(result.confidence || 0);
   const exact = result.exactImageMatch ? 1000 : 0;
-  const commercialSource =
-    sourceKey === "other" ? 0 : 150;
+  const commercialSource = sourceKey === "other" ? 0 : 150;
   const hasPrice = Number(result.price) > 0 ? 25 : 0;
-  const initialImages = Array.isArray(result.images)
-    ? Math.min(result.images.length, 4) * 8
-    : 0;
-  const titleHint = Number(result.titleHintScore || 0) * 320;
+  const initialImages = Array.isArray(result.images) ? Math.min(result.images.length, 4) * 8 : 0;
+  const titleHint = Number(result.titleHintScore || 0) * 900;
+  const titleOrigin = result.searchOrigin === "title" ? 120 : 0;
 
-  return (
-    exact +
-    commercialSource +
-    titleHint +
-    confidence * 5 +
-    hasPrice +
-    initialImages -
-    position
-  );
+  return exact + commercialSource + titleHint + titleOrigin + confidence * 5 + hasPrice + initialImages - position;
 }
 
 function selectGalleryCandidates(results = [], limit = 8) {
   const selected = [];
   const selectedIds = new Set();
-
   function add(result) {
     if (!result || selectedIds.has(result.id)) return;
     selected.push(result);
     selectedIds.add(result.id);
   }
 
-  const ordered = [...results].sort(
-    (a, b) =>
-      preliminaryCompatibilityScore(b) -
-      preliminaryCompatibilityScore(a)
-  );
+  const ordered = [...results].sort((a, b) => preliminaryCompatibilityScore(b) - preliminaryCompatibilityScore(a));
 
-  // Garantiza que las tiendas prioritarias compitan con galería enriquecida,
-  // y dentro de cada tienda favorece la coincidencia con el título capturado.
   for (const store of COMMERCIAL_STORE_ORDER) {
-    const candidate = ordered.find(
-      (result) => normalizeSourceKey(result) === store
-    );
-
+    const candidate = ordered.find((result) => normalizeSourceKey(result) === store);
     add(candidate);
-
     if (selected.length >= limit) return selected;
   }
 
@@ -353,6 +256,57 @@ function selectGalleryCandidates(results = [], limit = 8) {
   return selected;
 }
 
+function dedupeResults(results = []) {
+  const seen = new Set();
+  const output = [];
+
+  for (const result of results) {
+    const urlKey = normalizeText(result.url || "");
+    const titleKey = normalizeText(result.title || "");
+    const key = urlKey || `${normalizeSourceKey(result)}|${titleKey}`;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    output.push(result);
+  }
+
+  return output;
+}
+
+async function fetchTitleMatches(apiKey, titleHint) {
+  if (!titleHint) return [];
+
+  const params = new URLSearchParams({
+    engine: "google_shopping",
+    q: titleHint,
+    hl: "en",
+    gl: "us",
+    safe: "active",
+    api_key: apiKey,
+  });
+
+  try {
+    const response = await fetch(`${SERPAPI_ENDPOINT}?${params.toString()}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      console.warn("Atlas title search warning:", data.error || response.status);
+      return [];
+    }
+
+    const matches = Array.isArray(data.shopping_results) ? data.shopping_results : [];
+    return matches
+      .slice(0, 20)
+      .map((match, index) => normalizeMatch(match, index, titleHint, "title"))
+      .filter((item) => item.url || item.images.length)
+      .filter((item) => !isBlockedSocialResult(item));
+  } catch (error) {
+    console.warn("Atlas title search warning:", error);
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -360,20 +314,15 @@ export default async function handler(req, res) {
   }
 
   const apiKey = process.env.SERPAPI_KEY;
-
   if (!apiKey) {
     return sendJson(res, 500, {
-      error:
-        "Falta configurar SERPAPI_KEY en las variables de entorno de Vercel.",
+      error: "Falta configurar SERPAPI_KEY en las variables de entorno de Vercel.",
     });
   }
 
   const { imageUrl, titleHint = "" } = req.body || {};
-
   if (!isValidPublicImageUrl(imageUrl)) {
-    return sendJson(res, 400, {
-      error: "Se requiere una URL pública HTTPS de la imagen.",
-    });
+    return sendJson(res, 400, { error: "Se requiere una URL pública HTTPS de la imagen." });
   }
 
   const cleanTitleHint = String(titleHint || "").trim().slice(0, 300);
@@ -390,66 +339,44 @@ export default async function handler(req, res) {
       api_key: apiKey,
     });
 
-    const response = await fetch(`${SERPAPI_ENDPOINT}?${params.toString()}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
+    const [visualResponse, titleMatches] = await Promise.all([
+      fetch(`${SERPAPI_ENDPOINT}?${params.toString()}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }),
+      fetchTitleMatches(apiKey, cleanTitleHint),
+    ]);
 
-    const data = await response.json();
-
-    if (!response.ok || data.error) {
-      return sendJson(res, response.status || 502, {
-        error:
-          data.error ||
-          "SerpApi no pudo completar la búsqueda visual.",
+    const data = await visualResponse.json();
+    if (!visualResponse.ok || data.error) {
+      return sendJson(res, visualResponse.status || 502, {
+        error: data.error || "SerpApi no pudo completar la búsqueda visual.",
       });
     }
 
-    const visualMatches = Array.isArray(data.visual_matches)
-      ? data.visual_matches
-      : [];
-
-    const normalizedResults = visualMatches
+    const visualMatches = Array.isArray(data.visual_matches) ? data.visual_matches : [];
+    const normalizedVisual = visualMatches
       .slice(0, 30)
-      .map((match, index) => normalizeMatch(match, index, cleanTitleHint))
+      .map((match, index) => normalizeMatch(match, index, cleanTitleHint, "lens"))
       .filter((item) => item.url || item.images.length)
       .filter((item) => !isBlockedSocialResult(item));
 
-    const galleryLimit = Math.max(
-      1,
-      Math.min(
-        10,
-        Number(process.env.ATLAS_GALLERY_LIMIT || 8)
-      )
-    );
+    const normalizedResults = dedupeResults([
+      ...titleMatches,
+      ...normalizedVisual,
+    ]);
 
-    const candidatesForGallery =
-      selectGalleryCandidates(
-        normalizedResults,
-        galleryLimit
-      );
-
-    const candidateIds = new Set(
-      candidatesForGallery.map((result) => result.id)
-    );
-
-    const remainingResults = normalizedResults.filter(
-      (result) => !candidateIds.has(result.id)
-    );
+    const galleryLimit = Math.max(1, Math.min(10, Number(process.env.ATLAS_GALLERY_LIMIT || 8)));
+    const candidatesForGallery = selectGalleryCandidates(normalizedResults, galleryLimit);
+    const candidateIds = new Set(candidatesForGallery.map((result) => result.id));
+    const remainingResults = normalizedResults.filter((result) => !candidateIds.has(result.id));
 
     const enrichedCandidates = await Promise.all(
       candidatesForGallery.map(async (result) => {
         try {
-          return await enrichResultWithGallery(result, {
-            timeoutMs: 9000,
-            maximum: 30,
-          });
+          return await enrichResultWithGallery(result, { timeoutMs: 9000, maximum: 30 });
         } catch (error) {
-          console.warn(
-            `Atlas gallery warning for ${result.source || result.url}:`,
-            error
-          );
-
+          console.warn(`Atlas gallery warning for ${result.source || result.url}:`, error);
           return {
             ...result,
             galleryExtraction: {
@@ -457,20 +384,14 @@ export default async function handler(req, res) {
               count: 0,
               url: result.url || "",
               provider: "none",
-              error:
-                error instanceof Error
-                  ? error.message
-                  : "No se pudo extraer la galería.",
+              error: error instanceof Error ? error.message : "No se pudo extraer la galería.",
             },
           };
         }
       })
     );
 
-    const results = [
-      ...enrichedCandidates,
-      ...remainingResults,
-    ];
+    const results = [...enrichedCandidates, ...remainingResults];
 
     return sendJson(res, 200, {
       ok: true,
@@ -478,25 +399,21 @@ export default async function handler(req, res) {
       imageUrl,
       titleHintUsed: Boolean(cleanTitleHint),
       titleHint: cleanTitleHint,
+      titleSearchResults: titleMatches.length,
+      visualSearchResults: normalizedVisual.length,
       galleryExtractionEnabled: true,
       galleryCandidateStrategy: cleanTitleHint
-        ? "commercial-store-coverage-plus-title-hint"
+        ? "title-search-plus-visual-validation"
         : "commercial-store-coverage",
       galleryCandidatesProcessed: candidatesForGallery.length,
-      blockedSocialResults:
-        visualMatches.length - normalizedResults.length,
-      enrichedStores:
-        candidatesForGallery.map(normalizeSourceKey),
+      blockedSocialResults: visualMatches.length - normalizedVisual.length,
+      enrichedStores: candidatesForGallery.map(normalizeSourceKey),
       results,
     });
   } catch (error) {
     console.error("Atlas API error:", error);
-
     return sendJson(res, 500, {
-      error:
-        error instanceof Error
-          ? error.message
-          : "Error inesperado en Atlas API.",
+      error: error instanceof Error ? error.message : "Error inesperado en Atlas API.",
     });
   }
 }
