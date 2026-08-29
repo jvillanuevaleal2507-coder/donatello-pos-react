@@ -43,6 +43,7 @@ export default function DonatelloAtlas({
 }) {
   const [photo, setPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState("");
+  const [titleHint, setTitleHint] = useState("");
   const [costUsd, setCostUsd] = useState(defaultCostUsd);
   const [stock, setStock] = useState(defaultStock);
   const [status, setStatus] = useState("idle");
@@ -109,10 +110,15 @@ export default function DonatelloAtlas({
     try {
       setError("");
       setStatus("analyzing");
-      setProgressMessage("Atlas está comenzando la investigación...");
+      setProgressMessage(
+        titleHint.trim()
+          ? "Atlas está cruzando la foto con el título de la subasta..."
+          : "Atlas está comenzando la investigación..."
+      );
 
       const response = await runAtlas({
         photo,
+        titleHint,
         costUsd,
         stock,
         onProgress: ({ message }) => {
@@ -146,6 +152,7 @@ export default function DonatelloAtlas({
     if (photoPreview) URL.revokeObjectURL(photoPreview);
     setPhoto(null);
     setPhotoPreview("");
+    setTitleHint("");
     setStatus("idle");
     setResult(initialResult);
     setAlternatives([]);
@@ -170,6 +177,7 @@ export default function DonatelloAtlas({
       costUsd,
       stock,
       sourcePhoto: photo,
+      auctionTitle: titleHint.trim(),
     });
 
     setProgressMessage(
@@ -246,6 +254,11 @@ export default function DonatelloAtlas({
         decisionContext?.productCompatibility ??
         result?.productCompatibility ??
         null,
+      titleHintScore: Number(
+        decisionContext?.titleHintScore ??
+          result?.titleHintScore ??
+          0
+      ),
       photosMixed: Boolean(result?.photoSourcesMixed),
     };
   }, [decisionContext, result]);
@@ -327,13 +340,13 @@ export default function DonatelloAtlas({
           </h3>
 
           <p style={{ margin: 0, color: "#685b4b", maxWidth: 650 }}>
-            Sube la foto principal de la subasta y captura el costo. Atlas
-            preparará la coincidencia, las imágenes, el nombre, la categoría y
-            el precio sugerido para que tú lo apruebes.
+            Sube la foto principal, captura el costo y, si lo tienes, pega el
+            título de la subasta. Atlas cruzará ambas pistas para elegir una
+            coincidencia más precisa antes de preparar imágenes y precio.
           </p>
         </div>
 
-        {(photo || status !== "idle") && (
+        {(photo || status !== "idle" || titleHint) && (
           <button
             type="button"
             onClick={resetAtlas}
@@ -417,6 +430,17 @@ export default function DonatelloAtlas({
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <Field label="Título de subasta (opcional)">
+            <input
+              style={inputStyle}
+              type="text"
+              value={titleHint}
+              onChange={(e) => setTitleHint(e.target.value)}
+              placeholder="Ej. GARVEE 9 Drawer Dresser with Charging Station"
+              maxLength={300}
+            />
+          </Field>
+
           <Field label="Costo USD">
             <input
               style={inputStyle}
@@ -542,6 +566,22 @@ export default function DonatelloAtlas({
               >
                 Coincidencia {sourceAudit.confidence.toFixed(0)}%
               </span>
+
+              {titleHint.trim() && sourceAudit.titleHintScore > 0 && (
+                <span
+                  style={{
+                    borderRadius: 999,
+                    padding: "6px 10px",
+                    background: "#fff7df",
+                    border: "1px solid #d8bd72",
+                    color: "#665326",
+                    fontWeight: 900,
+                    fontSize: ".82rem",
+                  }}
+                >
+                  Título {Math.round(sourceAudit.titleHintScore * 100)}%
+                </span>
+              )}
 
               {sourceAudit.exact && (
                 <span
