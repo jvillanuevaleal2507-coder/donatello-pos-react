@@ -2,6 +2,14 @@ import { enrichResultWithGallery } from "./galleryExtractor.js";
 
 const SERPAPI_ENDPOINT = "https://serpapi.com/search.json";
 
+const TITLE_NOISE_WORDS = new Set([
+  "new", "open", "box", "lot", "item", "return", "returns",
+  "the", "and", "for", "with", "from", "this", "that",
+  "de", "la", "el", "los", "las", "para", "con", "por",
+  "set", "piece", "pieces", "pack", "pcs", "pc",
+  "modern", "home", "style", "color",
+]);
+
 function sendJson(res, status, payload) {
   res.status(status);
   res.setHeader("Content-Type", "application/json; charset=utf-8");
@@ -16,6 +24,66 @@ function isValidPublicImageUrl(value) {
   } catch {
     return false;
   }
+}
+
+function normalizeText(value = "") {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9\s.-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function usefulTitleTokens(value = "") {
+  return new Set(
+    normalizeText(value)
+      .split(" ")
+      .map((token) => token.trim())
+      .filter(
+        (token) =>
+          token.length >= 2 &&
+          !TITLE_NOISE_WORDS.has(token)
+      )
+  );
+}
+
+function extractTitleNumbers(value = "") {
+  return new Set(
+    (normalizeText(value).match(/\b\d+(?:\.\d+)?\b/g) || [])
+      .map((value) => Number(value))
+      .filter((value) => Number.isFinite(value))
+  );
+}
+
+function titleHintCompatibility(resultTitle = "", titleHint = "") {
+  const hint = String(titleHint || "").trim();
+  if (!hint) return 0;
+
+  const hintTokens = usefulTitleTokens(hint);
+  const resultTokens = usefulTitleTokens(resultTitle);
+
+  if (!hintTokens.size || !resultTokens.size) return 0;
+
+  let matched = 0;
+  for (const token of hintTokens) {
+    if (resultTokens.has(token)) matched += 1;
+  }
+
+  const coverage = matched / hintTokens.size;
+
+  const hintNumbers = extractTitleNumbers(hint);
+  const resultNumbers = extractTitleNumbers(resultTitle);
+  let numericBonus = 0;
+
+  if (hintNumbers.size && resultNumbers.size) {
+    const numberMatch = [...hintNumbers].some((value) => resultNumbers.has(value));
+    numericBonus = numberMatch ? 0.12 : -0.08;
+  }
+
+  return Math.max(0, Math.min(1, coverage + numericBonus));
 }
 
 function toNumber(value) {
@@ -93,10 +161,16 @@ function normalizeImages(match = {}) {
   });
 }
 
-function normalizeMatch(match, index) {
+function normalizeMatch(match, index, titleHint = "") {
   const priceValue = extractPrice(match);
   const currency = extractCurrency(match);
   const images = normalizeImages(match);
+  const titleHintScore = titleHintCompatibility(match.title || "", titleHint);
+  const baseConfidence = confidenceFor(match, index);
+  const confidence = Math.min(
+    99,
+    Math.round(baseConfidence + titleHintScore * 10)
+  );
 
   return {
     id: `lens-${match.position || index + 1}`,
@@ -110,7 +184,8 @@ function normalizeMatch(match, index) {
       match.price?.displayed_price ||
       match.price_string ||
       "",
-    confidence: confidenceFor(match, index),
+    confidence,
+    titleHintScore,
     exactImageMatch: match.exact_matches === true,
     hasTechnicalData: Boolean(match.title),
     inStock:
@@ -127,6 +202,7 @@ function normalizeMatch(match, index) {
       position: Number(match.position || index + 1),
       rating: match.rating ?? null,
       reviews: match.reviews ?? null,
+      titleHintScore,
       priceLabel:
         match.price?.value ||
         match.price?.displayed_price ||
@@ -140,7 +216,6 @@ function normalizeMatch(match, index) {
     raw: match,
   };
 }
-
 
 const BLOCKED_SOCIAL_HOSTS = [
   "tiktok.com",
@@ -229,10 +304,12 @@ function preliminaryCompatibilityScore(result = {}) {
   const initialImages = Array.isArray(result.images)
     ? Math.min(result.images.length, 4) * 8
     : 0;
+  const titleHint = Number(result.titleHintScore || 0) * 320;
 
   return (
     exact +
     commercialSource +
+    titleHint +
     confidence * 5 +
     hasPrice +
     initialImages -
@@ -257,7 +334,7 @@ function selectGalleryCandidates(results = [], limit = 8) {
   );
 
   // Garantiza que las tiendas prioritarias compitan con galería enriquecida,
-  // aunque SerpAPI las coloque abajo.
+  // y dentro de cada tienda favorece la coincidencia con el título capturado.
   for (const store of COMMERCIAL_STORE_ORDER) {
     const candidate = ordered.find(
       (result) => normalizeSourceKey(result) === store
@@ -268,7 +345,6 @@ function selectGalleryCandidates(results = [], limit = 8) {
     if (selected.length >= limit) return selected;
   }
 
-  // Completa con las mejores coincidencias restantes.
   for (const result of ordered) {
     add(result);
     if (selected.length >= limit) break;
@@ -292,13 +368,15 @@ export default async function handler(req, res) {
     });
   }
 
-  const { imageUrl } = req.body || {};
+  const { imageUrl, titleHint = "" } = req.body || {};
 
   if (!isValidPublicImageUrl(imageUrl)) {
     return sendJson(res, 400, {
       error: "Se requiere una URL pública HTTPS de la imagen.",
     });
   }
+
+  const cleanTitleHint = String(titleHint || "").trim().slice(0, 300);
 
   try {
     const params = new URLSearchParams({
@@ -333,7 +411,7 @@ export default async function handler(req, res) {
 
     const normalizedResults = visualMatches
       .slice(0, 30)
-      .map(normalizeMatch)
+      .map((match, index) => normalizeMatch(match, index, cleanTitleHint))
       .filter((item) => item.url || item.images.length)
       .filter((item) => !isBlockedSocialResult(item));
 
@@ -398,8 +476,12 @@ export default async function handler(req, res) {
       ok: true,
       searchId: data.search_metadata?.id || null,
       imageUrl,
+      titleHintUsed: Boolean(cleanTitleHint),
+      titleHint: cleanTitleHint,
       galleryExtractionEnabled: true,
-      galleryCandidateStrategy: "commercial-store-coverage",
+      galleryCandidateStrategy: cleanTitleHint
+        ? "commercial-store-coverage-plus-title-hint"
+        : "commercial-store-coverage",
       galleryCandidatesProcessed: candidatesForGallery.length,
       blockedSocialResults:
         visualMatches.length - normalizedResults.length,
