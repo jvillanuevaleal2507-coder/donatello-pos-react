@@ -38,6 +38,10 @@ function buildBaseCandidate(result, context) {
     compatibleWithAnchor:
       result?.compatibleWithAnchor ??
       true,
+    titleHintScore:
+      result?.titleHintScore ??
+      result?.metadata?.titleHintScore ??
+      0,
   };
 }
 
@@ -122,6 +126,10 @@ function buildDecisionContext({
     productCompatibility:
       bestResult?.productCompatibility ??
       null,
+    titleHintScore:
+      bestResult?.titleHintScore ??
+      bestResult?.metadata?.titleHintScore ??
+      0,
     resultCount:
       results.length,
     rejectedCount:
@@ -185,6 +193,7 @@ export async function prepareAtlasAlternative({
 
 export async function runAtlas({
   photo,
+  titleHint = "",
   costUsd,
   stock = "1",
   pricingOptions = {},
@@ -208,14 +217,19 @@ export async function runAtlas({
   };
 
   try {
+    const cleanTitleHint = String(titleHint || "").trim();
+
     notifyProgress(
       onProgress,
       "analyzingImage",
-      "Déjame investigar este producto..."
+      cleanTitleHint
+        ? "Déjame cruzar la foto con el título de la subasta..."
+        : "Déjame investigar este producto..."
     );
 
     const results = await searchByImage({
       photo,
+      titleHint: cleanTitleHint,
       onProgress: (step) =>
         notifyProgress(onProgress, step),
     });
@@ -240,7 +254,9 @@ export async function runAtlas({
     notifyProgress(
       onProgress,
       "comparingImages",
-      `Encontré ${results.length} coincidencias. Estoy validando similitud visual, modelo, marca, capacidad y forma.`
+      cleanTitleHint
+        ? `Encontré ${results.length} coincidencias. Estoy comparando imagen, palabras clave del título, modelo, marca, capacidad y forma.`
+        : `Encontré ${results.length} coincidencias. Estoy validando similitud visual, modelo, marca, capacidad y forma.`
     );
 
     const {
@@ -342,11 +358,16 @@ export async function runAtlas({
         ? " Se utilizó una imagen externa únicamente para medidas."
         : "";
 
+    const titleMessage =
+      cleanTitleHint && Number(best?.titleHintScore || best?.metadata?.titleHintScore || 0) >= 0.35
+        ? " El título de subasta ayudó a validar esta coincidencia."
+        : "";
+
     return {
       status: "result",
       message: product.aiEnriched
-        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}${sourceMessage}`
-        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}${sourceMessage}`,
+        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}${sourceMessage}${titleMessage}`
+        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}${sourceMessage}${titleMessage}`,
       best: product,
       alternatives: preparedAlternatives,
       rejected,
