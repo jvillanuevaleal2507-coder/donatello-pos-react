@@ -4,6 +4,11 @@ import {
 } from "./providers/amazonProvider.js";
 
 import {
+  canHandleHomeDepotUrl,
+  extractHomeDepotGallery,
+} from "./providers/homeDepotProvider.js";
+
+import {
   canHandleLowesUrl,
   extractLowesGallery,
 } from "./providers/lowesProvider.js";
@@ -17,6 +22,8 @@ import {
   canHandleWalmartUrl,
   extractWalmartGallery,
 } from "./providers/walmartProvider.js";
+
+import { resolveShoppingProduct } from "./shoppingProductResolver.js";
 
 const DEFAULT_TIMEOUT_MS = 12000;
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
@@ -46,12 +53,10 @@ function normalizeText(value = "") {
 function isPublicHttpsUrl(value) {
   try {
     const url = new URL(value);
-
-    if (url.protocol !== "https:") return false;
-    if (!url.hostname) return false;
-
-    return !BLOCKED_HOST_PATTERNS.some((pattern) =>
-      pattern.test(url.hostname)
+    return (
+      url.protocol === "https:" &&
+      Boolean(url.hostname) &&
+      !BLOCKED_HOST_PATTERNS.some((pattern) => pattern.test(url.hostname))
     );
   } catch {
     return false;
@@ -60,7 +65,6 @@ function isPublicHttpsUrl(value) {
 
 function absoluteUrl(value, pageUrl) {
   const normalized = normalizeText(value);
-
   if (!normalized) return "";
 
   try {
@@ -74,7 +78,6 @@ function isLikelyProductImage(value) {
   if (!isPublicHttpsUrl(value)) return false;
 
   const text = value.toLowerCase();
-
   if (
     text.includes("logo") ||
     text.includes("icon") ||
@@ -83,7 +86,8 @@ function isLikelyProductImage(value) {
     text.includes("avatar") ||
     text.includes("badge") ||
     text.includes("tracking") ||
-    text.includes("pixel")
+    text.includes("pixel") ||
+    text.includes("placeholder")
   ) {
     return false;
   }
@@ -132,11 +136,13 @@ function imageIdentity(url) {
     const fileName =
       parsed.pathname.split("/").filter(Boolean).pop()?.toLowerCase() || "";
 
-    return fileName
-      .replace(/[-_](thumb|thumbnail|small|medium|large|preview|zoom)/g, "")
+    const clean = fileName
+      .replace(/[-_](thumb|thumbnail|small|medium|large|preview|zoom|main|hero)/g, "")
       .replace(/[-_]\d+x\d+/g, "")
       .replace(/\.(jpe?g|png|webp|avif)$/i, "")
       .replace(/[^a-z0-9]/g, "");
+
+    return clean.length >= 8 ? clean : parsed.toString();
   } catch {
     return url;
   }
@@ -149,7 +155,6 @@ function pushImage(bucket, candidate) {
   if (!isLikelyProductImage(url)) return;
 
   const identity = imageIdentity(url);
-
   if (
     bucket.some(
       (item) =>
@@ -165,6 +170,8 @@ function pushImage(bucket, candidate) {
     type: candidate.type || classifyImage(url, candidate.alt || ""),
     alt: candidate.alt || "",
     source: candidate.source || "page",
+    width: candidate.width || null,
+    height: candidate.height || null,
     identity,
   });
 }
@@ -174,7 +181,6 @@ function extractJsonLd(html, pageUrl, bucket) {
     /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
 
   let match;
-
   while ((match = scriptRegex.exec(html))) {
     try {
       const parsed = JSON.parse(match[1].trim());
@@ -210,7 +216,7 @@ function extractJsonLd(html, pageUrl, bucket) {
         }
       }
     } catch {
-      // Algunos sitios insertan JSON-LD inválido; se ignora sin romper la extracción.
+      // JSON-LD inválido: se ignora sin romper la extracción.
     }
   }
 }
@@ -225,7 +231,6 @@ function extractMetaImages(html, pageUrl, bucket) {
 
   for (const pattern of patterns) {
     let match;
-
     while ((match = pattern.exec(html))) {
       pushImage(bucket, {
         url: absoluteUrl(match[1], pageUrl),
@@ -242,9 +247,7 @@ function extractImgTags(html, pageUrl, bucket) {
 
   while ((tag = imgRegex.exec(html))) {
     const htmlTag = tag[0];
-
-    const alt =
-      htmlTag.match(/\balt=["']([^"']*)["']/i)?.[1] || "";
+    const alt = htmlTag.match(/\balt=["']([^"']*)["']/i)?.[1] || "";
 
     const candidates = [
       htmlTag.match(/\bsrc=["']([^"']+)["']/i)?.[1],
@@ -263,7 +266,6 @@ function extractImgTags(html, pageUrl, bucket) {
         .map((item) => item.trim().split(/\s+/)[0])
         .filter(Boolean)
         .pop();
-
       if (highestCandidate) candidates.push(highestCandidate);
     }
 
@@ -286,10 +288,8 @@ function extractEmbeddedImageUrls(html, pageUrl, bucket) {
 
   for (const pattern of patterns) {
     let match;
-
     while ((match = pattern.exec(html))) {
       const value = match[1] || match[0];
-
       pushImage(bucket, {
         url: absoluteUrl(value, pageUrl),
         type: classifyImage(value),
@@ -324,24 +324,16 @@ async function fetchHtml(url, timeoutMs = DEFAULT_TIMEOUT_MS) {
     });
 
     if (!response.ok) {
-      throw new Error(
-        `La tienda respondió con HTTP ${response.status}.`
-      );
+      throw new Error(`La tienda respondió con HTTP ${response.status}.`);
     }
 
     const contentType = response.headers.get("content-type") || "";
-
     if (!contentType.includes("text/html")) {
       throw new Error("La URL no devolvió una página HTML.");
     }
 
     const text = await response.text();
-
-    if (text.length > MAX_HTML_BYTES) {
-      return text.slice(0, MAX_HTML_BYTES);
-    }
-
-    return text;
+    return text.length > MAX_HTML_BYTES ? text.slice(0, MAX_HTML_BYTES) : text;
   } finally {
     clearTimeout(timeout);
   }
@@ -364,81 +356,42 @@ export async function extractGalleryFromUrl({
   try {
     const html = await fetchHtml(url, timeoutMs);
 
-    // Provider específico de Amazon.
-    // Si funciona, evita mezclar recomendaciones y usa la galería real.
     if (canHandleAmazonUrl(url)) {
-      const amazonGallery = extractAmazonGallery({
-        html,
-        url,
-        maximum,
-      });
-
-      if (amazonGallery.ok && amazonGallery.images.length) {
-        return {
-          ...amazonGallery,
-          providerUsed: "amazon",
-          fallbackUsed: false,
-        };
+      const gallery = extractAmazonGallery({ html, url, maximum });
+      if (gallery.ok && gallery.images.length) {
+        return { ...gallery, providerUsed: "amazon", fallbackUsed: false };
       }
     }
 
-    // Provider específico de Lowe's.
-    // Si funciona, usa la galería estructurada y evita imágenes genéricas.
+    if (canHandleHomeDepotUrl(url)) {
+      const gallery = extractHomeDepotGallery({ html, url, maximum });
+      if (gallery.ok && gallery.images.length) {
+        return { ...gallery, providerUsed: "homedepot", fallbackUsed: false };
+      }
+    }
+
     if (canHandleLowesUrl(url)) {
-      const lowesGallery = extractLowesGallery({
-        html,
-        url,
-        maximum,
-      });
-
-      if (lowesGallery.ok && lowesGallery.images.length) {
-        return {
-          ...lowesGallery,
-          providerUsed: "lowes",
-          fallbackUsed: false,
-        };
+      const gallery = extractLowesGallery({ html, url, maximum });
+      if (gallery.ok && gallery.images.length) {
+        return { ...gallery, providerUsed: "lowes", fallbackUsed: false };
       }
     }
 
-    // Provider específico de Target.
-    // Prioriza la galería estructurada y sus imágenes Scene7.
     if (canHandleTargetUrl(url)) {
-      const targetGallery = extractTargetGallery({
-        html,
-        url,
-        maximum,
-      });
-
-      if (targetGallery.ok && targetGallery.images.length) {
-        return {
-          ...targetGallery,
-          providerUsed: "target",
-          fallbackUsed: false,
-        };
+      const gallery = extractTargetGallery({ html, url, maximum });
+      if (gallery.ok && gallery.images.length) {
+        return { ...gallery, providerUsed: "target", fallbackUsed: false };
       }
     }
 
-    // Provider específico de Walmart.
     if (canHandleWalmartUrl(url)) {
-      const walmartGallery = extractWalmartGallery({
-        html,
-        url,
-        maximum,
-      });
-
-      if (walmartGallery.ok && walmartGallery.images.length) {
-        return {
-          ...walmartGallery,
-          providerUsed: "walmart",
-          fallbackUsed: false,
-        };
+      const gallery = extractWalmartGallery({ html, url, maximum });
+      if (gallery.ok && gallery.images.length) {
+        return { ...gallery, providerUsed: "walmart", fallbackUsed: false };
       }
     }
 
-    // Respaldo genérico si un provider no obtiene imágenes
-    // y para las tiendas que todavía no tienen provider específico.
     const images = [];
-
     extractJsonLd(html, url, images);
     extractMetaImages(html, url, images);
     extractImgTags(html, url, images);
@@ -462,6 +415,7 @@ export async function extractGalleryFromUrl({
       providerUsed: "generic",
       fallbackUsed:
         canHandleAmazonUrl(url) ||
+        canHandleHomeDepotUrl(url) ||
         canHandleLowesUrl(url) ||
         canHandleTargetUrl(url) ||
         canHandleWalmartUrl(url),
@@ -484,54 +438,82 @@ export async function extractGalleryFromUrl({
   }
 }
 
-export async function enrichResultWithGallery(
-  result,
-  options = {}
-) {
-  if (!result?.url) return result;
+export async function enrichResultWithGallery(result, options = {}) {
+  if (!result) return result;
 
-  const gallery = await extractGalleryFromUrl({
-    url: result.url,
-    ...options,
+  const timeoutMs = Math.max(
+    1500,
+    Number(options.timeoutMs || DEFAULT_TIMEOUT_MS)
+  );
+  const maximum = Math.max(1, Number(options.maximum || MAX_IMAGES));
+
+  const resolved = await resolveShoppingProduct(result, {
+    apiKey: process.env.SERPAPI_KEY || "",
+    timeoutMs: Math.min(timeoutMs, 8000),
   });
 
-  if (!gallery.ok || !gallery.images.length) {
+  if (!resolved?.url) {
     return {
-      ...result,
-      galleryExtraction: gallery,
+      ...resolved,
+      galleryExtraction: {
+        ok: Array.isArray(resolved?.images) && resolved.images.length > 0,
+        count: Array.isArray(resolved?.images) ? resolved.images.length : 0,
+        url: "",
+        provider: resolved?.productResolution?.mediaCount ? "google-product" : "none",
+        fallbackUsed: false,
+        productResolution: resolved?.productResolution || null,
+        error: resolved?.images?.length ? "" : "No se encontró una URL directa del producto.",
+      },
     };
   }
 
-  const merged = [];
-  const existing = Array.isArray(result.images)
-    ? result.images
-    : [];
+  const gallery = await extractGalleryFromUrl({
+    url: resolved.url,
+    timeoutMs,
+    maximum,
+  });
 
-  for (const image of [...existing, ...gallery.images]) {
+  const existing = Array.isArray(resolved.images) ? resolved.images : [];
+  const merged = [];
+
+  for (const image of [...existing, ...(gallery.images || [])]) {
     pushImage(merged, image);
   }
 
+  if (!gallery.ok || !gallery.images?.length) {
+    return {
+      ...resolved,
+      images: merged.map(({ identity, ...image }) => image),
+      galleryExtraction: {
+        ...gallery,
+        ok: merged.length > 0,
+        count: merged.length,
+        provider:
+          resolved?.productResolution?.mediaCount
+            ? "google-product"
+            : gallery.provider || "none",
+        productResolution: resolved?.productResolution || null,
+      },
+    };
+  }
+
   return {
-    ...result,
+    ...resolved,
     images: merged.map(({ identity, ...image }) => image),
     galleryExtraction: {
       ok: true,
-      count: gallery.count,
+      count: merged.length,
       url: gallery.url,
       provider:
         gallery.providerUsed ||
         gallery.provider ||
         "generic",
-      fallbackUsed:
-        Boolean(gallery.fallbackUsed),
-      asin:
-        gallery.asin || "",
-      productId:
-        gallery.productId || "",
-      tcin:
-        gallery.tcin || "",
-      itemId:
-        gallery.itemId || "",
+      fallbackUsed: Boolean(gallery.fallbackUsed),
+      asin: gallery.asin || "",
+      productId: gallery.productId || "",
+      tcin: gallery.tcin || "",
+      itemId: gallery.itemId || "",
+      productResolution: resolved?.productResolution || null,
     },
   };
 }

@@ -43,7 +43,7 @@ export const SOURCE_LABELS = {
 };
 
 export const MAX_PRODUCT_IMAGES = 4;
-export const IMAGE_SLOT_PRIORITY = ["main", "dimensions", "environment", "detail"];
+export const IMAGE_SLOT_PRIORITY = ["main", "measurements", "environment", "other", "detail"];
 export const CONFIDENCE = { HIGH: 95, MEDIUM: 80, LOW: 60 };
 export const PRODUCT_STATUS = {
   IDLE: "idle",
