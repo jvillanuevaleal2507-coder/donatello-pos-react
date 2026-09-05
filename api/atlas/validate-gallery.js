@@ -97,6 +97,14 @@ Reglas obligatorias:
 - No aceptes una imagen únicamente porque el texto asociado diga que coincide: manda la evidencia visual.
 - Clasifica cada imagen aceptada como main, measurements, environment, detail u other.
 - Para "confidence", 1 significa certeza visual muy alta. Usa menos de 0.72 cuando exista duda real.
+
+CONTROL DE DUPLICADOS VISUALES:
+- Compara TODAS las candidatas entre sí, no solo cada una contra el producto.
+- Si dos imágenes muestran esencialmente la MISMA FOTO (aunque cambie URL, host, resolución, recorte leve, fondo agregado, compresión o tamaño), conserva únicamente la primera por número de candidata.
+- Para una imagen única usa duplicateOf = -1.
+- Para una repetida usa duplicateOf = índice de la candidata anterior que representa la misma foto.
+- Una candidata con duplicateOf distinto de -1 NO debe formar parte de la galería final, aunque muestre el producto correcto.
+- Dos fotografías diferentes del mismo producto desde ángulos distintos NO son duplicados.
 `.trim();
 
   const content = [{ type: "input_text", text: prompt }];
@@ -123,7 +131,7 @@ Reglas obligatorias:
       body: JSON.stringify({
         model: "gpt-5.6",
         reasoning: { effort: "low" },
-        max_output_tokens: 1000,
+        max_output_tokens: 1200,
         input: [{ role: "user", content }],
         text: {
           format: {
@@ -147,9 +155,10 @@ Reglas obligatorias:
                         type: "string",
                         enum: ["main", "measurements", "environment", "detail", "other"],
                       },
+                      duplicateOf: { type: "integer" },
                       reason: { type: "string" },
                     },
-                    required: ["index", "matchesTarget", "confidence", "type", "reason"],
+                    required: ["index", "matchesTarget", "confidence", "type", "duplicateOf", "reason"],
                   },
                 },
               },
@@ -177,26 +186,42 @@ Reglas obligatorias:
     const validIndexes = new Set(usable.map((candidate) => candidate.index));
     const normalized = (Array.isArray(parsed.items) ? parsed.items : [])
       .filter((item) => validIndexes.has(Number(item.index)))
-      .map((item) => ({
-        index: Number(item.index),
-        matchesTarget: Boolean(item.matchesTarget),
-        confidence: clamp01(item.confidence),
-        type: item.type || "other",
-        reason: String(item.reason || "").slice(0, 220),
-      }));
+      .map((item) => {
+        const duplicateOf = Number(item.duplicateOf);
+        const validDuplicate =
+          Number.isInteger(duplicateOf) &&
+          duplicateOf >= 0 &&
+          duplicateOf !== Number(item.index) &&
+          validIndexes.has(duplicateOf);
+
+        return {
+          index: Number(item.index),
+          matchesTarget: Boolean(item.matchesTarget),
+          confidence: clamp01(item.confidence),
+          type: item.type || "other",
+          duplicateOf: validDuplicate ? duplicateOf : -1,
+          reason: String(item.reason || "").slice(0, 220),
+        };
+      });
 
     const accepted = normalized.filter(
-      (item) => item.matchesTarget && item.confidence >= 0.72
+      (item) =>
+        item.matchesTarget &&
+        item.confidence >= 0.72 &&
+        item.duplicateOf === -1
     );
+
     const acceptedIndexes = new Set(accepted.map((item) => item.index));
-    const rejected = normalized
-      .filter((item) => !acceptedIndexes.has(item.index));
+    const rejected = normalized.filter(
+      (item) => !acceptedIndexes.has(item.index)
+    );
 
     return sendJson(res, 200, {
       ok: true,
       accepted,
       rejected,
       candidateCount: usable.length,
+      duplicateCount: normalized.filter((item) => item.duplicateOf !== -1).length,
       usage: data.usage || null,
     });
   } catch (error) {
