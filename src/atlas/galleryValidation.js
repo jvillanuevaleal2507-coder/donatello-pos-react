@@ -150,6 +150,14 @@ async function recoverMissingGallery({
         referenceImageUrl:
           bestResult?.metadata?.atlasSourceImageUrl ||
           "",
+        preferredSource:
+          bestResult?.metadata?.resolvedMerchant ||
+          bestResult?.source ||
+          "",
+        productUrl:
+          bestResult?.metadata?.resolvedProductUrl ||
+          bestResult?.url ||
+          "",
         existingUrls,
       }),
     });
@@ -301,6 +309,8 @@ export async function validateProductGallery({
       acceptedByValidator: data.accepted.length,
       recovered: recovered.length,
       finalUniqueImages: finalAcceptedImages.length,
+      source: bestResult?.source || "",
+      resolvedProductUrl: bestResult?.metadata?.resolvedProductUrl || bestResult?.url || "",
     });
 
     return {
