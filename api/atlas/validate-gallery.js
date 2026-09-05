@@ -51,6 +51,7 @@ export default async function handler(req, res) {
     targetTitle = "",
     titleHint = "",
     identity = null,
+    referenceImageUrl = "",
     candidates = [],
   } = req.body || {};
 
@@ -87,12 +88,15 @@ Producto objetivo:
 - Título de subasta: ${String(titleHint || "").slice(0, 300) || "No proporcionado"}
 - Identidad Atlas: ${identityText}
 
+La FOTO DE REFERENCIA, cuando se proporciona, es la fotografía real subida por el usuario. Úsala como ancla visual principal para reconocer forma, estructura, color y rasgos del producto objetivo. El título sirve para indicarte cuál objeto de esa fotografía es el que estamos buscando cuando aparecen otros objetos alrededor.
+
 Reglas obligatorias:
 - Acepta solo imágenes del mismo producto o de la misma variante exacta cuando sea visualmente consistente.
 - Rechaza productos de otra categoría, accesorios distintos, muebles diferentes, espejos, lámparas, sombrillas, comederos, decoración u otros objetos aunque aparezcan en resultados relacionados.
 - Una escena de ambiente se acepta solo si el producto objetivo está claramente presente y coincide.
 - Una imagen de medidas se acepta solo si corresponde al mismo producto.
 - Si marca, forma, color, número de cajones/patas/puertas, tamaño aparente o estructura contradicen el producto objetivo, rechaza.
+- Diferentes ángulos del mismo producto SÍ son válidos y deseables.
 - Si no puedes verificar con suficiente seguridad que es el mismo producto, rechaza.
 - No aceptes una imagen únicamente porque el texto asociado diga que coincide: manda la evidencia visual.
 - Clasifica cada imagen aceptada como main, measurements, environment, detail u other.
@@ -108,6 +112,19 @@ CONTROL DE DUPLICADOS VISUALES:
 `.trim();
 
   const content = [{ type: "input_text", text: prompt }];
+
+  const reference = publicHttps(referenceImageUrl);
+  if (reference) {
+    content.push({
+      type: "input_text",
+      text: "FOTO DE REFERENCIA SUBIDA POR EL USUARIO:",
+    });
+    content.push({
+      type: "input_image",
+      image_url: reference,
+      detail: "low",
+    });
+  }
 
   for (const candidate of usable) {
     content.push({
@@ -216,12 +233,21 @@ CONTROL DE DUPLICADOS VISUALES:
       (item) => !acceptedIndexes.has(item.index)
     );
 
+    console.log("Atlas gallery validator", {
+      referenceUsed: Boolean(reference),
+      candidateCount: usable.length,
+      acceptedCount: accepted.length,
+      duplicateCount: normalized.filter((item) => item.duplicateOf !== -1).length,
+      rejectedCount: rejected.length,
+    });
+
     return sendJson(res, 200, {
       ok: true,
       accepted,
       rejected,
       candidateCount: usable.length,
       duplicateCount: normalized.filter((item) => item.duplicateOf !== -1).length,
+      referenceUsed: Boolean(reference),
       usage: data.usage || null,
     });
   } catch (error) {
