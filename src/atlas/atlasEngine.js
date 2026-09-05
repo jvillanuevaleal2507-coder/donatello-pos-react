@@ -5,6 +5,7 @@ import { buildProductCandidate } from "./productBuilder";
 import { enrichProductCandidate } from "./productEnrichment";
 import { applyPricingToProduct } from "./pricingEngine";
 import { applySelectedPhotos } from "./photoSelector";
+import { validateProductGallery } from "./galleryValidation";
 
 function notifyProgress(onProgress, step, customMessage = "") {
   onProgress?.({
@@ -110,6 +111,8 @@ function buildDecisionContext({ bestResult, product, results, rejected }) {
     photoProviders: product?.photoDiagnostics?.providers || [],
     photoSourceKeys: product?.photoDiagnostics?.sourceKeys || [],
     photoThumbnailCount: Number(product?.photoDiagnostics?.thumbnailCount || 0),
+    galleryAiValidated: Boolean(product?.rawResult?.galleryValidation?.ok),
+    galleryValidationFallback: Boolean(product?.rawResult?.galleryValidation?.fallbackUsed),
   };
 }
 
@@ -242,11 +245,28 @@ export async function runAtlas({
 
     notifyProgress(
       onProgress,
+      "selectingPhotos",
+      "Estoy verificando visualmente cada fotografía para asegurar que pertenezca al mismo producto..."
+    );
+
+    const galleryValidation = await validateProductGallery({
+      bestResult: best,
+      searchResults: rankedSearchResults,
+      titleHint: cleanTitleHint,
+    });
+
+    const photoBest = galleryValidation.bestResult || best;
+    const photoSearchResults = Array.isArray(galleryValidation.searchResults)
+      ? galleryValidation.searchResults
+      : rankedSearchResults;
+
+    notifyProgress(
+      onProgress,
       "selectingSource",
       `Elegí ${best.source || "la mejor fuente"} por coincidencia del producto, no por precio ni por tienda.`
     );
 
-    let product = buildBaseCandidate(best, candidateContext);
+    let product = buildBaseCandidate(photoBest, candidateContext);
 
     notifyProgress(
       onProgress,
@@ -267,14 +287,14 @@ export async function runAtlas({
     notifyProgress(
       onProgress,
       "selectingPhotos",
-      "Estoy armando una galería real del producto y descartando miniaturas, duplicados y variantes dudosas..."
+      "Estoy ordenando únicamente las fotografías que pasaron la validación visual..."
     );
 
-    product = preparePhotos(product, best, rankedSearchResults);
+    product = preparePhotos(product, photoBest, photoSearchResults);
 
     const pricingContext = buildPricingContext(product);
     const decisionContext = buildDecisionContext({
-      bestResult: best,
+      bestResult: photoBest,
       product,
       results: rankedSearchResults,
       rejected,
@@ -283,13 +303,13 @@ export async function runAtlas({
     const preparedAlternatives = buildAlternativeCandidates(
       alternatives,
       candidateContext,
-      rankedSearchResults
+      photoSearchResults
     );
 
     notifyProgress(
       onProgress,
       "buildingProduct",
-      "Ya organicé la fuente, el precio y las fotografías válidas."
+      "Ya organicé la fuente, el precio y las fotografías verificadas."
     );
 
     const pricingMessage = product.suggestedPrice
@@ -302,11 +322,15 @@ export async function runAtlas({
 
     const photoCount = Number(product.photoDiagnostics?.selectedCount || 0);
     const photoMessage = photoCount
-      ? ` Galería: ${photoCount}/4 imagen${photoCount === 1 ? "" : "es"} útil${photoCount === 1 ? "" : "es"}.`
-      : " No encontré una galería confiable todavía.";
+      ? ` Galería validada: ${photoCount}/4 imagen${photoCount === 1 ? "" : "es"} útil${photoCount === 1 ? "" : "es"}.`
+      : " No encontré imágenes que pasaran la validación visual.";
 
     const sourceMessage = product.photoSourcesMixed
-      ? " Completé la galería con imágenes verificadas del mismo producto desde más de una fuente."
+      ? " Completé la galería únicamente con imágenes del mismo producto que pasaron validación visual."
+      : "";
+
+    const fallbackMessage = product?.rawResult?.galleryValidation?.fallbackUsed
+      ? " El validador no estuvo disponible y por seguridad conservé solo la imagen principal."
       : "";
 
     const titleMessage =
@@ -318,8 +342,8 @@ export async function runAtlas({
     return {
       status: "result",
       message: product.aiEnriched
-        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}${photoMessage}${sourceMessage}${titleMessage}`
-        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}${photoMessage}${sourceMessage}${titleMessage}`,
+        ? `Ya entendí el producto y preparé una opción clara para que la revises.${pricingMessage}${marginMessage}${photoMessage}${sourceMessage}${fallbackMessage}${titleMessage}`
+        : `Encontré el producto. La mejora con IA no estuvo disponible, pero puedes revisar esta opción.${pricingMessage}${marginMessage}${photoMessage}${sourceMessage}${fallbackMessage}${titleMessage}`,
       best: product,
       alternatives: preparedAlternatives,
       rejected,
