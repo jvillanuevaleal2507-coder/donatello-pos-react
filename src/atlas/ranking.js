@@ -106,8 +106,21 @@ function getTitleHintScore(result = {}) {
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 }
 
+function getIdentityScore(result = {}) {
+  const value = Number(result.identityScore ?? result.metadata?.identityScore ?? 0);
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+}
+
 function titleHintWasUsed(results = []) {
   return results.some((result) => Boolean(result.titleHintUsed || result.metadata?.titleHintUsed));
+}
+
+function identityWasUsed(results = []) {
+  return results.some((result) => Boolean(result.identityUsed || result.metadata?.identityUsed));
+}
+
+function isSemanticConflict(result = {}) {
+  return Boolean(result.semanticConflict || result.metadata?.semanticConflict);
 }
 
 function getImageCount(result = {}) {
@@ -187,21 +200,31 @@ function getConsensusScore(result, results) {
   let score = 0;
   for (const other of results) {
     if (other === result || detectConflict(result, other)) continue;
+    if (isSemanticConflict(other)) continue;
     const titleSimilarity = jaccardSimilarity(getTokens(result), getTokens(other));
     const numeric = numericCompatibility(result, other);
     score += titleSimilarity * 100;
     if (numeric > 0) score += 20;
-    if (normalizeText(result.metadata?.model) && normalizeText(result.metadata?.model) === normalizeText(other.metadata?.model)) score += 40;
-    if (normalizeText(result.metadata?.brand) && normalizeText(result.metadata?.brand) === normalizeText(other.metadata?.brand)) score += 15;
+    if (
+      normalizeText(result.metadata?.model) &&
+      normalizeText(result.metadata?.model) === normalizeText(other.metadata?.model)
+    ) score += 40;
+    if (
+      normalizeText(result.metadata?.brand) &&
+      normalizeText(result.metadata?.brand) === normalizeText(other.metadata?.brand)
+    ) score += 15;
   }
   return score;
 }
 
 function findStableAnchor(results = []) {
   const hintUsed = titleHintWasUsed(results);
+  const identityUsed = identityWasUsed(results);
   const decorated = results.map((result) => ({
     result,
+    identity: getIdentityScore(result),
     titleHint: getTitleHintScore(result),
+    semanticConflict: isSemanticConflict(result),
     exact: Boolean(result.exactImageMatch),
     confidence: getConfidence(result),
     consensus: getConsensusScore(result, results),
@@ -209,7 +232,9 @@ function findStableAnchor(results = []) {
   }));
 
   decorated.sort((a, b) => {
-    if (hintUsed && a.titleHint !== b.titleHint) return b.titleHint - a.titleHint;
+    if (a.semanticConflict !== b.semanticConflict) return a.semanticConflict ? 1 : -1;
+    if (identityUsed && Math.abs(a.identity - b.identity) > 0.04) return b.identity - a.identity;
+    if (hintUsed && Math.abs(a.titleHint - b.titleHint) > 0.04) return b.titleHint - a.titleHint;
     if (a.exact !== b.exact) return a.exact ? -1 : 1;
     if (a.consensus !== b.consensus) return b.consensus - a.consensus;
     if (a.confidence !== b.confidence) return b.confidence - a.confidence;
@@ -221,6 +246,7 @@ function findStableAnchor(results = []) {
 }
 
 function productCompatibility(result, anchor) {
+  if (isSemanticConflict(result)) return -1;
   if (!anchor || result === anchor) return 1;
   if (detectConflict(result, anchor)) return -1;
   const titleSimilarity = jaccardSimilarity(getTokens(result), getTokens(anchor));
@@ -275,14 +301,18 @@ function getCommercialUtilityScore(result = {}) {
   return score;
 }
 
-export function scoreResult(result = {}, anchor = null, hintUsed = false) {
+export function scoreResult(result = {}, anchor = null, hintUsed = false, identityUsed = false) {
   const compatibility = productCompatibility(result, anchor);
   const commercialUtility = getCommercialUtilityScore(result);
   const titleHint = getTitleHintScore(result);
+  const identity = getIdentityScore(result);
+  const semanticPenalty = isSemanticConflict(result) ? -500000 : 0;
 
   return (
-    (hintUsed ? titleHint * 250000 : 0) +
-    (result.exactImageMatch ? 100000 : 0) +
+    semanticPenalty +
+    (identityUsed ? identity * 350000 : 0) +
+    (hintUsed ? titleHint * 110000 : 0) +
+    (result.exactImageMatch ? 90000 : 0) +
     compatibility * 10000 +
     commercialUtility * 180 +
     getConfidence(result) * 35 +
@@ -292,32 +322,49 @@ export function scoreResult(result = {}, anchor = null, hintUsed = false) {
 }
 
 function compareResults(a, b) {
+  if (isSemanticConflict(a) !== isSemanticConflict(b)) return isSemanticConflict(a) ? 1 : -1;
+
+  if (Boolean(a.identityUsed || a.metadata?.identityUsed) || Boolean(b.identityUsed || b.metadata?.identityUsed)) {
+    const identityDifference = getIdentityScore(b) - getIdentityScore(a);
+    if (Math.abs(identityDifference) > 0.015) return identityDifference;
+  }
+
   if (Boolean(a.titleHintUsed || a.metadata?.titleHintUsed) || Boolean(b.titleHintUsed || b.metadata?.titleHintUsed)) {
     const titleDifference = getTitleHintScore(b) - getTitleHintScore(a);
-    if (Math.abs(titleDifference) > 0.01) return titleDifference;
+    if (Math.abs(titleDifference) > 0.015) return titleDifference;
   }
+
   if (Boolean(a.exactImageMatch) !== Boolean(b.exactImageMatch)) return a.exactImageMatch ? -1 : 1;
   if (a.productCompatibility !== b.productCompatibility) return b.productCompatibility - a.productCompatibility;
+
   const commercialDifference = getCommercialUtilityScore(b) - getCommercialUtilityScore(a);
   if (commercialDifference !== 0) return commercialDifference;
+
   const confidenceDifference = getConfidence(b) - getConfidence(a);
   if (confidenceDifference !== 0) return confidenceDifference;
+
   const modelA = normalizeText(a.metadata?.model);
   const modelB = normalizeText(b.metadata?.model);
   if (Boolean(modelA) !== Boolean(modelB)) return modelA ? -1 : 1;
+
   const brandA = normalizeText(a.metadata?.brand);
   const brandB = normalizeText(b.metadata?.brand);
   if (Boolean(brandA) !== Boolean(brandB)) return brandA ? -1 : 1;
+
   if (a.promotional !== b.promotional) return a.promotional ? 1 : -1;
+
   const imageDifference = getImageCount(b) - getImageCount(a);
   if (imageDifference !== 0) return imageDifference;
+
   const sourceDifference = getStorePriority(a.sourceKey) - getStorePriority(b.sourceKey);
   if (sourceDifference !== 0) return sourceDifference;
+
   return compareStableText(a, b);
 }
 
 export function rankResults(results = []) {
   const hintUsed = titleHintWasUsed(results);
+  const identityUsed = identityWasUsed(results);
   const anchor = findStableAnchor(results);
 
   return [...results].map((result) => {
@@ -331,7 +378,7 @@ export function rankResults(results = []) {
       compatibleWithAnchor: compatibility >= 0,
       commercialUtilityScore: getCommercialUtilityScore(result),
       hasMeasurementImage: hasMeasurementImage(result),
-      atlasScore: scoreResult(result, anchor, hintUsed),
+      atlasScore: scoreResult(result, anchor, hintUsed, identityUsed),
       deterministicKey: deterministicKey(result),
     };
   }).sort(compareResults);
@@ -340,15 +387,23 @@ export function rankResults(results = []) {
 export function chooseBestResult(results = []) {
   const ranked = rankResults(results);
   const hintUsed = titleHintWasUsed(ranked);
+  const identityUsed = identityWasUsed(ranked);
 
-  let pool = ranked;
+  let pool = ranked.filter((result) => !isSemanticConflict(result));
+  if (!pool.length) pool = ranked;
+
+  if (identityUsed) {
+    const strongIdentityMatches = pool.filter((result) => getIdentityScore(result) >= 0.58);
+    const mediumIdentityMatches = pool.filter((result) => getIdentityScore(result) >= 0.36);
+
+    if (strongIdentityMatches.length) pool = strongIdentityMatches;
+    else if (mediumIdentityMatches.length) pool = mediumIdentityMatches;
+  }
 
   if (hintUsed) {
-    const strongTitleMatches = ranked.filter((result) => getTitleHintScore(result) >= 0.42);
-    const mediumTitleMatches = ranked.filter((result) => getTitleHintScore(result) >= 0.25);
+    const strongTitleMatches = pool.filter((result) => getTitleHintScore(result) >= 0.42);
+    const mediumTitleMatches = pool.filter((result) => getTitleHintScore(result) >= 0.25);
 
-    // Si el título encontró candidatos razonables, un match visual de otro objeto
-    // ya no puede ganar solo por aparecer grande en la fotografía.
     if (strongTitleMatches.length) pool = strongTitleMatches;
     else if (mediumTitleMatches.length) pool = mediumTitleMatches;
   }
