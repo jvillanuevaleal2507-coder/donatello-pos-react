@@ -1,3 +1,5 @@
+import { extractGalleryFromUrl } from "./galleryExtractor.js";
+
 const SERPAPI_ENDPOINT = "https://serpapi.com/search.json";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const MAX_SEARCH_RESULTS = 18;
@@ -56,7 +58,23 @@ function unique(values = []) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function buildQueries({ targetTitle = "", titleHint = "", identity = null } = {}) {
+function preferredDomain(value = "") {
+  const text = normalizeText(value).replace(/\s+/g, "");
+  if (text.includes("walmart")) return "walmart.com";
+  if (text.includes("amazon")) return "amazon.com";
+  if (text.includes("homedepot")) return "homedepot.com";
+  if (text.includes("lowes") || text.includes("lowe")) return "lowes.com";
+  if (text.includes("target")) return "target.com";
+  if (text.includes("wayfair")) return "wayfair.com";
+  return "";
+}
+
+function buildQueries({
+  targetTitle = "",
+  titleHint = "",
+  identity = null,
+  preferredSource = "",
+} = {}) {
   const brand = String(identity?.brand || "").trim();
   const model = String(identity?.model || "").trim();
   const productType = String(
@@ -65,8 +83,11 @@ function buildQueries({ targetTitle = "", titleHint = "", identity = null } = {}
   const distinctive = Array.isArray(identity?.distinctiveTerms)
     ? identity.distinctiveTerms.filter(Boolean).slice(0, 3).join(" ")
     : "";
+  const domain = preferredDomain(preferredSource);
+  const primary = String(titleHint || targetTitle || "").trim();
 
   const queries = [
+    domain && primary ? `${primary} site:${domain}` : "",
     String(titleHint || "").trim(),
     [brand, model, productType].filter(Boolean).join(" "),
     [brand, productType, distinctive].filter(Boolean).join(" "),
@@ -117,6 +138,7 @@ async function fetchSerpApi(query, apiKey) {
     q: query,
     gl: "us",
     hl: "en",
+    safe: "active",
     api_key: apiKey,
   });
 
@@ -127,42 +149,107 @@ async function fetchSerpApi(query, apiKey) {
   if (!response.ok || data?.error) {
     throw new Error(data?.error || `SerpApi respondió HTTP ${response.status}.`);
   }
-  return Array.isArray(data.images_results) ? data.images_results : [];
+
+  return {
+    imageResults: Array.isArray(data.images_results) ? data.images_results : [],
+    shoppingResults: Array.isArray(data.shopping_results) ? data.shopping_results : [],
+  };
 }
 
-function collectImageCandidates(groups = [], existingUrls = []) {
+function collectImageCandidates({
+  groups = [],
+  directGallery = [],
+  existingUrls = [],
+  preferredSource = "",
+  productUrl = "",
+} = {}) {
   const existing = new Set(existingUrls.map(publicHttps).filter(Boolean));
   const seenUrls = new Set(existing);
   const seenIdentities = new Set();
   const output = [];
 
+  const add = ({
+    url,
+    title = "",
+    source = "",
+    pageUrl = "",
+    query = "",
+    width = null,
+    height = null,
+    originalType = "other",
+  }) => {
+    const normalizedUrl = publicHttps(url);
+    if (
+      !normalizedUrl ||
+      blockedHost(normalizedUrl) ||
+      seenUrls.has(normalizedUrl)
+    ) {
+      return;
+    }
+
+    const identity = imageIdentity(normalizedUrl);
+    if (identity && seenIdentities.has(identity)) return;
+
+    seenUrls.add(normalizedUrl);
+    if (identity) seenIdentities.add(identity);
+
+    output.push({
+      index: output.length,
+      url: normalizedUrl,
+      title: String(title || "").slice(0, 300),
+      source: String(source || "").slice(0, 160),
+      pageUrl: publicHttps(pageUrl || ""),
+      query,
+      width: Number(width || 0) || null,
+      height: Number(height || 0) || null,
+      originalType,
+    });
+  };
+
+  // La galería de la tienda elegida es la fuente de mayor confianza.
+  for (const image of directGallery) {
+    add({
+      url: typeof image === "string" ? image : image?.url || image?.link,
+      title: typeof image === "string" ? "" : image?.alt || "",
+      source: preferredSource || "direct-product-gallery",
+      pageUrl: productUrl,
+      query: "direct-product-gallery",
+      width: typeof image === "string" ? null : image?.width,
+      height: typeof image === "string" ? null : image?.height,
+      originalType: typeof image === "string" ? "other" : image?.type || "other",
+    });
+    if (output.length >= MAX_SEARCH_RESULTS) return output;
+  }
+
   for (const group of groups) {
-    for (const item of group.results || []) {
-      const url = publicHttps(item.original || item.image || item.thumbnail || "");
-      if (!url || blockedHost(url) || seenUrls.has(url)) continue;
-
-      const identity = imageIdentity(url);
-      if (identity && seenIdentities.has(identity)) continue;
-
-      seenUrls.add(url);
-      if (identity) seenIdentities.add(identity);
-
-      output.push({
-        index: output.length,
-        url,
-        title: String(item.title || "").slice(0, 300),
-        source: String(item.source || "").slice(0, 160),
-        pageUrl: publicHttps(item.link || ""),
+    for (const item of group.imageResults || []) {
+      add({
+        url: item.original || item.image || item.thumbnail || "",
+        title: item.title || "",
+        source: item.source || "",
+        pageUrl: item.link || "",
         query: group.query,
-        width: Number(item.original_width || item.width || 0) || null,
-        height: Number(item.original_height || item.height || 0) || null,
+        width: item.original_width || item.width,
+        height: item.original_height || item.height,
       });
+      if (output.length >= MAX_SEARCH_RESULTS) return output;
+    }
 
+    // Google Images Shopping sí devuelve enlaces directos del comercio y puede
+    // aportar una foto limpia cuando el rastreo HTML de la tienda está bloqueado.
+    for (const item of group.shoppingResults || []) {
+      add({
+        url: item.thumbnail || item.serpapi_thumbnail || "",
+        title: item.title || "",
+        source: item.source || "",
+        pageUrl: item.link || "",
+        query: `${group.query} [shopping]`,
+      });
       if (output.length >= MAX_SEARCH_RESULTS) return output;
     }
   }
 
-  return output;
+  return output.slice(0, MAX_SEARCH_RESULTS);
 }
 
 function clamp01(value) {
@@ -195,7 +282,7 @@ async function validateCandidates({
   const content = [
     {
       type: "input_text",
-      text: `Eres el recuperador visual de catálogo de Ventas Donatello. Debes encontrar fotografías DIFERENTES del MISMO producto objetivo.\n\nProducto objetivo:\n- Título elegido: ${String(targetTitle || "").slice(0, 300)}\n- Título de subasta: ${String(titleHint || "").slice(0, 300) || "No proporcionado"}\n- Identidad Atlas: ${identityText}\n\nReglas:\n- Compara visualmente cada candidata con la FOTO DE REFERENCIA y con la identidad textual.\n- Acepta solo el mismo producto o la misma variante exacta.\n- Rechaza otro color, tamaño, estructura, número de patas/cajones/puertas, accesorios o productos parecidos pero distintos.\n- Una escena de ambiente se acepta solo si el producto objetivo aparece claramente.\n- Una imagen de medidas se acepta solo si las medidas corresponden al mismo producto.\n- Si dos candidatas son esencialmente la misma fotografía (aunque cambie recorte, resolución, fondo o compresión), asígnales el mismo duplicateGroup.\n- Clasifica cada candidata como main, measurements, environment, detail u other.\n- Es preferible regresar menos imágenes antes que contaminar la galería.`,
+      text: `Eres el recuperador visual de catálogo de Ventas Donatello. Debes encontrar fotografías DIFERENTES del MISMO producto objetivo.\n\nProducto objetivo:\n- Título elegido: ${String(targetTitle || "").slice(0, 300)}\n- Título de subasta: ${String(titleHint || "").slice(0, 300) || "No proporcionado"}\n- Identidad Atlas: ${identityText}\n\nReglas:\n- Compara visualmente cada candidata con la FOTO DE REFERENCIA y con la identidad textual.\n- Acepta solo el mismo producto o la misma variante exacta.\n- Rechaza otro color, tamaño, estructura, número de patas/cajones/puertas, accesorios o productos parecidos pero distintos.\n- Una escena de ambiente se acepta solo si el producto objetivo aparece claramente.\n- Una imagen de medidas se acepta solo si las medidas corresponden al mismo producto.\n- Si dos candidatas son esencialmente la misma fotografía (aunque cambie recorte, resolución, fondo o compresión), asígnales el mismo duplicateGroup.\n- Clasifica cada candidata como main, measurements, environment, detail u other.\n- Las candidatas cuya Consulta sea direct-product-gallery provienen de la página real del comercio elegido, pero AUN ASÍ debes comprobar visualmente que muestran el producto correcto.\n- Es preferible regresar menos imágenes antes que contaminar la galería.`,
     },
   ];
 
@@ -208,7 +295,7 @@ async function validateCandidates({
   for (const candidate of candidates) {
     content.push({
       type: "input_text",
-      text: `CANDIDATA #${candidate.index}\nTítulo: ${candidate.title}\nFuente: ${candidate.source}\nConsulta: ${candidate.query}`,
+      text: `CANDIDATA #${candidate.index}\nTítulo: ${candidate.title}\nFuente: ${candidate.source}\nConsulta: ${candidate.query}\nTipo previo: ${candidate.originalType || "other"}`,
     });
     content.push({
       type: "input_image",
@@ -291,7 +378,7 @@ async function validateCandidates({
       duplicateGroup: Number(item.duplicateGroup || 0),
       reason: String(item.reason || "").slice(0, 220),
     }))
-    .filter((item) => item.matchesTarget && item.confidence >= 0.74)
+    .filter((item) => item.matchesTarget && item.confidence >= 0.72)
     .sort((a, b) => b.confidence - a.confidence);
 
   const seenGroups = new Set();
@@ -329,11 +416,12 @@ export default async function handler(req, res) {
     return sendJson(res, 405, { error: "Método no permitido." });
   }
 
-  const serpApiKey = process.env.SERPAPI_API_KEY;
+  // El resto de Atlas usa SERPAPI_KEY. Se conserva el alias viejo como respaldo.
+  const serpApiKey = process.env.SERPAPI_KEY || process.env.SERPAPI_API_KEY;
   const openAiKey = process.env.OPENAI_API_KEY;
   if (!serpApiKey || !openAiKey) {
     return sendJson(res, 500, {
-      error: "Falta configurar SERPAPI_API_KEY u OPENAI_API_KEY en Vercel.",
+      error: "Falta configurar SERPAPI_KEY u OPENAI_API_KEY en Vercel.",
     });
   }
 
@@ -342,31 +430,95 @@ export default async function handler(req, res) {
     titleHint = "",
     identity = null,
     referenceImageUrl = "",
+    preferredSource = "",
+    productUrl = "",
     existingUrls = [],
   } = req.body || {};
 
-  const queries = buildQueries({ targetTitle, titleHint, identity });
-  if (!queries.length) {
+  const queries = buildQueries({
+    targetTitle,
+    titleHint,
+    identity,
+    preferredSource,
+  });
+
+  let directGallery = [];
+  let directGalleryDiagnostics = {
+    attempted: false,
+    ok: false,
+    provider: "none",
+    count: 0,
+    error: "",
+  };
+
+  const safeProductUrl = publicHttps(productUrl);
+  if (safeProductUrl) {
+    directGalleryDiagnostics.attempted = true;
+    try {
+      const gallery = await extractGalleryFromUrl({
+        url: safeProductUrl,
+        timeoutMs: 8000,
+        maximum: 30,
+      });
+      directGallery = Array.isArray(gallery.images) ? gallery.images : [];
+      directGalleryDiagnostics = {
+        attempted: true,
+        ok: Boolean(gallery.ok),
+        provider: gallery.providerUsed || gallery.provider || "generic",
+        count: directGallery.length,
+        error: gallery.error || "",
+      };
+    } catch (error) {
+      directGalleryDiagnostics = {
+        attempted: true,
+        ok: false,
+        provider: "none",
+        count: 0,
+        error: error instanceof Error ? error.message : "No se pudo leer la tienda.",
+      };
+    }
+  }
+
+  if (!queries.length && !directGallery.length) {
     return sendJson(res, 200, {
       ok: true,
       recovered: [],
       queries: [],
       candidateCount: 0,
+      directGallery: directGalleryDiagnostics,
     });
   }
 
   try {
+    // Un fallo en una consulta secundaria no debe tumbar toda la recuperación.
     const groups = await Promise.all(
-      queries.map(async (query) => ({
-        query,
-        results: await fetchSerpApi(query, serpApiKey),
-      }))
+      queries.map(async (query) => {
+        try {
+          const result = await fetchSerpApi(query, serpApiKey);
+          return {
+            query,
+            imageResults: result.imageResults,
+            shoppingResults: result.shoppingResults,
+            error: "",
+          };
+        } catch (error) {
+          return {
+            query,
+            imageResults: [],
+            shoppingResults: [],
+            error: error instanceof Error ? error.message : "Falló la consulta.",
+          };
+        }
+      })
     );
 
-    const candidates = collectImageCandidates(
+    const candidates = collectImageCandidates({
       groups,
-      Array.isArray(existingUrls) ? existingUrls : []
-    );
+      directGallery,
+      existingUrls: Array.isArray(existingUrls) ? existingUrls : [],
+      preferredSource,
+      productUrl: safeProductUrl,
+    });
 
     const recovered = await validateCandidates({
       candidates,
@@ -378,7 +530,19 @@ export default async function handler(req, res) {
     });
 
     console.log("Atlas gallery recovery", {
+      preferredSource,
+      productHost: (() => {
+        try {
+          return safeProductUrl ? new URL(safeProductUrl).hostname : "";
+        } catch {
+          return "";
+        }
+      })(),
+      directGallery: directGalleryDiagnostics,
       queries,
+      queryErrors: groups.filter((group) => group.error).map((group) => group.error),
+      imageSearchCount: groups.reduce((sum, group) => sum + group.imageResults.length, 0),
+      shoppingImageCount: groups.reduce((sum, group) => sum + group.shoppingResults.length, 0),
       candidateCount: candidates.length,
       recoveredCount: recovered.length,
     });
@@ -388,11 +552,18 @@ export default async function handler(req, res) {
       recovered,
       queries,
       candidateCount: candidates.length,
+      directGallery: directGalleryDiagnostics,
+      searchDiagnostics: {
+        imageCount: groups.reduce((sum, group) => sum + group.imageResults.length, 0),
+        shoppingCount: groups.reduce((sum, group) => sum + group.shoppingResults.length, 0),
+        queryErrors: groups.filter((group) => group.error).map((group) => group.error),
+      },
     });
   } catch (error) {
     console.error("Atlas gallery recovery error:", error);
     return sendJson(res, 500, {
       error: error instanceof Error ? error.message : "No se pudo recuperar la galería.",
+      directGallery: directGalleryDiagnostics,
     });
   }
 }
