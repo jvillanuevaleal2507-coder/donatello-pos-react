@@ -23,6 +23,11 @@ import {
   extractWalmartGallery,
 } from "./providers/walmartProvider.js";
 
+import {
+  canHandleShopifyProductPage,
+  extractShopifyGallery,
+} from "./providers/shopifyProvider.js";
+
 import { resolveShoppingProduct } from "./shoppingProductResolver.js";
 
 const DEFAULT_TIMEOUT_MS = 12000;
@@ -391,6 +396,18 @@ export async function extractGalleryFromUrl({
       }
     }
 
+    if (canHandleShopifyProductPage({ html, url })) {
+      const gallery = await extractShopifyGallery({
+        html,
+        url,
+        maximum,
+        timeoutMs: Math.min(timeoutMs, 8000),
+      });
+      if (gallery.ok && gallery.images.length) {
+        return { ...gallery, providerUsed: "shopify", fallbackUsed: false };
+      }
+    }
+
     const images = [];
     extractJsonLd(html, url, images);
     extractMetaImages(html, url, images);
@@ -418,7 +435,8 @@ export async function extractGalleryFromUrl({
         canHandleHomeDepotUrl(url) ||
         canHandleLowesUrl(url) ||
         canHandleTargetUrl(url) ||
-        canHandleWalmartUrl(url),
+        canHandleWalmartUrl(url) ||
+        canHandleShopifyProductPage({ html, url }),
       error:
         selected.length > 0
           ? ""
@@ -461,6 +479,7 @@ export async function enrichResultWithGallery(result, options = {}) {
         url: "",
         provider: resolved?.productResolution?.mediaCount ? "google-product" : "none",
         fallbackUsed: false,
+        productMetadata: null,
         productResolution: resolved?.productResolution || null,
         error: resolved?.images?.length ? "" : "No se encontró una URL directa del producto.",
       },
@@ -480,9 +499,18 @@ export async function enrichResultWithGallery(result, options = {}) {
     pushImage(merged, image);
   }
 
+  const enrichedMetadata = {
+    ...(resolved.metadata || {}),
+    ...(gallery?.metadata?.sku && !resolved.metadata?.model
+      ? { model: gallery.metadata.sku }
+      : {}),
+    extractedProductMetadata: gallery?.metadata || null,
+  };
+
   if (!gallery.ok || !gallery.images?.length) {
     return {
       ...resolved,
+      metadata: enrichedMetadata,
       images: merged.map(({ identity, ...image }) => image),
       galleryExtraction: {
         ...gallery,
@@ -492,6 +520,7 @@ export async function enrichResultWithGallery(result, options = {}) {
           resolved?.productResolution?.mediaCount
             ? "google-product"
             : gallery.provider || "none",
+        productMetadata: gallery?.metadata || null,
         productResolution: resolved?.productResolution || null,
       },
     };
@@ -499,6 +528,7 @@ export async function enrichResultWithGallery(result, options = {}) {
 
   return {
     ...resolved,
+    metadata: enrichedMetadata,
     images: merged.map(({ identity, ...image }) => image),
     galleryExtraction: {
       ok: true,
@@ -513,6 +543,7 @@ export async function enrichResultWithGallery(result, options = {}) {
       productId: gallery.productId || "",
       tcin: gallery.tcin || "",
       itemId: gallery.itemId || "",
+      productMetadata: gallery?.metadata || null,
       productResolution: resolved?.productResolution || null,
     },
   };
