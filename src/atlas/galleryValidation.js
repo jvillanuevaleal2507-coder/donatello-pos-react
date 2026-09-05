@@ -18,6 +18,33 @@ function normalizeUrl(value = "") {
   }
 }
 
+function sourceFamily(value = "") {
+  const text = normalizeText(value).replace(/[^a-z0-9]/g, "");
+  if (text.includes("amazon")) return "amazon";
+  if (text.includes("homedepot")) return "homedepot";
+  if (text.includes("walmart")) return "walmart";
+  if (text.includes("lowes") || text.includes("lowe")) return "lowes";
+  if (text.includes("target")) return "target";
+  if (text.includes("wayfair")) return "wayfair";
+  return "other";
+}
+
+function urlFamily(value = "") {
+  try {
+    const host = new URL(value).hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "amazon.com" || host.endsWith(".amazon.com")) return "amazon";
+    if (host === "homedepot.com" || host.endsWith(".homedepot.com")) return "homedepot";
+    if (host === "walmart.com" || host.endsWith(".walmart.com")) return "walmart";
+    if (host === "lowes.com" || host.endsWith(".lowes.com")) return "lowes";
+    if (host === "target.com" || host.endsWith(".target.com")) return "target";
+    if (host === "wayfair.com" || host.endsWith(".wayfair.com")) return "wayfair";
+    if (host.includes("google.")) return "google";
+    return "other";
+  } catch {
+    return "other";
+  }
+}
+
 function sameModel(a = {}, b = {}) {
   const modelA = normalizeText(a.metadata?.model);
   const modelB = normalizeText(b.metadata?.model);
@@ -52,9 +79,8 @@ function collectCandidates(bestResult = {}, searchResults = [], maximum = 12) {
       const url = normalizeUrl(typeof image === "string" ? image : image?.url || image?.link);
       if (!url) continue;
 
-      const key = url;
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (seen.has(url)) continue;
+      seen.add(url);
 
       candidates.push({
         id: candidates.length,
@@ -129,12 +155,72 @@ function safeFallback(bestResult = {}, searchResults = []) {
   };
 }
 
+function findRecoveryContext(bestResult = {}, searchResults = []) {
+  const desiredFamily = sourceFamily(
+    bestResult?.metadata?.resolvedMerchant || bestResult?.source || ""
+  );
+
+  const candidates = [bestResult, ...searchResults]
+    .filter(Boolean)
+    .filter((result) => !(result.semanticConflict || result.metadata?.semanticConflict))
+    .map((result) => {
+      const resolvedUrl = normalizeUrl(
+        result?.metadata?.resolvedProductUrl ||
+        result?.productResolution?.directUrl ||
+        result?.url ||
+        ""
+      );
+      const resolvedFamily = urlFamily(resolvedUrl);
+      const resultFamily = sourceFamily(
+        result?.metadata?.resolvedMerchant || result?.source || ""
+      );
+      const identity = Number(result.identityScore ?? result.metadata?.identityScore ?? 0);
+      const title = Number(result.titleHintScore ?? result.metadata?.titleHintScore ?? 0);
+      const compatibility = Number(result.productCompatibility || 0);
+      const imageCount = Array.isArray(result.images) ? result.images.length : 0;
+
+      let score = 0;
+      if (desiredFamily !== "other" && resultFamily === desiredFamily) score += 500;
+      if (desiredFamily !== "other" && resolvedFamily === desiredFamily) score += 500;
+      if (resolvedFamily !== "google" && resolvedFamily !== "other") score += 220;
+      if (resolvedFamily === "google") score -= 900;
+      score += identity * 180;
+      score += title * 120;
+      score += Math.max(0, compatibility) * 80;
+      score += Math.min(imageCount, 8) * 5;
+
+      return { result, resolvedUrl, resolvedFamily, resultFamily, score };
+    })
+    .filter((entry) => entry.resolvedUrl)
+    .sort((a, b) => b.score - a.score);
+
+  const winner = candidates[0] || null;
+  const fallbackSource =
+    bestResult?.metadata?.resolvedMerchant ||
+    bestResult?.source ||
+    "";
+
+  return {
+    preferredSource:
+      winner?.result?.metadata?.resolvedMerchant ||
+      winner?.result?.source ||
+      fallbackSource,
+    productUrl:
+      winner?.resolvedFamily !== "google"
+        ? winner.resolvedUrl
+        : normalizeUrl(bestResult?.metadata?.resolvedProductUrl || bestResult?.url || ""),
+    sourceResultId: winner?.result?.id || bestResult?.id || "",
+  };
+}
+
 async function recoverMissingGallery({
   bestResult = {},
+  searchResults = [],
   titleHint = "",
   existingImages = [],
 } = {}) {
   const existingUrls = uniqueImages(existingImages).map((image) => image.url);
+  const recoveryContext = findRecoveryContext(bestResult, searchResults);
 
   try {
     const response = await fetch("/api/atlas/recover-gallery", {
@@ -150,14 +236,9 @@ async function recoverMissingGallery({
         referenceImageUrl:
           bestResult?.metadata?.atlasSourceImageUrl ||
           "",
-        preferredSource:
-          bestResult?.metadata?.resolvedMerchant ||
-          bestResult?.source ||
-          "",
-        productUrl:
-          bestResult?.metadata?.resolvedProductUrl ||
-          bestResult?.url ||
-          "",
+        preferredSource: recoveryContext.preferredSource,
+        productUrl: recoveryContext.productUrl,
+        recoverySourceResultId: recoveryContext.sourceResultId,
         existingUrls,
       }),
     });
@@ -277,6 +358,7 @@ export async function validateProductGallery({
     if (allValidatedImages.length < 4) {
       recovered = await recoverMissingGallery({
         bestResult,
+        searchResults,
         titleHint,
         existingImages: allValidatedImages,
       });
@@ -304,13 +386,15 @@ export async function validateProductGallery({
       ...rebuilt.flatMap((result) => result?.images || []),
     ]);
 
+    const recoveryContext = findRecoveryContext(bestResult, searchResults);
     console.log("Atlas gallery validation", {
       initialCandidates: candidates.length,
       acceptedByValidator: data.accepted.length,
       recovered: recovered.length,
       finalUniqueImages: finalAcceptedImages.length,
       source: bestResult?.source || "",
-      resolvedProductUrl: bestResult?.metadata?.resolvedProductUrl || bestResult?.url || "",
+      resolvedProductUrl: recoveryContext.productUrl,
+      recoverySourceResultId: recoveryContext.sourceResultId,
     });
 
     return {
