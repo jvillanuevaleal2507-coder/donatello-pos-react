@@ -26,7 +26,7 @@ import {
 import {
   canHandleShopifyProductPage,
   extractShopifyGallery,
-} from "./providers/shopifyProvider.js";
+} from "../../server/atlas/shopifyProvider.js";
 
 import { resolveShoppingProduct } from "./shoppingProductResolver.js";
 
