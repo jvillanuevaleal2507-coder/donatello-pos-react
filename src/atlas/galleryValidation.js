@@ -86,6 +86,20 @@ function collectCandidates(bestResult = {}, searchResults = [], maximum = 12) {
   return candidates.slice(0, maximum);
 }
 
+function uniqueImages(images = []) {
+  const seen = new Set();
+  const output = [];
+
+  for (const image of images) {
+    const url = normalizeUrl(typeof image === "string" ? image : image?.url || image?.link);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    output.push(typeof image === "string" ? { url } : { ...image, url });
+  }
+
+  return output;
+}
+
 function safeFallback(bestResult = {}, searchResults = []) {
   const firstImage = Array.isArray(bestResult?.images)
     ? bestResult.images.find((image) => normalizeUrl(typeof image === "string" ? image : image?.url || image?.link))
@@ -100,6 +114,7 @@ function safeFallback(bestResult = {}, searchResults = []) {
       fallbackUsed: true,
       acceptedCount: firstImage ? 1 : 0,
       rejectedCount: 0,
+      recoveredCount: 0,
     },
   };
 
@@ -112,6 +127,48 @@ function safeFallback(bestResult = {}, searchResults = []) {
     ),
     diagnostics: safeBest.galleryValidation,
   };
+}
+
+async function recoverMissingGallery({
+  bestResult = {},
+  titleHint = "",
+  existingImages = [],
+} = {}) {
+  const existingUrls = uniqueImages(existingImages).map((image) => image.url);
+
+  try {
+    const response = await fetch("/api/atlas/recover-gallery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        targetTitle: bestResult?.title || "",
+        titleHint: String(titleHint || "").trim(),
+        identity:
+          bestResult?.metadata?.productIdentity ||
+          bestResult?.productIdentity ||
+          null,
+        referenceImageUrl:
+          bestResult?.metadata?.atlasSourceImageUrl ||
+          "",
+        existingUrls,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !Array.isArray(data.recovered)) {
+      throw new Error(data.error || "No se pudo recuperar la galería.");
+    }
+
+    return uniqueImages(data.recovered).map((image) => ({
+      ...image,
+      atlasValidated: true,
+      atlasRecovered: true,
+      atlasValidationOrigin: "recovery_search",
+    }));
+  } catch (error) {
+    console.warn("Atlas gallery recovery warning:", error);
+    return [];
+  }
 }
 
 export async function validateProductGallery({
@@ -131,6 +188,7 @@ export async function validateProductGallery({
         fallbackUsed: false,
         acceptedCount: 0,
         rejectedCount: 0,
+        recoveredCount: 0,
       },
     };
   }
@@ -146,6 +204,9 @@ export async function validateProductGallery({
           bestResult?.metadata?.productIdentity ||
           bestResult?.productIdentity ||
           null,
+        referenceImageUrl:
+          bestResult?.metadata?.atlasSourceImageUrl ||
+          "",
         candidates: candidates.map(({ originalImage, ...candidate }) => candidate),
       }),
     });
@@ -182,22 +243,65 @@ export async function validateProductGallery({
 
       return {
         ...result,
-        images: validatedImages,
+        images: uniqueImages(validatedImages),
         galleryValidation: {
           attempted: true,
           ok: true,
           fallbackUsed: false,
           acceptedCount: validatedImages.length,
-          rejectedCount: candidates.filter((candidate) => candidate.resultId === resultId).length - validatedImages.length,
+          rejectedCount:
+            candidates.filter((candidate) => candidate.resultId === resultId).length -
+            validatedImages.length,
+          recoveredCount: 0,
         },
       };
     };
 
-    const rebuilt = searchResults.map(rebuildResult);
-    const rebuiltBest = rebuildResult(bestResult);
+    let rebuilt = searchResults.map(rebuildResult);
+    let rebuiltBest = rebuildResult(bestResult);
 
-    const bestInListIndex = rebuilt.findIndex((result) => result?.id && result.id === rebuiltBest?.id);
+    const allValidatedImages = uniqueImages([
+      ...rebuiltBest.images,
+      ...rebuilt.flatMap((result) => result?.images || []),
+    ]);
+
+    let recovered = [];
+    if (allValidatedImages.length < 4) {
+      recovered = await recoverMissingGallery({
+        bestResult,
+        titleHint,
+        existingImages: allValidatedImages,
+      });
+    }
+
+    if (recovered.length) {
+      rebuiltBest = {
+        ...rebuiltBest,
+        images: uniqueImages([...rebuiltBest.images, ...recovered]),
+        galleryValidation: {
+          ...rebuiltBest.galleryValidation,
+          acceptedCount: uniqueImages([...rebuiltBest.images, ...recovered]).length,
+          recoveredCount: recovered.length,
+        },
+      };
+    }
+
+    const bestInListIndex = rebuilt.findIndex(
+      (result) => result?.id && result.id === rebuiltBest?.id
+    );
     if (bestInListIndex >= 0) rebuilt[bestInListIndex] = rebuiltBest;
+
+    const finalAcceptedImages = uniqueImages([
+      ...rebuiltBest.images,
+      ...rebuilt.flatMap((result) => result?.images || []),
+    ]);
+
+    console.log("Atlas gallery validation", {
+      initialCandidates: candidates.length,
+      acceptedByValidator: data.accepted.length,
+      recovered: recovered.length,
+      finalUniqueImages: finalAcceptedImages.length,
+    });
 
     return {
       bestResult: rebuiltBest,
@@ -206,8 +310,11 @@ export async function validateProductGallery({
         attempted: true,
         ok: true,
         fallbackUsed: false,
-        acceptedCount: data.accepted.length,
-        rejectedCount: Array.isArray(data.rejected) ? data.rejected.length : Math.max(0, candidates.length - data.accepted.length),
+        acceptedCount: finalAcceptedImages.length,
+        rejectedCount: Array.isArray(data.rejected)
+          ? data.rejected.length
+          : Math.max(0, candidates.length - data.accepted.length),
+        recoveredCount: recovered.length,
         candidateCount: candidates.length,
       },
     };
