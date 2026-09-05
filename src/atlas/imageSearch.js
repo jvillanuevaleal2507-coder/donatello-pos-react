@@ -83,5 +83,18 @@ export async function searchByImage({ photo, titleHint = "", onProgress }) {
     throw new Error("Atlas API devolvió una respuesta inesperada.");
   }
 
-  return data.results;
+  // Conservamos la fotografía original como ancla visual. De esta forma,
+  // el motor de galerías puede comprobar que cada foto recuperada pertenece
+  // realmente al mismo producto y no depender únicamente del título.
+  return data.results.map((result) => ({
+    ...result,
+    metadata: {
+      ...(result.metadata || {}),
+      atlasSourceImageUrl: imageUrl,
+      productIdentity:
+        result.metadata?.productIdentity ||
+        data.identity ||
+        null,
+    },
+  }));
 }
