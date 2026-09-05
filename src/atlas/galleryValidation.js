@@ -20,6 +20,7 @@ function normalizeUrl(value = "") {
 
 function sourceFamily(value = "") {
   const text = normalizeText(value).replace(/[^a-z0-9]/g, "");
+  if (text.includes("garvee") || text.includes("manufacturer") || text.includes("fabricante")) return "manufacturer";
   if (text.includes("amazon")) return "amazon";
   if (text.includes("homedepot")) return "homedepot";
   if (text.includes("walmart")) return "walmart";
@@ -32,6 +33,7 @@ function sourceFamily(value = "") {
 function urlFamily(value = "") {
   try {
     const host = new URL(value).hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "garvee.com" || host.endsWith(".garvee.com")) return "manufacturer";
     if (host === "amazon.com" || host.endsWith(".amazon.com")) return "amazon";
     if (host === "homedepot.com" || host.endsWith(".homedepot.com")) return "homedepot";
     if (host === "walmart.com" || host.endsWith(".walmart.com")) return "walmart";
@@ -43,6 +45,23 @@ function urlFamily(value = "") {
   } catch {
     return "other";
   }
+}
+
+function recoveryReliability(family = "other") {
+  // Prioridad pensada específicamente para EXTRAER GALERÍAS, no para decidir
+  // cuál tienda gana comercialmente. Lowe's/Amazon suelen bloquear serverless.
+  const weights = {
+    manufacturer: 700,
+    walmart: 600,
+    homedepot: 500,
+    target: 380,
+    wayfair: 220,
+    amazon: 160,
+    lowes: 120,
+    other: 80,
+    google: -900,
+  };
+  return weights[family] ?? 0;
 }
 
 function sameModel(a = {}, b = {}) {
@@ -163,6 +182,7 @@ function findRecoveryContext(bestResult = {}, searchResults = []) {
   const candidates = [bestResult, ...searchResults]
     .filter(Boolean)
     .filter((result) => !(result.semanticConflict || result.metadata?.semanticConflict))
+    .filter((result) => result === bestResult || strictPeer(result, bestResult))
     .map((result) => {
       const resolvedUrl = normalizeUrl(
         result?.metadata?.resolvedProductUrl ||
@@ -180,13 +200,18 @@ function findRecoveryContext(bestResult = {}, searchResults = []) {
       const imageCount = Array.isArray(result.images) ? result.images.length : 0;
 
       let score = 0;
-      if (desiredFamily !== "other" && resultFamily === desiredFamily) score += 500;
-      if (desiredFamily !== "other" && resolvedFamily === desiredFamily) score += 500;
-      if (resolvedFamily !== "google" && resolvedFamily !== "other") score += 220;
-      if (resolvedFamily === "google") score -= 900;
-      score += identity * 180;
-      score += title * 120;
-      score += Math.max(0, compatibility) * 80;
+      score += recoveryReliability(resolvedFamily);
+
+      // La misma tienda sigue sumando, pero ya no puede obligarnos a usar una
+      // página conocida por responder 403 si existe el mismo producto en otra fuente.
+      if (desiredFamily !== "other" && resultFamily === desiredFamily) score += 120;
+      if (desiredFamily !== "other" && resolvedFamily === desiredFamily) score += 120;
+
+      if (result.exactImageMatch === true) score += 320;
+      if (sameModel(result, bestResult)) score += 260;
+      score += identity * 420;
+      score += title * 260;
+      score += Math.max(0, compatibility) * 180;
       score += Math.min(imageCount, 8) * 5;
 
       return { result, resolvedUrl, resolvedFamily, resultFamily, score };
@@ -210,6 +235,7 @@ function findRecoveryContext(bestResult = {}, searchResults = []) {
         ? winner.resolvedUrl
         : normalizeUrl(bestResult?.metadata?.resolvedProductUrl || bestResult?.url || ""),
     sourceResultId: winner?.result?.id || bestResult?.id || "",
+    sourceFamily: winner?.resolvedFamily || "other",
   };
 }
 
@@ -239,6 +265,7 @@ async function recoverMissingGallery({
         preferredSource: recoveryContext.preferredSource,
         productUrl: recoveryContext.productUrl,
         recoverySourceResultId: recoveryContext.sourceResultId,
+        recoverySourceFamily: recoveryContext.sourceFamily,
         existingUrls,
       }),
     });
@@ -395,6 +422,7 @@ export async function validateProductGallery({
       source: bestResult?.source || "",
       resolvedProductUrl: recoveryContext.productUrl,
       recoverySourceResultId: recoveryContext.sourceResultId,
+      recoverySourceFamily: recoveryContext.sourceFamily,
     });
 
     return {
