@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -16,9 +16,16 @@ function ProductImage({ src, alt = "Producto", small = false }) {
 function money(value) { return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value || 0)); }
 function margin(price, cost) { if (!price) return 0; return ((Number(price || 0) - Number(cost || 0)) / Number(price || 1)) * 100; }
 function cleanText(value) { return String(value || "").trim().replace(/\s+/g, " "); }
+function normalizeSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 function normalizeCategory(value) {
   const raw = cleanText(value);
-  const key = raw.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const key = normalizeSearchText(raw);
   const categories = { decoracion: "Decoración", iluminacion: "Iluminación", muebles: "Muebles", mueble: "Muebles", sabanas: "Sábanas", cocina: "Cocina", vajilla: "Vajilla", juguete: "Juguetes", juguetes: "Juguetes", infantil: "Infantil", hogar: "Hogar", general: "General" };
   return categories[key] || raw || "General";
 }
@@ -46,12 +53,23 @@ function Button({ children, variant = "primary", disabled = false, onClick, type
 
 export default function InventoryPage({ products, allProducts, searchTerm, setSearchTerm, categoryFilter, setCategoryFilter, categories, loadProducts }) {
   const [editingId, setEditingId] = useState(null);
+
+  const visibleProducts = useMemo(() => {
+    const query = normalizeSearchText(searchTerm);
+    return (allProducts || []).filter((product) => {
+      const productCategory = cleanText(product.category || "Sin categoría");
+      const matchesCategory = categoryFilter === "all" || productCategory === categoryFilter;
+      const haystack = normalizeSearchText(`${product.name || ""} ${product.code || ""} ${product.category || ""}`);
+      return matchesCategory && haystack.includes(query);
+    });
+  }, [allProducts, searchTerm, categoryFilter]);
+
   async function deleteProduct(product) { const confirmed = window.confirm(`¿Eliminar "${product.name}" del inventario?`); if (!confirmed) return; const { error } = await supabase.from("products").delete().eq("id", product.id); if (error) { alert(`Error eliminando producto: ${error.message}`); return; } await loadProducts(); }
   return <section className="inventory-section"><div className="catalog-toolbar">
     <input className="search-input" type="text" placeholder="Buscar por nombre, código o categoría..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
     <div className="category-pills">{categories.map((category) => <button key={category} className={`category-pill ${categoryFilter === category ? "active" : ""}`} onClick={() => setCategoryFilter(category)}>{category === "all" ? "✨ Todos" : category}</button>)}</div>
-    <p className="catalog-counter">Mostrando {products.length} de {allProducts.length} productos</p>
+    <p className="catalog-counter">Mostrando {visibleProducts.length} de {allProducts.length} productos</p>
   </div><div className="search-box"><span>🔎</span><input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Buscar producto" /></div>
-  <div className="products-grid">{products.map((p) => <Card key={p.id}><div className="product-card with-image"><div><ProductImage src={p.image_url} alt={p.name} />{[p.image_url_2,p.image_url_3,p.image_url_4].filter(Boolean).length > 0 && <p style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: "#6d604d" }}>+{[p.image_url_2,p.image_url_3,p.image_url_4].filter(Boolean).length} fotos</p>}</div><div className="product-main"><h3>{p.name}</h3><p>{p.code} · {p.category}</p><p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p><p>Margen: <b>{margin(p.price,p.cost).toFixed(1)}%</b></p><button className="text-btn" onClick={() => setEditingId(editingId === p.id ? null : p.id)}>✏️ {editingId === p.id ? "Cerrar edición" : "Editar producto"}</button><button className="btn btn-danger" onClick={() => deleteProduct(p)}>🗑️ Eliminar</button></div><div className="stock-pill"><span>Stock</span><strong>{p.stock}</strong></div></div>{editingId === p.id && <EditProduct product={p} onSaved={async () => { setEditingId(null); await loadProducts(); }} />}</Card>)}</div></section>;
+  <div className="products-grid">{visibleProducts.map((p) => <Card key={p.id}><div className="product-card with-image"><div><ProductImage src={p.image_url} alt={p.name} />{[p.image_url_2,p.image_url_3,p.image_url_4].filter(Boolean).length > 0 && <p style={{ marginTop: 6, fontSize: 12, fontWeight: 800, color: "#6d604d" }}>+{[p.image_url_2,p.image_url_3,p.image_url_4].filter(Boolean).length} fotos</p>}</div><div className="product-main"><h3>{p.name}</h3><p>{p.code} · {p.category}</p><p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p><p>Margen: <b>{margin(p.price,p.cost).toFixed(1)}%</b></p><button className="text-btn" onClick={() => setEditingId(editingId === p.id ? null : p.id)}>✏️ {editingId === p.id ? "Cerrar edición" : "Editar producto"}</button><button className="btn btn-danger" onClick={() => deleteProduct(p)}>🗑️ Eliminar</button></div><div className="stock-pill"><span>Stock</span><strong>{p.stock}</strong></div></div>{editingId === p.id && <EditProduct product={p} onSaved={async () => { setEditingId(null); await loadProducts(); }} />}</Card>)}</div></section>;
 }
 async function uploadProductImage(file) { if (!file) return ""; const fileExt = file.name.split(".").pop() || "jpg"; const safeName = `${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`; const filePath = `products/${safeName}`; const { error } = await supabase.storage.from("product-images").upload(filePath, file, { cacheControl: "3600", upsert: false }); if (error) throw new Error(error.message); const { data } = supabase.storage.from("product-images").getPublicUrl(filePath); return data.publicUrl; }
