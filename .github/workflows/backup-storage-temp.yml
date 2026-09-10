@@ -1,0 +1,72 @@
+name: Temporary Donatello Storage Backup
+
+on:
+  push:
+    paths:
+      - '.github/workflows/backup-storage-temp.yml'
+
+jobs:
+  backup-storage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Download public product-images bucket
+        env:
+          SUPABASE_URL: https://lotgmhfqzthhhadavwlu.supabase.co
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_sBkHcv70pthOQHI0DRuYhQ_gz1kZeP3
+        run: |
+          python3 - <<'PY'
+          import json, os, time, urllib.request, urllib.parse, zipfile
+          base=os.environ['SUPABASE_URL']
+          key=os.environ['SUPABASE_PUBLISHABLE_KEY']
+          bucket='product-images'
+          root='storage_backup'
+          os.makedirs(root,exist_ok=True)
+          paths=[]
+          def list_dir(prefix=''):
+              offset=0
+              while True:
+                  body=json.dumps({'prefix':prefix,'limit':1000,'offset':offset,'sortBy':{'column':'name','order':'asc'}}).encode()
+                  req=urllib.request.Request(base+'/storage/v1/object/list/'+bucket,data=body,headers={'apikey':key,'Content-Type':'application/json'},method='POST')
+                  with urllib.request.urlopen(req,timeout=60) as r:
+                      batch=json.load(r)
+                  for item in batch:
+                      p=(prefix+'/'+item['name']).strip('/')
+                      if item.get('id'):
+                          paths.append(p)
+                      else:
+                          list_dir(p)
+                  if len(batch)<1000: break
+                  offset+=len(batch)
+          list_dir('')
+          for i,path in enumerate(paths,1):
+              dest=os.path.join(root,*path.split('/'))
+              os.makedirs(os.path.dirname(dest),exist_ok=True)
+              url=base+'/storage/v1/object/public/'+bucket+'/'+urllib.parse.quote(path,safe='/')
+              last=None
+              for attempt in range(4):
+                  try:
+                      with urllib.request.urlopen(url,timeout=60) as r, open(dest,'wb') as f:
+                          f.write(r.read())
+                      last=None
+                      break
+                  except Exception as e:
+                      last=e; time.sleep(2*(attempt+1))
+              if last: raise last
+          with open('DONATELLO_STORAGE_MANIFEST_2026-09-10.json','w',encoding='utf-8') as f:
+              json.dump({'bucket':bucket,'count':len(paths),'paths':paths},f,ensure_ascii=False,indent=2)
+          with zipfile.ZipFile('DONATELLO_STORAGE_2026-09-10.zip','w',zipfile.ZIP_DEFLATED,allowZip64=True) as z:
+              for base_dir,dirs,files in os.walk(root):
+                  for fn in files:
+                      p=os.path.join(base_dir,fn)
+                      z.write(p,os.path.relpath(p,root))
+          print('downloaded',len(paths))
+          PY
+      - name: Upload Storage backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: DONATELLO_STORAGE_2026-09-10
+          path: |
+            DONATELLO_STORAGE_2026-09-10.zip
+            DONATELLO_STORAGE_MANIFEST_2026-09-10.json
+          retention-days: 30
