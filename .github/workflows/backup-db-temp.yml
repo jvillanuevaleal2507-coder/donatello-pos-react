@@ -1,0 +1,28 @@
+name: Temporary Donatello Database Backup
+
+on:
+  push:
+    paths:
+      - '.github/workflows/backup-db-temp.yml'
+
+jobs:
+  backup-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download encrypted logical backup
+        env:
+          SUPABASE_PUBLISHABLE_KEY: sb_publishable_sBkHcv70pthOQHI0DRuYhQ_gz1kZeP3
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            'https://lotgmhfqzthhhadavwlu.supabase.co/functions/v1/backup-db-97edd6069050cdbda941' \
+            -o DONATELLO_DB_LOGICAL_2026-09-10.enc.json
+          test -s DONATELLO_DB_LOGICAL_2026-09-10.enc.json
+      - name: Upload database backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: DONATELLO_DB_LOGICAL_2026-09-10_ENCRYPTED
+          path: DONATELLO_DB_LOGICAL_2026-09-10.enc.json
+          retention-days: 30
