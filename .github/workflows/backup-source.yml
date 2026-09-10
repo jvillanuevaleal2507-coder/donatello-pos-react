@@ -1,0 +1,24 @@
+name: Backup Source Snapshot
+
+on:
+  push:
+    paths:
+      - '.github/workflows/backup-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create source archive
+        run: zip -rq DONATELLO_POS_SOURCE_2026-09-10.zip . -x '.git/*' 'node_modules/*' 'dist/*'
+      - name: Upload source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: DONATELLO_POS_SOURCE_2026-09-10
+          path: DONATELLO_POS_SOURCE_2026-09-10.zip
+          retention-days: 30
