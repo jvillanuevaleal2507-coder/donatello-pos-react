@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas PyME</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-wrap">
+        <div class="brand-mark">A</div>
+        <div>
+          <div class="brand">Atlas PyME</div>
+          <div class="brand-sub">Control sencillo. Decisiones claras.</div>
+        </div>
+      </div>
+
+      <div class="business-card">
+        <span class="eyebrow">Negocio demo</span>
+        <strong id="businessName">Casa Norte</strong>
+        <small>Reynosa, Tamaulipas</small>
+      </div>
+
+      <nav>
+        <button class="nav-btn active" data-view="dashboard">Resumen</button>
+        <button class="nav-btn" data-view="inventory">Inventario</button>
+        <button class="nav-btn" data-view="sale">Venta rápida</button>
+        <button class="nav-btn" data-view="history">Historial</button>
+      </nav>
+
+      <div class="sidebar-note">
+        <strong>Demo comercial</strong>
+        <span>Funciona sin backend. Los datos se guardan solo en este navegador.</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow">Atlas PyME</span>
+          <h1 id="viewTitle">Resumen del negocio</h1>
+        </div>
+        <div class="top-actions">
+          <button class="ghost-btn" id="resetDemo">Restablecer demo</button>
+          <button class="primary-btn" data-go="sale">+ Registrar venta</button>
+        </div>
+      </header>
+
+      <section id="dashboard" class="view active-view">
+        <div class="hero-card">
+          <div>
+            <span class="eyebrow light">HOY</span>
+            <h2 id="todaySales">$0</h2>
+            <p>Ventas registradas</p>
+          </div>
+          <div class="hero-side">
+            <span>Utilidad estimada</span>
+            <strong id="todayProfit">$0</strong>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <article class="kpi-card"><span>Ventas del mes</span><strong id="monthSales">$0</strong><small id="monthTickets">0 tickets</small></article>
+          <article class="kpi-card"><span>Utilidad del mes</span><strong id="monthProfit">$0</strong><small id="marginPct">0% margen</small></article>
+          <article class="kpi-card"><span>Inventario a costo</span><strong id="inventoryCost">$0</strong><small id="inventoryUnits">0 piezas</small></article>
+          <article class="kpi-card"><span>Venta potencial</span><strong id="inventoryValue">$0</strong><small>Existencia actual</small></article>
+        </div>
+
+        <div class="content-grid">
+          <article class="panel">
+            <div class="panel-head"><div><span class="eyebrow">Movimiento</span><h3>Últimas ventas</h3></div><button class="text-btn" data-go="history">Ver historial</button></div>
+            <div id="recentSales" class="list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head"><div><span class="eyebrow">Atención</span><h3>Stock bajo</h3></div><button class="text-btn" data-go="inventory">Ver inventario</button></div>
+            <div id="lowStock" class="list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="inventory" class="view">
+        <div class="section-head">
+          <div><span class="eyebrow">Inventario</span><h2>Productos y existencias</h2></div>
+          <button class="primary-btn" id="openProductModal">+ Nuevo producto</button>
+        </div>
+        <div class="panel table-wrap">
+          <table>
+            <thead><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Costo</th><th>Precio</th><th>Margen</th></tr></thead>
+            <tbody id="inventoryTable"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sale" class="view">
+        <div class="section-head"><div><span class="eyebrow">Caja</span><h2>Registrar una venta</h2></div></div>
+        <div class="sale-layout">
+          <article class="panel">
+            <label class="field-label" for="productSelect">Producto</label>
+            <select id="productSelect"></select>
+            <div class="inline-fields">
+              <div><label class="field-label" for="saleQty">Cantidad</label><input id="saleQty" type="number" min="1" value="1" /></div>
+              <div><label class="field-label" for="salePrice">Precio de venta</label><input id="salePrice" type="number" min="0" step="0.01" /></div>
+            </div>
+            <label class="field-label" for="customerName">Cliente <span>(opcional)</span></label>
+            <input id="customerName" type="text" placeholder="Ej. Mariana" />
+            <button class="primary-btn full" id="registerSale">Cobrar venta</button>
+          </article>
+          <article class="panel sale-summary">
+            <span class="eyebrow">Resumen</span>
+            <div class="summary-row"><span>Subtotal</span><strong id="saleSubtotal">$0</strong></div>
+            <div class="summary-row"><span>Costo estimado</span><strong id="saleCost">$0</strong></div>
+            <div class="summary-row total"><span>Utilidad estimada</span><strong id="saleProfit">$0</strong></div>
+            <small>La demo calcula la utilidad usando el costo registrado del producto.</small>
+          </article>
+        </div>
+      </section>
+
+      <section id="history" class="view">
+        <div class="section-head"><div><span class="eyebrow">Historial</span><h2>Ventas registradas</h2></div></div>
+        <div class="panel table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Cant.</th><th>Cliente</th><th>Total</th><th>Utilidad</th></tr></thead>
+            <tbody id="historyTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="productModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head"><div><span class="eyebrow">Inventario</span><h3>Nuevo producto</h3></div><button class="icon-btn" id="closeProductModal">×</button></div>
+      <label class="field-label">Nombre</label><input id="newName" type="text" placeholder="Ej. Lámpara decorativa" />
+      <label class="field-label">Categoría</label><input id="newCategory" type="text" placeholder="Ej. Decoración" />
+      <div class="inline-fields">
+        <div><label class="field-label">Costo</label><input id="newCost" type="number" min="0" step="0.01" /></div>
+        <div><label class="field-label">Precio</label><input id="newPrice" type="number" min="0" step="0.01" /></div>
+        <div><label class="field-label">Stock</label><input id="newStock" type="number" min="0" value="1" /></div>
+      </div>
+      <button class="primary-btn full" id="saveProduct">Guardar producto</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
