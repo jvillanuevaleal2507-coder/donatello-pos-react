@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Atlas Integrador — Demo V1</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div><strong>Atlas Integrador</strong><span>Operación de proyectos</span></div>
+      </div>
+      <nav id="nav"></nav>
+      <div class="sidebar-footer">
+        <span class="dot online"></span>
+        <div><strong>Demo local</strong><small>Sin backend / sin Supabase</small></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="eyebrow">Dirección</p>
+          <h1 id="page-title">Inicio</h1>
+        </div>
+        <div class="top-actions">
+          <button class="ghost" id="role-btn">Rol: Dirección</button>
+          <button class="primary" id="primary-action">Nueva cotización</button>
+        </div>
+      </header>
+      <section id="content"></section>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
