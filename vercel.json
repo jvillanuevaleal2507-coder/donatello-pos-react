@@ -1,5 +1,6 @@
 {
   "routes": [
+    { "src": "^/$", "dest": "/atlas-integrador-demo/index.html" },
     { "handle": "filesystem" },
     { "src": "/.*", "dest": "/index.html" }
   ]
