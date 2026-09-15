@@ -1,13 +1,46 @@
 <!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logo-donatello.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>POS VENTAS DONATELLO</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0e1726" />
+  <title>Atlas Integrador — Demo Comercial</title>
+  <link rel="stylesheet" href="/atlas-integrador-demo/styles.css" />
+  <link rel="stylesheet" href="/atlas-integrador-demo/demo-enhancements.css" />
+  <link rel="stylesheet" href="/atlas-integrador-demo/flow-simulation.css" />
+  <link rel="stylesheet" href="/atlas-integrador-demo/final-audit.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">A</div>
+        <div><strong>Atlas Integrador</strong><span>Operación de proyectos</span></div>
+      </div>
+      <nav id="nav"></nav>
+      <div class="sidebar-footer">
+        <span class="dot online"></span>
+        <div><strong>Demo comercial</strong><small>Datos ficticios · Entorno demostrativo</small></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="eyebrow">Dirección</p>
+          <h1 id="page-title">Inicio</h1>
+        </div>
+        <div class="top-actions">
+          <button class="ghost" id="role-btn">Rol: Dirección</button>
+          <button class="primary" id="primary-action">Nueva cotización</button>
+        </div>
+      </header>
+      <section id="content"></section>
+    </main>
+  </div>
+  <script src="/atlas-integrador-demo/app.js"></script>
+  <script src="/atlas-integrador-demo/demo-enhancements.js"></script>
+  <script src="/atlas-integrador-demo/sales-ready.js"></script>
+  <script src="/atlas-integrador-demo/flow-simulation.js"></script>
+  <script src="/atlas-integrador-demo/final-audit.js"></script>
+</body>
 </html>
