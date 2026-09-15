@@ -1,78 +1,25 @@
-// Commercial UX layer: makes the demo safer, clearer and more persuasive in a live sales meeting.
+// Commercial UX layer: decision-first live demo with an interactive margin simulator.
 (function(){
-  const $=(s,r=document)=>r.querySelector(s);
-  const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  state.marginDemo=state.marginDemo||{extraMaterial:0,extraLabor:0};
+  const money=n=>typeof fmt==='function'?fmt(n):new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(n);
+  function toast(msg){if(typeof atlasToast==='function')atlasToast(msg)}
+  function go(page,extra={}){Object.assign(state,{page,project:null,quote:null,warehouse:null},extra);render()}
+  function project(){return projects.find(x=>x.id==='P-13217')}
+  function economics(){const p=project();const base=p?.real||134200;const extra=state.marginDemo.extraMaterial+state.marginDemo.extraLabor;const real=base+extra;return{p,base,extra,real,margin:p?((p.sale-real)/p.sale*100):0,variance:p?real-p.budget:0}}
 
-  function toast(msg){ if(typeof atlasToast==='function') atlasToast(msg); }
-  function go(page,extra={}){ Object.assign(state,{page,project:null,quote:null,warehouse:null},extra); render(); }
+  function executiveStart(){if(state.page!=='inicio')return;const c=$('#content');if(!c||$('.atlas-exec-start',c))return;const e=economics();const block=document.createElement('div');block.className='card panel atlas-exec-start';block.innerHTML=`<div class="panel-head"><div><span class="eyebrow">Para Dirección</span><h3>¿Dónde se está moviendo el margen?</h3><p class="muted">Empieza por las excepciones. Atlas conecta la alerta con el proyecto y con la acción que la corrige.</p></div><span class="chip orange">3 puntos de atención</span></div><div class="atlas-decision-grid"><button data-go="risk"><span>Proyecto con desviación</span><strong>P-13217 · ${money(e.variance)} sobre presupuesto</strong><small>Ver qué está erosionando el margen →</small></button><button data-go="purchase"><span>Abastecimiento pendiente</span><strong>OC #11113 · recepción parcial</strong><small>Seguir material pendiente →</small></button><button data-go="profit"><span>Rentabilidad</span><strong>30.1% vendido → ${e.margin.toFixed(1)}% real</strong><small>Entender la diferencia →</small></button></div>`;c.prepend(block);$('[data-go="risk"]',block).onclick=()=>go('proyectos',{project:'P-13217',projectTab:'Resumen'});$('[data-go="purchase"]',block).onclick=()=>go('compras');$('[data-go="profit"]',block).onclick=()=>go('proyectos',{project:'P-13217',projectTab:'Rentabilidad'})}
 
-  function executiveStart(){
-    if(state.page!=='inicio')return;
-    const content=$('#content'); if(!content||$('.atlas-exec-start',content))return;
-    const block=document.createElement('div');
-    block.className='card panel atlas-exec-start';
-    block.innerHTML=`<div class="panel-head"><div><span class="eyebrow">Para Dirección</span><h3>¿Dónde se está moviendo el margen?</h3><p class="muted">Empieza por las excepciones. Atlas conecta la alerta con el proyecto y con la acción que la corrige.</p></div><span class="chip orange">3 puntos de atención</span></div><div class="atlas-decision-grid"><button data-go="risk"><span>Proyecto con desviación</span><strong>P-13217 · costo +4.1%</strong><small>Ver qué está erosionando el margen →</small></button><button data-go="purchase"><span>Abastecimiento pendiente</span><strong>OC #11113 · recepción parcial</strong><small>Seguir material pendiente →</small></button><button data-go="profit"><span>Rentabilidad</span><strong>30.1% vendido → 27.3% real</strong><small>Entender la diferencia →</small></button></div>`;
-    content.prepend(block);
-    $('[data-go="risk"]',block).onclick=()=>go('proyectos',{project:'P-13217',projectTab:'Resumen'});
-    $('[data-go="purchase"]',block).onclick=()=>go('compras');
-    $('[data-go="profit"]',block).onclick=()=>go('proyectos',{project:'P-13217',projectTab:'Rentabilidad'});
-  }
+  function projectDecision(){if(state.page!=='proyectos'||state.project!=='P-13217')return;const c=$('#content');if(!c||$('.atlas-project-decision',c))return;const e=economics();const box=document.createElement('div');box.className='atlas-project-decision';box.innerHTML=`<div><span class="eyebrow">Lectura ejecutiva</span><strong>El proyecto consume ${money(e.variance)} más de lo presupuestado.</strong><small>Margen actual ${e.margin.toFixed(1)}% · línea base vendida 30.1%. La prioridad es identificar compras, material y horas fuera del presupuesto.</small></div><div class="atlas-decision-actions"><button class="ghost" data-action="buy">Revisar compras</button><button class="primary" data-action="profit">Ver rentabilidad →</button></div>`;const anchor=$('.metric-strip',c)||c.firstElementChild;anchor?.insertAdjacentElement('afterend',box);$('[data-action="buy"]',box).onclick=()=>go('compras');$('[data-action="profit"]',box).onclick=()=>{state.projectTab='Rentabilidad';render()}}
 
-  function projectDecision(){
-    if(state.page!=='proyectos'||state.project!=='P-13217')return;
-    const content=$('#content'); if(!content||$('.atlas-project-decision',content))return;
-    const p=projects.find(x=>x.id==='P-13217'); const real=p?.real||134200;
-    const variance=real-p.budget; const margin=((p.sale-real)/p.sale*100).toFixed(1);
-    const box=document.createElement('div'); box.className='atlas-project-decision';
-    box.innerHTML=`<div><span class="eyebrow">Lectura ejecutiva</span><strong>El proyecto ya consume ${fmt(variance)} más de lo presupuestado.</strong><small>Margen actual ${margin}% · línea base vendida 30.1%. La prioridad es identificar compras, material y horas fuera del presupuesto.</small></div><div class="atlas-decision-actions"><button class="ghost" data-action="buy">Revisar compras</button><button class="primary" data-action="profit">Ver rentabilidad →</button></div>`;
-    const anchor=$('.metric-strip',content)||content.firstElementChild; anchor?.insertAdjacentElement('afterend',box);
-    $('[data-action="buy"]',box).onclick=()=>go('compras');
-    $('[data-action="profit"]',box).onclick=()=>{state.projectTab='Rentabilidad';render();};
-  }
+  function marginSimulator(){if(state.page!=='proyectos'||state.project!=='P-13217'||state.projectTab!=='Rentabilidad')return;const c=$('#content');if(!c||$('.atlas-margin-simulator',c))return;const e=economics();const card=document.createElement('div');card.className='card panel atlas-margin-simulator';card.innerHTML=`<div class="panel-head"><div><span class="eyebrow">Simulación en vivo</span><h3>Haz visible lo que normalmente aparece hasta el cierre</h3><p class="muted">Agrega un imprevisto y observa inmediatamente su impacto económico.</p></div><span class="chip ${e.margin<27?'red':'orange'}">Margen ${e.margin.toFixed(1)}%</span></div><div class="atlas-margin-bridge"><div><span>Margen vendido</span><strong>30.1%</strong><small>Cotización aprobada</small></div><b>→</b><div><span>Costo real</span><strong>${money(e.real)}</strong><small>${e.extra?`Incluye ${money(e.extra)} de imprevistos`:'Ejecución registrada'}</small></div><b>→</b><div class="atlas-margin-result"><span>Margen actual</span><strong>${e.margin.toFixed(1)}%</strong><small>${money(e.variance)} sobre presupuesto</small></div></div><div class="atlas-scenario-actions"><button data-extra="material">+ Material no previsto <small>${money(4800)}</small></button><button data-extra="labor">+ Horas adicionales <small>${money(2700)}</small></button><button class="ghost" data-extra="reset">Limpiar imprevistos</button></div><div class="atlas-impact-line"><strong>${e.extra?'Impacto detectado antes de cerrar el proyecto':'Prueba un escenario'}</strong><span>${e.extra?`Los imprevistos redujeron el margen ${Math.max(0,30.1-e.margin).toFixed(1)} puntos porcentuales. Dirección puede intervenir antes de facturar/cerrar.`:'Simula una compra fuera de alcance o trabajo adicional para mostrar cómo Atlas protege margen.'}</span></div>`;c.appendChild(card);$$('[data-extra]',card).forEach(b=>b.onclick=()=>{const a=b.dataset.extra;if(a==='material')state.marginDemo.extraMaterial+=4800;if(a==='labor')state.marginDemo.extraLabor+=2700;if(a==='reset')state.marginDemo={extraMaterial:0,extraLabor:0};render();toast(a==='reset'?'Escenario restablecido':'Costo real actualizado · margen recalculado')})}
 
-  function quoteDecision(){
-    if(state.page!=='cotizaciones'||!state.quote||state.quote==='new')return;
-    const content=$('#content'); if(!content||$('.atlas-quote-decision',content))return;
-    const q=quotes.find(x=>x.id===state.quote); if(!q)return;
-    const box=document.createElement('div');box.className='atlas-quote-decision';
-    box.innerHTML=`<span>Antes de vender</span><strong>${q.margin>=30?'Margen dentro de política':'Margen por debajo de política'}</strong><small>${q.margin.toFixed(1)}% de margen · costo ${fmt(q.cost)} · venta ${fmt(q.sale)}. Esta cifra quedará congelada como línea base para medir la ejecución real.</small>`;
-    const anchor=$('.metric-strip',content); anchor?.insertAdjacentElement('afterend',box);
-  }
+  function quoteDecision(){if(state.page!=='cotizaciones'||!state.quote||state.quote==='new')return;const c=$('#content');if(!c||$('.atlas-quote-decision',c))return;const q=quotes.find(x=>x.id===state.quote);if(!q)return;const box=document.createElement('div');box.className='atlas-quote-decision';box.innerHTML=`<span>Antes de vender</span><strong>${q.margin>=30?'Margen dentro de política':'Margen por debajo de política'}</strong><small>${q.margin.toFixed(1)}% de margen · costo ${money(q.cost)} · venta ${money(q.sale)}. Esta cifra quedará congelada como línea base para medir la ejecución real.</small>`;$('.metric-strip',c)?.insertAdjacentElement('afterend',box)}
 
-  function purchaseDecision(){
-    if(state.page!=='compras')return;
-    const content=$('#content');if(!content||$('.atlas-purchase-decision',content))return;
-    const box=document.createElement('div');box.className='card panel atlas-purchase-decision';
-    box.innerHTML=`<div class="panel-head"><div><span class="eyebrow">Control de abastecimiento</span><h3>Compra con impacto visible en proyecto</h3><p class="muted">No basta saber qué se compró: Dirección necesita saber para qué proyecto, contra qué presupuesto y qué falta por recibir.</p></div><span class="chip orange">2 partidas pendientes</span></div><div class="atlas-mini-metrics"><div><span>Proyecto</span><strong>P-13217</strong></div><div><span>OC</span><strong>#11113</strong></div><div><span>Recepción</span><strong>6 / 8 partidas</strong></div><div><span>Estado</span><strong>Parcial</strong></div></div>`;
-    content.appendChild(box);
-  }
-
-  function laborDecision(){
-    if(state.page!=='mano')return;
-    const content=$('#content');if(!content||$('.atlas-labor-decision',content))return;
-    const box=document.createElement('div');box.className='atlas-labor-decision';
-    box.innerHTML=`<strong>La hora no sólo se registra: se costea.</strong><span>Cuando el técnico captura tiempo contra P-13217, Atlas actualiza el costo real y la rentabilidad que ve Dirección.</span>`;
-    content.appendChild(box);
-  }
-
-  function safeButtons(){
-    $$('#content button').forEach(btn=>{
-      if(btn.onclick||btn.dataset.commercialSafe)return;
-      const label=btn.textContent.trim(); if(!label)return;
-      btn.dataset.commercialSafe='1';
-      btn.onclick=()=>toast(`${label} · disponible en la versión operativa`);
-    });
-  }
-
-  function markDemoReset(){
-    const footer=$('.sidebar-footer');if(!footer||$('#atlas-reset-demo'))return;
-    const b=document.createElement('button');b.id='atlas-reset-demo';b.className='atlas-reset-demo';b.textContent='↻ Reiniciar demo';
-    b.onclick=()=>{ if(typeof atlasResetDemo==='function')atlasResetDemo(); else location.reload(); toast('Demo reiniciada'); };
-    footer.appendChild(b);
-  }
-
-  function decorateCommercial(){ executiveStart();quoteDecision();projectDecision();purchaseDecision();laborDecision();safeButtons();markDemoReset(); }
-  const base=window.atlasDecorate;
-  window.atlasDecorate=function(){ if(typeof base==='function')base(); decorateCommercial(); };
-  decorateCommercial();
+  function purchaseDecision(){if(state.page!=='compras')return;const c=$('#content');if(!c||$('.atlas-purchase-decision',c))return;const box=document.createElement('div');box.className='card panel atlas-purchase-decision';box.innerHTML=`<div class="panel-head"><div><span class="eyebrow">Control de abastecimiento</span><h3>Compra con impacto visible en proyecto</h3><p class="muted">No basta saber qué se compró: Dirección necesita saber para qué proyecto, contra qué presupuesto y qué falta por recibir.</p></div><span class="chip orange">2 partidas pendientes</span></div><div class="atlas-mini-metrics"><div><span>Proyecto</span><strong>P-13217</strong></div><div><span>OC</span><strong>#11113</strong></div><div><span>Recepción</span><strong>6 / 8 partidas</strong></div><div><span>Estado</span><strong>Parcial</strong></div></div>`;c.appendChild(box)}
+  function laborDecision(){if(state.page!=='mano')return;const c=$('#content');if(!c||$('.atlas-labor-decision',c))return;const box=document.createElement('div');box.className='atlas-labor-decision';box.innerHTML=`<strong>La hora no sólo se registra: se costea.</strong><span>Cuando el técnico captura tiempo contra P-13217, Atlas actualiza el costo real y la rentabilidad que ve Dirección.</span>`;c.appendChild(box)}
+  function safeButtons(){$$('#content button').forEach(btn=>{if(btn.onclick||btn.dataset.commercialSafe)return;const label=btn.textContent.trim();if(!label)return;btn.dataset.commercialSafe='1';btn.onclick=()=>toast(`${label} · disponible en la versión operativa`)})}
+  function markDemoReset(){const footer=$('.sidebar-footer');if(!footer||$('#atlas-reset-demo'))return;const b=document.createElement('button');b.id='atlas-reset-demo';b.className='atlas-reset-demo';b.textContent='↻ Reiniciar demo';b.onclick=()=>{state.marginDemo={extraMaterial:0,extraLabor:0};if(typeof atlasResetDemo==='function')atlasResetDemo();else location.reload();toast('Demo reiniciada')};footer.appendChild(b)}
+  function decorateCommercial(){executiveStart();quoteDecision();projectDecision();purchaseDecision();laborDecision();marginSimulator();safeButtons();markDemoReset()}
+  const base=window.atlasDecorate;window.atlasDecorate=function(){if(typeof base==='function')base();decorateCommercial()};decorateCommercial();
 })();
