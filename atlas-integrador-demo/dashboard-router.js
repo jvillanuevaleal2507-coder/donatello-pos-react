@@ -1,13 +1,18 @@
-// Final routing layer for Atlas Integrador demo.
-// Keeps Dashboard as a first-class Dirección-only destination without changing the POS app.
+// Atlas Integrador: Dashboard is injected into the base navigation data itself.
+// This makes the original app nav() render Dashboard instead of relying on DOM insertion.
 (function(){
-  const items=[['inicio','⌂','Inicio'],['dashboard','▥','Dashboard'],['clientes','◉','Clientes'],['cotizaciones','▤','Cotizaciones'],['proyectos','▦','Proyectos'],['inventario','◫','Inventario'],['compras','⇄','Compras'],['mano','⌁','Mano de obra'],['almacen','⬡','Almacén'],['reportes','▥','Reportes'],['config','⚙','Configuración']];
+  const dashboardItem=['dashboard','▥','Dashboard'];
+  if(typeof navItems!=='undefined' && !navItems.some(([id])=>id==='dashboard')){
+    navItems.splice(1,0,dashboardItem);
+  }
+
   const operationalRender=window.render;
 
   function finalNav(){
     const navEl=document.querySelector('#nav');
     if(!navEl)return;
-    const visible=items.filter(([id])=>id!=='dashboard'||state.role==='Dirección');
+    const source=typeof navItems!=='undefined'?navItems:[dashboardItem];
+    const visible=source.filter(([id])=>id!=='dashboard'||state.role==='Dirección');
     navEl.innerHTML=visible.map(([id,ico,label])=>`<button class="nav-btn ${state.page===id?'active':''}" data-page="${id}">${ico} <span>${label}</span></button>`).join('');
     navEl.querySelectorAll('.nav-btn').forEach(btn=>btn.onclick=()=>{
       state.page=btn.dataset.page;
@@ -19,8 +24,9 @@
   window.nav=finalNav;
   window.render=function(){
     if(state.page==='dashboard'){
-      if(state.role!=='Dirección')state.page='inicio';
-      else{
+      if(state.role!=='Dirección'){
+        state.page='inicio';
+      }else{
         finalNav();
         const content=document.querySelector('#content');
         content.innerHTML=typeof window.atlasExecutiveDashboard==='function'
