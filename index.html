@@ -10,8 +10,8 @@
   <link rel="stylesheet" href="/atlas-integrador-demo/flow-simulation.css" />
   <link rel="stylesheet" href="/atlas-integrador-demo/final-audit.css" />
   <link rel="stylesheet" href="/atlas-integrador-demo/design-system.css" />
-  <link rel="stylesheet" href="/atlas-integrador-demo/commercial-ux.css?v=20260915-2" />
-  <link rel="stylesheet" href="/atlas-integrador-demo/role-dashboard.css?v=20260915-2" />
+  <link rel="stylesheet" href="/atlas-integrador-demo/commercial-ux.css" />
+  <link rel="stylesheet" href="/atlas-integrador-demo/role-dashboard.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -25,12 +25,38 @@
       <section id="content"></section>
     </main>
   </div>
-  <script src="/atlas-integrador-demo/app.js?v=20260915-2"></script>
-  <script src="/atlas-integrador-demo/demo-enhancements.js?v=20260915-2"></script>
-  <script src="/atlas-integrador-demo/sales-ready.js?v=20260915-2"></script>
-  <script src="/atlas-integrador-demo/flow-simulation.js?v=20260915-2"></script>
-  <script src="/atlas-integrador-demo/final-audit.js?v=20260915-2"></script>
-  <script src="/atlas-integrador-demo/commercial-ux.js?v=20260915-2"></script>
-  <script src="/atlas-integrador-demo/role-dashboard.js?v=20260915-2"></script>
+  <script src="/atlas-integrador-demo/app.js?v=20260915-core1"></script>
+  <script src="/atlas-integrador-demo/demo-enhancements.js"></script>
+  <script src="/atlas-integrador-demo/sales-ready.js"></script>
+  <script src="/atlas-integrador-demo/flow-simulation.js"></script>
+  <script src="/atlas-integrador-demo/final-audit.js"></script>
+  <script src="/atlas-integrador-demo/commercial-ux.js?v=20260915-core1"></script>
+  <script src="/atlas-integrador-demo/role-dashboard.js?v=20260915-core1"></script>
+  <script>
+  (()=>{
+    const baseNavItems=[['inicio','⌂','Inicio'],['dashboard','▥','Dashboard'],['clientes','◉','Clientes'],['cotizaciones','▤','Cotizaciones'],['proyectos','▦','Proyectos'],['inventario','◫','Inventario'],['compras','⇄','Compras'],['mano','⌁','Mano de obra'],['almacen','⬡','Almacén'],['reportes','▥','Reportes'],['config','⚙','Configuración']];
+    window.nav=function(){
+      const visible=baseNavItems.filter(([id])=>id!=='dashboard'||state.role==='Dirección');
+      document.querySelector('#nav').innerHTML=visible.map(([id,ico,l])=>`<button class="nav-btn ${state.page===id?'active':''}" data-page="${id}">${ico} <span>${l}</span></button>`).join('');
+      document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>{state.page=b.dataset.page;state.project=null;state.quote=null;state.warehouse=null;window.render()});
+    };
+    const operationalRender=window.render;
+    window.render=function(){
+      if(state.page==='dashboard'){
+        if(state.role!=='Dirección'){state.page='inicio';return operationalRender();}
+        window.nav();
+        const html=typeof window.atlasExecutiveDashboard==='function'?window.atlasExecutiveDashboard():`<div class="kpi-grid">${kpi('Venta en cartera','$473k','Proyectos activos')}${kpi('Proyectos activos','3','Operación en curso')}${kpi('Margen vendido','29.4%','Base comercial')}${kpi('Margen real P-13217','27.3%','Costo real vs venta')}</div><div class="card panel"><h3>Control económico de la operación</h3><p class="muted">De lo cotizado a lo realmente ganado.</p></div>`;
+        document.querySelector('#content').innerHTML=html;
+        return;
+      }
+      operationalRender();
+      window.nav();
+    };
+    const roleBtn=document.querySelector('#role-btn');
+    const oldRole=roleBtn.onclick;
+    roleBtn.onclick=()=>{if(oldRole)oldRole();if(state.role!=='Dirección'&&state.page==='dashboard')state.page='inicio';window.render();};
+    window.render();
+  })();
+  </script>
 </body>
 </html>
