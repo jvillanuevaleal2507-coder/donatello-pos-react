@@ -1,3 +1,4 @@
+import { requirePosUser } from "./_auth.js";
 import { enrichResultWithGallery } from "./galleryExtractor.js";
 import { buildProductIdentity } from "./productIdentity.js";
 
@@ -559,6 +560,9 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return sendJson(res, 405, { error: "Método no permitido." });
   }
+
+  const authorizedUser = await requirePosUser(req, res);
+  if (!authorizedUser) return;
 
   const apiKey = process.env.SERPAPI_KEY;
   if (!apiKey) {
