@@ -1,3 +1,4 @@
+import { authorizedAtlasFetch } from "./authFetch";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -60,7 +61,7 @@ export async function searchByImage({ photo, titleHint = "", onProgress }) {
   onProgress?.("searchingMatches");
   onProgress?.("checkingAmazon");
 
-  const response = await fetch("/api/atlas/search", {
+  const response = await authorizedAtlasFetch("/api/atlas/search", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
