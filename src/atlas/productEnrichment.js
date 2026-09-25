@@ -1,3 +1,4 @@
+import { authorizedAtlasFetch } from "./authFetch";
 export async function enrichProductCandidate(candidate) {
   if (!candidate?.rawResult?.title) return candidate;
 
@@ -7,7 +8,7 @@ export async function enrichProductCandidate(candidate) {
     candidate.image_url ||
     "";
 
-  const response = await fetch("/api/atlas/enrich", {
+  const response = await authorizedAtlasFetch("/api/atlas/enrich", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
