@@ -1,3 +1,4 @@
+import { requirePosUser } from "./_auth.js";
 import { extractGalleryFromUrl } from "./galleryExtractor.js";
 
 const SERPAPI_ENDPOINT = "https://serpapi.com/search.json";
@@ -616,6 +617,9 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return sendJson(res, 405, { error: "Método no permitido." });
   }
+
+  const authorizedUser = await requirePosUser(req, res);
+  if (!authorizedUser) return;
 
   const serpApiKey = process.env.SERPAPI_KEY || process.env.SERPAPI_API_KEY;
   const openAiKey = process.env.OPENAI_API_KEY;
