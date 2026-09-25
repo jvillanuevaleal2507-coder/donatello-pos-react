@@ -1,3 +1,4 @@
+import { authorizedAtlasFetch } from "./authFetch";
 function normalizeText(value = "") {
   return String(value || "")
     .toLowerCase()
@@ -249,7 +250,7 @@ async function recoverMissingGallery({
   const recoveryContext = findRecoveryContext(bestResult, searchResults);
 
   try {
-    const response = await fetch("/api/atlas/recover-gallery", {
+    const response = await authorizedAtlasFetch("/api/atlas/recover-gallery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -310,7 +311,7 @@ export async function validateProductGallery({
   }
 
   try {
-    const response = await fetch("/api/atlas/validate-gallery", {
+    const response = await authorizedAtlasFetch("/api/atlas/validate-gallery", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
