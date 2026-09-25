@@ -1,3 +1,4 @@
+import { requirePosUser } from "./_auth.js";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 function sendJson(res, status, payload) {
@@ -35,6 +36,9 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return sendJson(res, 405, { error: "Método no permitido." });
   }
+
+  const authorizedUser = await requirePosUser(req, res);
+  if (!authorizedUser) return;
 
   const apiKey = process.env.OPENAI_API_KEY;
 
