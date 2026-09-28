@@ -1,4 +1,4 @@
-/* Atlas Integrador canonical runtime R8 */
+/* Atlas Integrador canonical runtime R8.1 */
 
 
 /* ===== app.js ===== */
@@ -2308,4 +2308,8 @@ render=function(){
   }
   atlasRenderR8Base();
 };
+
+
+/* R8 startup: paint the final navigation after all R8 modules and permissions exist */
+render();
 
