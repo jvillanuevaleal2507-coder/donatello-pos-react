@@ -148,7 +148,7 @@ function atlasExportCurrentReport(){
   const ws=XLSX.utils.json_to_sheet(data),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Reporte');
   XLSX.writeFile(wb,'Atlas-Reporte-'+state.reportTab+'-'+state.reportYear+'.xlsx');
 }
-reportes=function(){
+function reportes(){
   setHead('Reportes','Análisis','');
   if(state.role==='Ingeniería')state.reportOwner=state.demoEngineer;
   setTimeout(function(){
