@@ -12,7 +12,7 @@
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">A</div><div><strong>Atlas Integrador</strong><span>Operación de proyectos</span></div></div>
       <nav id="nav"></nav>
-      <div class="sidebar-footer"><span class="dot online"></span><div><strong>Demo comercial</strong><small>Datos ficticios · Entorno demostrativo</small></div></div>
+      <div class="sidebar-footer"><span class="dot online"></span><div><strong>Demo comercial</strong><small>Datos ficticios · Entorno demostrativo · R1</small></div></div>
     </aside>
     <main class="main">
       <header class="topbar"><div><p class="eyebrow" id="eyebrow">Dirección</p><h1 id="page-title">Inicio</h1></div><div class="top-actions"><button class="ghost" id="role-btn">Rol: Dirección</button><button class="primary" id="primary-action">Nueva cotización</button></div></header>
@@ -21,6 +21,497 @@
   </div>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
-  <script src="/atlas-integrador-demo/runtime.js?v=20260928-runtime-root1"></script>
+  <script>
+window.ATLAS_BUILD="2026-09-28-quote-root-inline1";
+/* Atlas Integrador canonical runtime — generated from app + flow + pdf + enhancements */
+
+
+/* ===== app.js ===== */
+const navItems=[['inicio','⌂','Inicio'],['dashboard','▥','Dashboard'],['clientes','◉','Clientes'],['cotizaciones','▤','Cotizaciones'],['proyectos','▦','Proyectos'],['inventario','◫','Inventario'],['compras','⇄','Compras'],['mano','⌁','Mano de obra'],['almacen','⬡','Almacén'],['reportes','▥','Reportes'],['config','⚙','Configuración']];
+const state={page:'inicio',role:'Dirección',quote:null,quoteSearch:'',quoteStatus:'Todos',clientSearch:'',projectSearch:'',projectYear:'2026',laborDraft:null,configTab:'personal'};
+const clients=[
+{id:1,name:'Cliente Industrial Norte',rfc:'CIN010203AA1',contact:'Carlos Méndez',closed:14},{id:2,name:'Manufactura Delta',rfc:'MDE040506BB2',contact:'Laura Garza',closed:8},{id:3,name:'Alimentos del Norte',rfc:'ANO070809CC3',contact:'Miguel Treviño',closed:5},{id:4,name:'Empaques Río Bravo',rfc:'ERB101112DD4',contact:'Andrea Salinas',closed:11}
+];
+const personnel=[
+{id:1,name:'Técnico 01',position:'Técnico instalador',hour:110,day:880,satDay:1320,sunDay:1760,active:true},{id:2,name:'Técnico 02',position:'Técnico instalador',hour:115,day:920,satDay:1380,sunDay:1840,active:true},{id:3,name:'Ing. Proyecto',position:'Ingeniero',hour:220,day:1760,satDay:2640,sunDay:3520,active:true},{id:4,name:'Ayudante 01',position:'Ayudante',hour:80,day:640,satDay:960,sunDay:1280,active:true}
+];
+const activityCatalog=['CANALIZACIÓN','CABLEADO CÁMARAS','CABLEADO FIBRA ÓPTICA','INSTALACIÓN CCTV','CONFIGURACIÓN Y PUESTA EN MARCHA'];
+const inventory=[
+{id:1,model:'DS-2CD2143G2-I',brand:'Hikvision',desc:'Cámara IP domo 4 MP',stock:0,min:4,loc:'A-02',cost:1850,status:'Crítico',history:true,active:true},{id:2,model:'UTP-CAT6-BL',brand:'Panduit',desc:'Cable Cat6 azul caja 305 m',stock:7,min:3,loc:'B-01',cost:2890,status:'OK',history:true,active:true},{id:3,model:'RG-RAP2266',brand:'Ruijie',desc:'Access Point WiFi 6 AX3000',stock:3,min:2,loc:'C-04',cost:2680,status:'OK',history:false,active:true},{id:4,model:'DS-K1T341AMF',brand:'Hikvision',desc:'Terminal acceso facial',stock:1,min:2,loc:'A-06',cost:4220,status:'Bajo',history:true,active:true}
+];
+const projects=[
+{id:'P-13217',client:'Cliente Industrial Norte',name:'CCTV Nave 3',owner:'Ing. Ramiro',status:'En ejecución',sale:184500,budget:128900,real:134200,margin:27.3,po:'OC-45821',alert:'Costo +4.1%',year:2026},{id:'P-13244',client:'Manufactura Delta',name:'Control de acceso planta',owner:'Ing. Celeste',status:'Aprobado',sale:96200,budget:68100,real:0,margin:29.2,po:'PO-9918',alert:'Por surtir',year:2026},{id:'P-13251',client:'Alimentos del Norte',name:'Red WiFi almacén',owner:'Ing. Alfredo',status:'En ejecución',sale:74200,budget:49500,real:51700,margin:30.3,po:'OC-11093',alert:'Material extra',year:2026}
+];
+const quotes=[
+{id:'COT-2026-0046',clientId:2,name:'Control de acceso almacén',status:'Enviada',date:'08 sep 2026',owner:'Ing. Celeste',revision:0,total:96200},{id:'COT-2026-0045',clientId:1,name:'CCTV acceso norte',status:'Pendiente',date:'05 sep 2026',owner:'Ing. Ramiro',revision:1,total:184500},{id:'COT-2026-0044',clientId:3,name:'Enlace de fibra',status:'Perdida',date:'31 ago 2026',owner:'Ing. Alfredo',revision:0,total:74200}
+];
+let folioConfig={quoteTemplate:'COT-{AÑO}-{0000}',projectTemplate:'P-{00000}',nextQuote:47,nextProject:13266};
+const fmt=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:2}).format(Number(n)||0);
+const money=fmt;
+function chip(text,color='gray'){return `<span class="chip ${color}">${text}</span>`}
+function setHead(title,eye='Atlas Integrador',action=''){document.querySelector('#page-title').textContent=title;document.querySelector('#eyebrow').textContent=eye;const b=document.querySelector('#primary-action');b.textContent=action;b.style.display=action?'block':'none';b.onclick=null}
+function nav(){document.querySelector('#nav').innerHTML=navItems.map(([id,ico,label])=>`<button class="nav-btn ${state.page===id?'active':''}" data-page="${id}">${ico} <span>${label}</span></button>`).join('');document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>{state.page=b.dataset.page;state.quote=null;render()})}
+function nextQuoteFolio(){return folioConfig.quoteTemplate.replace('{AÑO}','2026').replace('{MES}','09').replace('{0000}',String(folioConfig.nextQuote).padStart(4,'0')).replace('{000000}',String(folioConfig.nextQuote).padStart(6,'0'))}
+function materialPrice(x){return +x.cost*(1+(+x.markup||0)/100)}
+function laborRowCost(x){const p=personnel.find(p=>p.id===+x.personId)||personnel[0];if(x.mode==='hora')return (+x.normalQty||0)*p.hour+(+x.satQty||0)*(p.hour*1.5)+(+x.sunQty||0)*(p.hour*2);return (+x.normalQty||0)*p.day+(+x.satQty||0)*p.satDay+(+x.sunQty||0)*p.sunDay}
+function quoteTotals(q=state.quote){if(!q)return{mc:0,ms:0,lc:0,ls:0,ind:0,subtotal:0,iva:0,isr:0,total:0,margin:0};let mc=q.materials.reduce((s,x)=>s+x.qty*x.cost,0),ms=q.materials.reduce((s,x)=>s+x.qty*materialPrice(x),0),lc=q.laborRows.reduce((s,x)=>s+laborRowCost(x),0),ls=q.laborRows.reduce((s,x)=>s+laborRowCost(x)*(1+x.markup/100),0),base=mc+lc,ind=lc*q.indirect.safety+lc*q.indirect.tools+base*q.indirect.general+base*q.indirect.field+base*q.indirect.finance+q.truckDays*q.truckDaily,subtotal=ms+ls+ind,iva=subtotal*(q.ivaRate/100),isr=q.retainISR?subtotal*(q.isrRate/100):0,total=subtotal+iva-isr,cost=mc+lc;return{mc,ms,lc,ls,ind,subtotal,iva,isr,total,margin:subtotal?(subtotal-cost)/subtotal*100:0}}
+function newQuote(clientId=null){state.quote={id:nextQuoteFolio(),revision:0,status:'Borrador',step:clientId?2:1,clientId,name:'',currency:'MXN',materials:[{model:'DS-2CD2143G2-I',desc:'Cámara IP domo 4 MP',qty:8,cost:1850,markup:35,category:'VIDEO VIGILANCIA'},{model:'UTP-CAT6-BL',desc:'Cable Cat6 caja 305 m',qty:2,cost:2890,markup:30,category:'VIDEO VIGILANCIA'}],laborRows:[],indirect:{safety:.02,tools:.03,general:.10,field:.03,finance:.03},truckDays:2,truckDaily:250,directedTo:'',payment:'Contado',delivery:'15 días hábiles',validity:'15 días',ivaRate:16,retainISR:false,isrRate:0,scope:'',materialPresentation:'detail',laborPresentation:'detail',commercialReady:false};state.page='cotizaciones';renderQuote()}
+function inicio(){setHead('Inicio',state.role,'Nueva cotización');document.querySelector('#primary-action').onclick=()=>newQuote();return `<div class="kpi-grid"><div class="card kpi"><div class="label">Cotizaciones pendientes</div><div class="value">6</div><div class="delta">2 con más de 7 días</div></div><div class="card kpi"><div class="label">Proyectos activos</div><div class="value">18</div><div class="delta">4 requieren atención</div></div><div class="card kpi"><div class="label">Utilidad estimada mes</div><div class="value">$486k</div><div class="delta">31.4% margen</div></div><div class="card kpi"><div class="label">Utilidad real cerrada</div><div class="value">$392k</div><div class="delta">28.7% margen real</div></div></div><div class="grid-2"><div class="card panel"><h3>Seguimiento comercial</h3><div class="action-list"><div class="action-item"><div><strong>COT-2026-0045</strong><span>CCTV acceso norte · 6 días</span></div>${chip('Pendiente','orange')}</div><div class="action-item"><div><strong>COT-2026-0046</strong><span>Control de acceso almacén · 3 días</span></div>${chip('Enviada','blue')}</div></div></div><div class="card panel"><h3>Atención operativa</h3><div class="action-list"><div class="action-item"><div><strong>P-13217</strong><span>Costo real +4.1% vs presupuesto</span></div>${chip('Revisar','orange')}</div><div class="action-item"><div><strong>Inventario crítico</strong><span>1 artículo en existencia cero</span></div>${chip('Inventario','red')}</div></div></div></div>`}
+function dashboard(){
+ setHead('Dashboard','Dirección','');
+ const totalSales=projects.reduce((s,p)=>s+(+p.sale||0),0);
+ const active=projects.filter(p=>p.status==='En ejecución'||p.status==='Aprobado').length;
+ const projectedCost=projects.reduce((s,p)=>s+(+p.real||+p.budget||0),0);
+ const projectedMargin=totalSales?((totalSales-projectedCost)/totalSales*100):0;
+ const openQuotes=quotes.filter(q=>q.status!=='Perdida'&&q.status!=='Aceptada').length;
+ const quoteValue=quotes.filter(q=>q.status!=='Perdida').reduce((s,q)=>s+(+q.total||0),0);
+ return `<div class="project-header"><div><p class="eyebrow">Resultados ejecutivos</p><h2 style="margin:0 0 6px">Control económico de la operación</h2><p class="muted" style="margin:0">Una lectura rápida de venta, costo y proyectos que requieren atención.</p></div>${chip('Dirección','blue')}</div>
+ <div class="kpi-grid">
+  <div class="card kpi"><div class="label">Venta en cartera</div><div class="value">${fmt(totalSales)}</div><div class="delta">${active} proyectos activos</div></div>
+  <div class="card kpi"><div class="label">Costo real / proyectado</div><div class="value">${fmt(projectedCost)}</div><div class="delta">Contra proyectos actuales</div></div>
+  <div class="card kpi"><div class="label">Margen real / proyectado</div><div class="value">${projectedMargin.toFixed(1)}%</div><div class="delta">Lectura consolidada</div></div>
+  <div class="card kpi"><div class="label">Cotizaciones abiertas</div><div class="value">${openQuotes}</div><div class="delta">${fmt(quoteValue)} en seguimiento</div></div>
+ </div>
+ <div class="grid-2">
+  <div class="card panel"><h3>Proyectos que requieren atención</h3><div class="table-wrap"><table class="table"><thead><tr><th>Proyecto</th><th>Responsable</th><th>Venta</th><th>Margen</th><th>Alerta</th></tr></thead><tbody>${projects.map(p=>{const cost=+p.real||+p.budget||0;const margin=p.sale?((p.sale-cost)/p.sale*100):0;return `<tr><td><strong>${p.id}</strong><br><span class="muted">${p.name}</span></td><td>${p.owner}</td><td>${fmt(p.sale)}</td><td>${margin.toFixed(1)}%</td><td>${chip(p.alert||'Sin alerta',(p.alert||'').includes('+')||(p.alert||'').toLowerCase().includes('extra')?'orange':'blue')}</td></tr>`}).join('')}</tbody></table></div></div>
+  <div class="card panel"><h3>Lectura de Dirección</h3><div class="action-list"><div class="action-item"><div><strong>P-13217</strong><span>Costo real por arriba del presupuesto.</span></div>${chip('Revisar','orange')}</div><div class="action-item"><div><strong>Abastecimiento</strong><span>Hay órdenes con recepción parcial o pendiente.</span></div>${chip('Compras','blue')}</div><div class="action-item"><div><strong>Seguimiento comercial</strong><span>${openQuotes} cotizaciones siguen abiertas.</span></div>${chip('Comercial','blue')}</div></div></div>
+ </div>`;
+}
+function clientes(){setHead('Clientes','Comercial','Nueva cotización');document.querySelector('#primary-action').onclick=()=>newQuote();let q=state.clientSearch.toLowerCase(),rows=clients.filter(c=>!q||[c.name,c.rfc,c.contact].some(v=>v.toLowerCase().includes(q)));setTimeout(()=>{const s=document.querySelector('#client-search');if(s)s.oninput=e=>{state.clientSearch=e.target.value;render()};document.querySelectorAll('.qclient').forEach(b=>b.onclick=()=>newQuote(+b.dataset.id))},0);return `<div class="toolbar"><input id="client-search" class="input" style="min-width:320px" placeholder="Buscar cliente, RFC o contacto" value="${state.clientSearch}"></div><div class="card panel"><table class="table"><thead><tr><th>Cliente</th><th>RFC</th><th>Contacto</th><th>Proyectos</th><th></th></tr></thead><tbody>${rows.map(c=>`<tr><td><strong>${c.name}</strong></td><td>${c.rfc}</td><td>${c.contact}</td><td>${c.closed}</td><td><button class="ghost qclient" data-id="${c.id}">Cotizar</button></td></tr>`).join('')}</tbody></table></div>`}
+function cotizaciones(){if(state.quote){renderQuote();return ''}setHead('Cotizaciones','Comercial','Nueva cotización');document.querySelector('#primary-action').onclick=()=>newQuote();let q=state.quoteSearch.toLowerCase(),rows=quotes.filter(x=>{let c=clients.find(c=>c.id===x.clientId);return(state.quoteStatus==='Todos'||x.status===state.quoteStatus)&&(!q||[x.id,x.name,c?.name,x.owner].some(v=>String(v).toLowerCase().includes(q)))});setTimeout(()=>{document.querySelector('#quote-search').oninput=e=>{state.quoteSearch=e.target.value;render()};document.querySelector('#quote-status').onchange=e=>{state.quoteStatus=e.target.value;render()};document.querySelectorAll('.open-quote').forEach(b=>b.onclick=()=>alert('En la versión conectada abrirá la revisión guardada con Ver / Editar / PDF / Seguimiento / Aceptar cotización.'))},0);return `<div class="toolbar"><input id="quote-search" class="input" style="min-width:320px" value="${state.quoteSearch}" placeholder="Buscar folio, cliente, proyecto o promotor"><select id="quote-status" class="select">${['Todos','Borrador','Enviada','Pendiente','Aceptada','Perdida'].map(s=>`<option ${s===state.quoteStatus?'selected':''}>${s}</option>`).join('')}</select><select class="select"><option>2026</option><option>2025</option></select></div><div class="card panel"><table class="table"><thead><tr><th>Folio</th><th>Cliente</th><th>Proyecto</th><th>Fecha</th><th>Rev.</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody>${rows.map(x=>{let c=clients.find(c=>c.id===x.clientId);return `<tr><td><strong>${x.id}</strong></td><td>${c?.name||''}</td><td>${x.name}</td><td>${x.date}</td><td>${x.revision}</td><td>${chip(x.status,x.status==='Perdida'?'red':x.status==='Pendiente'?'orange':'blue')}</td><td>${fmt(x.total)}</td><td><button class="ghost open-quote">Abrir</button></td></tr>`}).join('')}</tbody></table></div><div class="note" style="margin-top:14px">Una cotización puede permanecer aquí semanas o meses. El proyecto nace solamente cuando la cotización es aceptada y se registra su autorización.</div>`}
+function renderQuote(){nav();let q=state.quote,c=clients.find(x=>x.id===q.clientId),t=quoteTotals();setHead(q.id,'Cotización · Rev. '+q.revision,'');document.querySelector('#content').innerHTML=`<div class="tabs">${['Cliente','General','Materiales','Mano de obra','Indirectos','Resumen','Cotizar'].map((x,i)=>`<button class="tab qtab ${q.step===i+1?'active':''}" data-step="${i+1}">${i+1} ${x}</button>`).join('')}</div><div class="card panel" id="qbody"></div><div class="toolbar" style="justify-content:flex-end;margin-top:14px"><button class="ghost" id="qclose">Cerrar</button>${q.step>1?'<button class="ghost" id="qprev">← Anterior</button>':''}${q.step<7?'<button class="primary" id="qnext">Continuar →</button>':''}</div>`;const b=document.querySelector('#qbody');
+if(q.step===1)b.innerHTML=`<h3>Selecciona el cliente</h3><div class="action-list">${clients.map(x=>`<div class="action-item"><div><strong>${x.name}</strong><span>${x.rfc} · ${x.contact}</span></div><button class="primary pick-client" data-id="${x.id}">Seleccionar</button></div>`).join('')}</div>`;
+if(q.step===2)b.innerHTML=`<h3>Datos generales</h3><div class="toolbar"><input id="qname" class="input" style="min-width:360px" value="${q.name}" placeholder="Descripción del proyecto"><select id="qcur" class="select"><option ${q.currency==='MXN'?'selected':''}>MXN</option><option ${q.currency==='USD'?'selected':''}>USD</option></select></div><div class="note"><strong>Folio:</strong> ${q.id} · <strong>Cliente:</strong> ${c?.name||'Pendiente'}</div>`;
+if(q.step===3)b.innerHTML=`<h3>Materiales</h3><p class="muted">Costo actual del catálogo + utilidad por partida. Al aprobarse, la revisión conserva estos valores históricos.</p><div class="table-wrap"><table class="table"><thead><tr><th>Modelo</th><th>Descripción</th><th>Cant.</th><th>Costo</th><th>% utilidad</th><th>P. cliente</th><th>Importe</th></tr></thead><tbody>${q.materials.map((x,i)=>`<tr><td><strong>${x.model}</strong></td><td>${x.desc}</td><td><input class="input mq" data-i="${i}" type="number" value="${x.qty}" style="width:70px"></td><td>${fmt(x.cost)}</td><td><input class="input mm" data-i="${i}" type="number" value="${x.markup}" style="width:80px"></td><td>${fmt(materialPrice(x))}</td><td><strong>${fmt(x.qty*materialPrice(x))}</strong></td></tr>`).join('')}</tbody></table></div>`;
+if(q.step===4){let d=state.laborDraft||{activity:activityCatalog[0],category:'VIDEO VIGILANCIA',personId:personnel[0].id,mode:'día',normalQty:1,satQty:0,sunQty:0,markup:70};state.laborDraft=d;let p=personnel.find(x=>x.id===+d.personId),cost=laborRowCost(d),sale=cost*(1+d.markup/100);b.innerHTML=`<h3>Mano de obra presupuestada</h3><p class="muted">Selecciona una actividad del catálogo, asígnala al alcance y después agrega recursos por día u hora. Día queda como modo predeterminado.</p><div class="note"><div class="toolbar"><select id="la" class="select">${activityCatalog.map(x=>`<option ${x===d.activity?'selected':''}>${x}</option>`).join('')}</select><select id="lcat" class="select"><option>VIDEO VIGILANCIA</option><option>CONTROL DE ACCESO</option><option>REDES</option><option>FIBRA ÓPTICA</option><option>No asignado</option></select><select id="lp" class="select">${personnel.filter(x=>x.active).map(x=>`<option value="${x.id}" ${x.id===+d.personId?'selected':''}>${x.name} · ${x.position}</option>`).join('')}</select><select id="lm" class="select"><option value="día" ${d.mode==='día'?'selected':''}>Por día</option><option value="hora" ${d.mode==='hora'?'selected':''}>Por hora</option></select></div><div class="table-wrap"><table class="table"><thead><tr><th>Tipo</th><th>Recurso</th><th>% utilidad</th><th>Cantidad</th><th>Costo empresa</th><th>Total cliente</th></tr></thead><tbody><tr><td>Normal</td><td>${p.name}</td><td><input id="lmk" class="input" type="number" value="${d.markup}" style="width:80px"></td><td><input id="ln" class="input" type="number" value="${d.normalQty}" style="width:75px"></td><td rowspan="3"><strong>${fmt(cost)}</strong></td><td rowspan="3"><strong>${fmt(sale)}</strong></td></tr><tr><td>Sábado</td><td>${p.position}</td><td></td><td><input id="ls" class="input" type="number" value="${d.satQty}" style="width:75px"></td></tr><tr><td>Domingo</td><td>${d.mode==='día'?'Tarifa especial día':'Tarifa extra hora'}</td><td></td><td><input id="ld" class="input" type="number" value="${d.sunQty}" style="width:75px"></td></tr></tbody></table></div><button class="primary" id="save-labor">Guardar mano de obra para ${d.activity}</button></div><h3 style="margin-top:22px">Resumen de actividades</h3><div class="table-wrap"><table class="table"><thead><tr><th>Asignado a</th><th>Actividad</th><th>Recurso</th><th>Modo</th><th>% utilidad</th><th>Costo</th><th>Cliente</th><th></th></tr></thead><tbody>${q.laborRows.length?q.laborRows.map((x,i)=>{let pp=personnel.find(p=>p.id===+x.personId);return `<tr><td>${x.category}</td><td><strong>${x.activity}</strong></td><td>${pp?.name}</td><td>${x.mode}</td><td>${x.markup}%</td><td>${fmt(laborRowCost(x))}</td><td><strong>${fmt(laborRowCost(x)*(1+x.markup/100))}</strong></td><td><button class="ghost del-labor" data-i="${i}">Eliminar</button></td></tr>`}).join(''):'<tr><td colspan="8" class="muted">Todavía no has agregado mano de obra a esta cotización.</td></tr>'}</tbody></table></div>`}
+if(q.step===5){let mo=t.lc,base=t.mc+t.lc,rows=[['safety','Seguridad, Protección e Higiene',mo,'MO'],['tools','Herramienta menor',mo,'MO'],['general','Indirectos',base,'MO + materiales'],['field','Indirectos de campo',base,'MO + materiales'],['finance','Financiamiento',base,'MO + materiales']];b.innerHTML=`<h3>Gastos indirectos</h3><p class="muted">La base se calcula automáticamente; aquí únicamente se modifica el factor.</p><table class="table"><thead><tr><th>Concepto</th><th>Base calculada</th><th>Factor</th><th>Total cliente</th></tr></thead><tbody>${rows.map(r=>`<tr><td>${r[1]}</td><td><strong>${fmt(r[2])}</strong><br><span class="muted">${r[3]}</span></td><td><input class="input ifactor" data-key="${r[0]}" type="number" step="0.01" value="${q.indirect[r[0]]}" style="width:100px"></td><td>${fmt(r[2]*q.indirect[r[0]])}</td></tr>`).join('')}<tr><td><strong>Camioneta</strong></td><td>Días <input id="truckd" class="input" type="number" value="${q.truckDays}" style="width:75px"></td><td>Costo/día <input id="truckc" class="input" type="number" value="${q.truckDaily}" style="width:100px"></td><td>${fmt(q.truckDays*q.truckDaily)}</td></tr></tbody></table>`}
+if(q.step===6)b.innerHTML=`<h3>Resumen interno</h3><div class="metric-strip"><div class="metric-box"><small>Materiales</small><strong>${fmt(t.ms)}</strong></div><div class="metric-box"><small>Mano de obra</small><strong>${fmt(t.ls)}</strong></div><div class="metric-box"><small>Indirectos</small><strong>${fmt(t.ind)}</strong></div><div class="metric-box"><small>Margen estimado</small><strong>${t.margin.toFixed(1)}%</strong></div></div><div class="note" style="margin-top:16px"><strong>Subtotal comercial:</strong> ${fmt(t.subtotal)}. Aquí se guarda la cotización; todavía NO se crea un proyecto ni se solicita OC.</div><div class="toolbar" style="margin-top:16px"><button class="primary" id="save-quote">Guardar cotización</button><button class="ghost" id="go-commercial">Cotizar / preparar para cliente</button></div>`;
+if(q.step===7)b.innerHTML=`<h3>Preparación comercial</h3><div class="grid-2"><div><label>Dirigido a</label><input id="directed" class="input" value="${q.directedTo}" placeholder="Nombre del contacto" style="width:100%"></div><div><label>Condiciones de pago</label><select id="payment" class="select" style="width:100%"><option ${q.payment==='Contado'?'selected':''}>Contado</option><option ${q.payment==='Crédito'?'selected':''}>Crédito</option></select></div><div><label>Tiempo de entrega</label><input id="delivery" class="input" value="${q.delivery}" style="width:100%"></div><div><label>Vigencia</label><input id="validity" class="input" value="${q.validity}" style="width:100%"></div><div><label>IVA</label><select id="iva" class="select" style="width:100%"><option value="16" ${q.ivaRate===16?'selected':''}>16%</option><option value="8" ${q.ivaRate===8?'selected':''}>8%</option></select></div><div><label>Retener ISR</label><select id="isr" class="select" style="width:100%"><option value="no" ${!q.retainISR?'selected':''}>No</option><option value="si" ${q.retainISR?'selected':''}>Sí · tasa configurada</option></select></div><div><label>Materiales en PDF</label><select id="matpres" class="select" style="width:100%"><option value="detail" ${q.materialPresentation==='detail'?'selected':''}>Detallado</option><option value="summary" ${q.materialPresentation==='summary'?'selected':''}>Resumido / ocultar modelos</option></select></div><div><label>Mano de obra en PDF</label><select id="labpres" class="select" style="width:100%"><option value="detail" ${q.laborPresentation==='detail'?'selected':''}>Detallada</option><option value="summary" ${q.laborPresentation==='summary'?'selected':''}>Resumida</option></select></div></div><label style="display:block;margin-top:14px">Alcance del proyecto / comentarios</label><textarea id="scope" class="input" style="width:100%;min-height:100px">${q.scope}</textarea><div class="metric-strip" style="margin-top:16px"><div class="metric-box"><small>Subtotal</small><strong>${fmt(t.subtotal)}</strong></div><div class="metric-box"><small>IVA ${q.ivaRate}%</small><strong>${fmt(t.iva)}</strong></div><div class="metric-box"><small>MO comercial</small><strong>${fmt(t.ls)}</strong></div><div class="metric-box"><small>Total</small><strong>${fmt(t.total)}</strong></div></div><div class="toolbar" style="margin-top:16px"><button class="primary" id="pdf-btn">Descargar PDF</button><button class="ghost" id="mark-sent">Guardar como enviada</button></div><div class="note" style="margin-top:12px">Folio visible configurable por empresa: <strong>${q.id}</strong>. El sistema conservará además un ID interno estable, listo para representar en código de barras o QR cuando se habilite operación con scanner.</div>`;
+bindQuote();}
+function bindQuote(){let q=state.quote;document.querySelectorAll('.qtab').forEach(x=>x.onclick=()=>{q.step=+x.dataset.step;renderQuote()});document.querySelector('#qclose').onclick=()=>{state.quote=null;state.page='cotizaciones';render()};let p=document.querySelector('#qprev');if(p)p.onclick=()=>{q.step--;renderQuote()};let n=document.querySelector('#qnext');if(n)n.onclick=()=>{if(q.step===2){q.name=document.querySelector('#qname').value||'Proyecto nuevo';q.currency=document.querySelector('#qcur').value}if(!q.clientId)return alert('Selecciona un cliente');q.step++;renderQuote()};document.querySelectorAll('.pick-client').forEach(x=>x.onclick=()=>{q.clientId=+x.dataset.id;q.step=2;renderQuote()});document.querySelectorAll('.mq').forEach(x=>x.onchange=e=>{q.materials[+e.target.dataset.i].qty=+e.target.value;renderQuote()});document.querySelectorAll('.mm').forEach(x=>x.onchange=e=>{q.materials[+e.target.dataset.i].markup=+e.target.value;renderQuote()});
+if(q.step===4){['la','lcat','lp','lm','lmk','ln','ls','ld'].forEach(id=>{let el=document.querySelector('#'+id);if(el)el.onchange=e=>{let d=state.laborDraft;if(id==='la')d.activity=e.target.value;if(id==='lcat')d.category=e.target.value;if(id==='lp')d.personId=+e.target.value;if(id==='lm')d.mode=e.target.value;if(id==='lmk')d.markup=+e.target.value;if(id==='ln')d.normalQty=+e.target.value;if(id==='ls')d.satQty=+e.target.value;if(id==='ld')d.sunQty=+e.target.value;renderQuote()}});document.querySelector('#save-labor').onclick=()=>{q.laborRows.push({...state.laborDraft});state.laborDraft=null;renderQuote()};document.querySelectorAll('.del-labor').forEach(x=>x.onclick=()=>{q.laborRows.splice(+x.dataset.i,1);renderQuote()})}
+document.querySelectorAll('.ifactor').forEach(x=>x.onchange=e=>{q.indirect[e.target.dataset.key]=+e.target.value;renderQuote()});let td=document.querySelector('#truckd');if(td)td.onchange=e=>{q.truckDays=+e.target.value;renderQuote()};let tc=document.querySelector('#truckc');if(tc)tc.onchange=e=>{q.truckDaily=+e.target.value;renderQuote()};let save=document.querySelector('#save-quote');if(save)save.onclick=()=>{if(!q.name)q.name='Proyecto nuevo';if(!quotes.some(x=>x.id===q.id)){quotes.unshift({id:q.id,clientId:q.clientId,name:q.name,status:'Borrador',date:'11 sep 2026',owner:'Usuario actual',revision:q.revision,total:quoteTotals().total});folioConfig.nextQuote++}alert('Cotización guardada en la demo. Aún no existe proyecto.')};let gc=document.querySelector('#go-commercial');if(gc)gc.onclick=()=>{q.step=7;renderQuote()};
+if(q.step===7){['directed','payment','delivery','validity','iva','isr','matpres','labpres','scope'].forEach(id=>{let el=document.querySelector('#'+id);if(el)el.onchange=e=>{if(id==='directed')q.directedTo=e.target.value;if(id==='payment')q.payment=e.target.value;if(id==='delivery')q.delivery=e.target.value;if(id==='validity')q.validity=e.target.value;if(id==='iva')q.ivaRate=+e.target.value;if(id==='isr')q.retainISR=e.target.value==='si';if(id==='matpres')q.materialPresentation=e.target.value;if(id==='labpres')q.laborPresentation=e.target.value;if(id==='scope')q.scope=e.target.value;renderQuote()}});document.querySelector('#pdf-btn').onclick=()=>atlasQuotePdf();document.querySelector('#mark-sent').onclick=()=>{q.status='Enviada';let row=quotes.find(x=>x.id===q.id);if(row){row.status='Enviada';row.total=quoteTotals().total}else quotes.unshift({id:q.id,clientId:q.clientId,name:q.name,status:'Enviada',date:'11 sep 2026',owner:'Usuario actual',revision:q.revision,total:quoteTotals().total});alert('Cotización marcada como enviada. La aceptación se hará después desde Cotizaciones.')}}}
+function proyectos(){setHead('Proyectos','Operación','');let q=state.projectSearch.toLowerCase(),rows=projects.filter(p=>(state.projectYear==='Todos'||String(p.year)===state.projectYear)&&(!q||[p.id,p.client,p.name,p.owner,p.po].some(v=>String(v).toLowerCase().includes(q))));setTimeout(()=>{document.querySelector('#ps').oninput=e=>{state.projectSearch=e.target.value;render()};document.querySelector('#py').onchange=e=>{state.projectYear=e.target.value;render()}},0);return `<div class="toolbar"><input id="ps" class="input" value="${state.projectSearch}" placeholder="Buscar proyecto, cliente, promotor u OC"><select id="py" class="select"><option ${state.projectYear==='2026'?'selected':''}>2026</option><option>2025</option><option>Todos</option></select></div><div class="card panel"><table class="table"><thead><tr><th>Proyecto</th><th>Cliente</th><th>Promotor</th><th>Estado</th><th>OC</th><th>Venta</th><th>Margen</th></tr></thead><tbody>${rows.map(p=>`<tr><td><strong>${p.id}</strong><br><span class="muted">${p.name}</span></td><td>${p.client}</td><td>${p.owner}</td><td>${chip(p.status,'green')}</td><td>${p.po}</td><td>${fmt(p.sale)}</td><td>${p.margin}%</td></tr>`).join('')}</tbody></table></div>`}
+function inventario(){setHead('Inventario','Materiales','Nuevo artículo');setTimeout(()=>{document.querySelectorAll('.edit-item').forEach(b=>b.onclick=()=>{let x=inventory.find(i=>i.id===+b.dataset.id),n=prompt('Descripción del artículo:',x.desc);if(n!==null){x.desc=n;render()}});document.querySelectorAll('.del-item').forEach(b=>b.onclick=()=>{let x=inventory.find(i=>i.id===+b.dataset.id);if(x.history){x.active=false;alert('Tiene historial: Atlas lo desactivó en lugar de borrarlo.')}else if(x.stock>0)alert('No se puede eliminar con existencia mayor a cero. Regulariza el inventario primero.');else if(confirm('Este artículo no tiene historial. ¿Eliminar definitivamente?'))inventory.splice(inventory.indexOf(x),1);render()})},0);return `<div class="toolbar"><input class="input" placeholder="Modelo, marca, descripción o código"><select class="select"><option>Activos</option><option>Inactivos</option></select></div><div class="card panel"><table class="table"><thead><tr><th>Modelo</th><th>Marca</th><th>Descripción</th><th>Existencia</th><th>Mínimo</th><th>Ubicación</th><th>Costo</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>${inventory.map(i=>`<tr style="${!i.active?'opacity:.55':''}"><td><strong>${i.model}</strong></td><td>${i.brand}</td><td>${i.desc}</td><td>${i.stock}</td><td>${i.min}</td><td>${i.loc}</td><td>${fmt(i.cost)}</td><td>${chip(i.active?i.status:'Inactivo',i.active?(i.status==='OK'?'green':i.status==='Bajo'?'orange':'red'):'gray')}</td><td><button class="ghost edit-item" data-id="${i.id}">Editar</button> <button class="ghost del-item" data-id="${i.id}">${i.history?'Desactivar':'Eliminar'}</button></td></tr>`).join('')}</tbody></table></div><div class="note" style="margin-top:14px"><strong>Regla:</strong> stock nunca se edita como dato maestro. Se corrige mediante Ajuste de inventario con permiso, motivo y auditoría.</div>`}
+function mano(){setHead('Mano de obra','Costos reales','Registrar actividad');setTimeout(()=>{document.querySelector('#real-mode').onchange=e=>{document.querySelector('#real-qty').placeholder=e.target.value==='día'?'Días':'Horas'};document.querySelector('#real-add').onclick=()=>alert('Registro demo agregado. En la versión conectada tomará el costo configurado del empleado y quedará ligado al proyecto.')},0);return `<div class="card panel"><h3>Registro por proyecto</h3><div class="toolbar"><select class="select"><option>P-13217 · CCTV Nave 3</option></select><select class="select">${activityCatalog.map(x=>`<option>${x}</option>`).join('')}</select><select class="select">${personnel.filter(x=>x.active).map(x=>`<option>${x.name} · ${x.position}</option>`).join('')}</select><input class="input" type="date"><select id="real-mode" class="select"><option value="día">Por día</option><option value="hora">Por hora</option></select><select class="select"><option>Normal</option><option>Sábado</option><option>Domingo</option></select><input id="real-qty" class="input" type="number" placeholder="Días" style="width:100px"><button id="real-add" class="primary">Agregar</button></div><table class="table"><thead><tr><th>Fecha</th><th>Actividad</th><th>Empleado</th><th>Modo</th><th>Tiempo</th><th></th></tr></thead><tbody><tr><td>10 sep</td><td>Canalización</td><td>Técnico 01</td><td>Día</td><td>1 día</td><td><button class="ghost">Editar</button></td></tr><tr><td>10 sep</td><td>Instalación CCTV</td><td>Técnico 02</td><td>Hora</td><td>6 h</td><td><button class="ghost">Editar</button></td></tr></tbody></table></div><div class="note" style="margin-top:14px">Al cierre, Atlas podrá comparar MO presupuestada contra MO real usando las mismas tarifas configuradas de Personal.</div>`}
+function config(){setHead('Configuración','Administración','');setTimeout(()=>{document.querySelectorAll('.ctab').forEach(b=>b.onclick=()=>{state.configTab=b.dataset.tab;render()});let qf=document.querySelector('#qfolio');if(qf)qf.onchange=e=>folioConfig.quoteTemplate=e.target.value},0);let body=state.configTab==='personal'?`<div class="card panel"><h3>Personal y costos de mano de obra</h3><p class="muted">Estos valores alimentan automáticamente cotizaciones y costos reales. La visibilidad de costos será controlada por permisos.</p><table class="table"><thead><tr><th>Empleado</th><th>Puesto</th><th>Costo/hora</th><th>Día normal</th><th>Sábado</th><th>Domingo</th><th>Estado</th></tr></thead><tbody>${personnel.map(p=>`<tr><td><strong>${p.name}</strong></td><td>${p.position}</td><td>${fmt(p.hour)}</td><td>${fmt(p.day)}</td><td>${fmt(p.satDay)}</td><td>${fmt(p.sunDay)}</td><td>${chip(p.active?'Activo':'Inactivo',p.active?'green':'gray')}</td></tr>`).join('')}</tbody></table><button class="primary" style="margin-top:14px">+ Agregar personal</button></div>`:`<div class="card panel"><h3>Consecutivos e identificadores</h3><p class="muted">Cada empresa puede definir el formato visible sin alterar el ID interno de Atlas.</p><label>Plantilla de cotización</label><input id="qfolio" class="input" value="${folioConfig.quoteTemplate}" style="width:320px"><p class="muted">Variables sugeridas: {AÑO}, {MES}, {0000}, {000000}</p><label>Plantilla de proyecto</label><input class="input" value="${folioConfig.projectTemplate}" style="width:320px"><div class="note" style="margin-top:16px">Ejemplo actual: <strong>${nextQuoteFolio()}</strong>. El ID interno queda preparado para código de barras Code 128 o QR en una futura operación con scanner.</div></div>`;return `<div class="tabs"><button class="tab ctab ${state.configTab==='personal'?'active':''}" data-tab="personal">Personal</button><button class="tab ctab ${state.configTab==='folios'?'active':''}" data-tab="folios">Consecutivos</button></div>${body}`}
+function compras(){setHead('Compras','Abastecimiento','Nueva OC');return `<div class="card panel"><h3>Recepciones pendientes</h3><table class="table"><thead><tr><th>OC compra</th><th>Proyecto</th><th>Proveedor</th><th>Partidas</th><th>Recibido</th><th>Estado</th></tr></thead><tbody><tr><td>#11113</td><td>P-13217</td><td>SYSCOM</td><td>8</td><td>6 / 8</td><td>${chip('Parcial','orange')}</td></tr><tr><td>#11114</td><td>P-13217</td><td>Panduit</td><td>3</td><td>0 / 3</td><td>${chip('Pendiente','blue')}</td></tr></tbody></table></div>`}
+function almacen(){setHead('Almacén','Vista operativa','');return `<div class="warehouse-home"><div class="card warehouse-card"><div class="icon">📦</div><h3>Recibir orden de compra</h3><p>Escanea o busca una OC, valida cantidades parciales y actualiza inventario/costo.</p><button class="primary">Recibir OC</button></div><div class="card warehouse-card"><div class="icon">🔧</div><h3>Surtir o devolver proyecto</h3><p>Proyecto + PIN → materiales → cantidades → técnico receptor → guardar lote.</p><button class="primary">Abrir proyecto</button></div></div>`}
+function generic(title,eye){setHead(title,eye,'');return `<div class="card empty"><h3>${title}</h3><p>Este módulo se detallará en la siguiente iteración.</p></div>`}
+function render(){nav();if(state.page==='cotizaciones'&&state.quote){renderQuote();return}let html='';switch(state.page){case'inicio':html=inicio();break;case'dashboard':html=dashboard();break;case'clientes':html=clientes();break;case'cotizaciones':html=cotizaciones();break;case'proyectos':html=proyectos();break;case'inventario':html=inventario();break;case'compras':html=compras();break;case'mano':html=mano();break;case'almacen':html=almacen();break;case'config':html=config();break;case'reportes':html=generic('Reportes','Análisis');break;default:html=inicio()}document.querySelector('#content').innerHTML=html}
+document.querySelector('#role-btn').onclick=()=>alert('Demo: los costos sensibles, ajustes de inventario, aceptación de cotizaciones y finanzas tendrán permisos independientes.');render();
+
+
+/* ===== flow.js ===== */
+// Mejoras de interacción sobre el prototipo principal.
+// Se cargan después de app.js para mantener el demo modular.
+
+const atlasBaseRenderQuote = renderQuote;
+
+function atlasEnhanceMaterials(){
+  const q=state.quote;
+  if(!q || q.step!==3) return;
+  const table=document.querySelector('#qbody table');
+  if(!table) return;
+
+  const headRow=table.querySelector('thead tr');
+  if(headRow && !headRow.querySelector('.atlas-actions-head')){
+    const th=document.createElement('th');
+    th.className='atlas-actions-head';
+    th.textContent='Acciones';
+    headRow.appendChild(th);
+  }
+
+  table.querySelectorAll('tbody tr').forEach((tr,i)=>{
+    if(tr.querySelector('.remove-material')) return;
+    const td=document.createElement('td');
+    td.innerHTML=`<button class="ghost remove-material" data-i="${i}">Quitar</button>`;
+    tr.appendChild(td);
+  });
+
+  const wrap=table.closest('.table-wrap');
+  if(wrap && !document.querySelector('#material-adder')){
+    const box=document.createElement('div');
+    box.id='material-adder';
+    box.className='note';
+    box.style.marginTop='14px';
+    box.innerHTML=`
+      <strong>Agregar material del catálogo</strong>
+      <div class="toolbar" style="margin-top:10px">
+        <select id="material-catalog" class="select" style="min-width:360px">
+          ${inventory.filter(x=>x.active).map(x=>`<option value="${x.id}">${x.model} · ${x.brand} · ${x.desc}</option>`).join('')}
+        </select>
+        <input id="material-add-qty" class="input" type="number" min="1" value="1" style="width:90px" title="Cantidad">
+        <input id="material-add-markup" class="input" type="number" min="0" value="30" style="width:100px" title="% utilidad">
+        <button id="add-material" class="primary">+ Agregar material</button>
+      </div>
+      <span class="muted">Si el modelo ya está en la cotización, Atlas suma la cantidad en lugar de duplicarlo.</span>`;
+    wrap.insertAdjacentElement('afterend',box);
+  }
+
+  document.querySelectorAll('.remove-material').forEach(btn=>btn.onclick=()=>{
+    const i=+btn.dataset.i;
+    const item=q.materials[i];
+    if(!item) return;
+    if(confirm(`¿Quitar ${item.model} de esta cotización?`)){
+      q.materials.splice(i,1);
+      renderQuote();
+    }
+  });
+
+  const add=document.querySelector('#add-material');
+  if(add)add.onclick=()=>{
+    const id=+document.querySelector('#material-catalog').value;
+    const qty=Math.max(1,+document.querySelector('#material-add-qty').value||1);
+    const markup=Math.max(0,+document.querySelector('#material-add-markup').value||0);
+    const item=inventory.find(x=>x.id===id);
+    if(!item) return;
+    const existing=q.materials.find(x=>x.model===item.model);
+    if(existing){
+      existing.qty=+existing.qty+qty;
+      existing.markup=markup;
+    }else{
+      q.materials.push({model:item.model,desc:item.desc,qty,cost:item.cost,markup,category:'No asignado'});
+    }
+    renderQuote();
+  };
+}
+
+function atlasEnhanceLabor(){
+  const q=state.quote;
+  if(!q || q.step!==4) return;
+
+  const save=document.querySelector('#save-labor');
+  if(save) save.textContent=`+ Agregar ${state.laborDraft?.activity||'actividad'} al resumen`;
+
+  document.querySelectorAll('.del-labor').forEach(btn=>{
+    const td=btn.parentElement;
+    const i=+btn.dataset.i;
+    if(td && !td.querySelector('.edit-labor')){
+      const edit=document.createElement('button');
+      edit.className='ghost edit-labor';
+      edit.dataset.i=String(i);
+      edit.textContent='Editar';
+      edit.style.marginRight='6px';
+      td.insertBefore(edit,btn);
+    }
+    btn.textContent='Eliminar';
+  });
+
+  document.querySelectorAll('.edit-labor').forEach(btn=>btn.onclick=()=>{
+    const i=+btn.dataset.i;
+    const row=q.laborRows[i];
+    if(!row) return;
+    state.laborDraft={...row};
+    q.laborRows.splice(i,1);
+    renderQuote();
+    document.querySelector('#qbody')?.scrollIntoView({behavior:'smooth',block:'start'});
+  });
+
+  const summary=document.querySelector('#qbody .table-wrap:last-child');
+  if(summary && !document.querySelector('#new-labor-draft')){
+    const actions=document.createElement('div');
+    actions.className='toolbar';
+    actions.style.marginTop='12px';
+    actions.innerHTML=`<button id="new-labor-draft" class="ghost">+ Nueva actividad</button><span class="muted">Editar carga la actividad nuevamente en el formulario superior. Eliminar la quita de la cotización.</span>`;
+    summary.insertAdjacentElement('afterend',actions);
+    document.querySelector('#new-labor-draft').onclick=()=>{
+      state.laborDraft=null;
+      renderQuote();
+      document.querySelector('#qbody')?.scrollIntoView({behavior:'smooth',block:'start'});
+    };
+  }
+}
+
+renderQuote=function(){
+  atlasBaseRenderQuote();
+  atlasEnhanceMaterials();
+  atlasEnhanceLabor();
+};
+
+// Si el usuario ya estaba dentro de una cotización al cargar este parche,
+// vuelve a pintar la vista con los controles nuevos.
+if(state.quote && state.page==='cotizaciones') renderQuote();
+
+
+
+/* ===== pdf.js ===== */
+function atlasQuotePdf(){
+  const q=state.quote;if(!q)return alert('No hay cotización abierta.');
+  if(!window.jspdf)return alert('No se pudo cargar el generador PDF.');
+  const {jsPDF}=window.jspdf,doc=new jsPDF();
+  const c=clients.find(x=>x.id===q.clientId),t=quoteTotals(q);
+  const pageW=doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text('ATLAS INTEGRADOR',14,18);
+  doc.setFont('helvetica','normal');doc.setFontSize(10);doc.text('Cotización comercial',14,25);
+  doc.setFont('helvetica','bold');doc.text(`Cotización No. ${q.id}`,pageW-14,18,{align:'right'});
+  doc.setFont('helvetica','normal');doc.text(`Revisión ${q.revision} · 11/09/2026`,pageW-14,25,{align:'right'});
+  let y=36;
+  const field=(label,value,x,w)=>{doc.setFont('helvetica','bold');doc.text(label,x,y);doc.setFont('helvetica','normal');doc.text(String(value||'—'),x,y+5,{maxWidth:w});};
+  field('Cliente',c?.name,14,85);field('RFC',c?.rfc,105,45);field('Contacto / dirigido a',q.directedTo||c?.contact,155,40);y+=16;
+  field('Proyecto',q.name||'Proyecto nuevo',14,85);field('Condiciones',q.payment,105,45);field('Entrega / vigencia',`${q.delivery} / ${q.validity}`,155,40);y+=18;
+  doc.setDrawColor(220);doc.line(14,y,pageW-14,y);y+=7;
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Materiales',14,y);y+=4;
+  let matBody;
+  if(q.materialPresentation==='summary') matBody=[['PRODUCTOS / MATERIALES DEL PROYECTO','1',money(t.ms),money(t.ms)]];
+  else matBody=q.materials.map(x=>[`${x.model} · ${x.desc}`,String(x.qty),money(materialPrice(x)),money(x.qty*materialPrice(x))]);
+  doc.autoTable({startY:y,head:[['Descripción','Cant.','P. Unitario','Importe']],body:matBody,styles:{fontSize:8},headStyles:{fillColor:[48,48,48]},margin:{left:14,right:14}});
+  y=doc.lastAutoTable.finalY+9;
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.text('Mano de obra',14,y);y+=4;
+  let laborBody=[];
+  if(q.laborRows.length){
+    if(q.laborPresentation==='summary'){
+      laborBody=[['MANO DE OBRA DEL PROYECTO',money(t.ls)]];
+    }else{
+      const grouped={};
+      q.laborRows.forEach(x=>{
+        const key=x.activity||'Mano de obra';
+        grouped[key]=(grouped[key]||0)+laborRowCost(x)*(1+x.markup/100);
+      });
+      laborBody=Object.entries(grouped).map(([activity,total])=>[activity,money(total)]);
+    }
+  } else laborBody=[['Sin mano de obra agregada',money(0)]];
+  doc.autoTable({startY:y,head:[['Actividad','Importe']],body:laborBody,styles:{fontSize:8},headStyles:{fillColor:[48,48,48]},margin:{left:14,right:14}});
+  y=doc.lastAutoTable.finalY+9;
+  if(q.scope){doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text('Alcance del proyecto',14,y);y+=5;doc.setFont('helvetica','normal');doc.setFontSize(9);const lines=doc.splitTextToSize(q.scope,pageW-28);doc.text(lines,14,y);y+=lines.length*4+5;}
+  if(y>235){doc.addPage();y=20}
+  const totalsBody=[['Subtotal',money(t.subtotal)],[`IVA ${q.ivaRate}%`,money(t.iva)],['TOTAL',money(t.total)]];
+  doc.autoTable({startY:y,body:totalsBody,theme:'plain',styles:{fontSize:9},columnStyles:{0:{halign:'right',fontStyle:'bold'},1:{halign:'right'}},margin:{left:105,right:14}});
+  y=doc.lastAutoTable.finalY+10;
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.text(`Identificador: ${q.id} · ID interno preparado para código de barras/QR`,14,y);
+  doc.text('Documento generado desde Atlas Integrador · Demo',14,doc.internal.pageSize.getHeight()-10);
+  doc.save(`${q.id}-${(q.name||'cotizacion').replace(/\s+/g,'-').toLowerCase()}.pdf`);
+}
+
+
+
+/* ===== enhancements.js ===== */
+// Mejoras de flujo UX para Atlas Integrador demo.
+// Mantiene la demo sin backend y evita tocar el core mientras validamos operación.
+
+state.quoteDetail=null;
+state.projectDetailId=null;
+state.laborBuilder=null;
+state.quoteYear=state.quoteYear||'2026';
+state.quoteOwner=state.quoteOwner||'Todos';
+
+const cloneDemo=x=>JSON.parse(JSON.stringify(x));
+function ensureQuoteMeta(row){
+  if(!row)return row;
+  row.year=row.year||((String(row.date||'').match(/20\d{2}/)||['2026'])[0]);
+  row.followups=row.followups||[];
+  row.revisions=row.revisions||[];
+  return row;
+}
+quotes.forEach(ensureQuoteMeta);
+function quoteOwnerOptions(){return ['Todos',...new Set(quotes.map(q=>q.owner).filter(Boolean))]}
+function quoteYearOptions(){return ['Todos',...new Set(quotes.map(q=>ensureQuoteMeta(q).year).filter(Boolean))].sort().reverse()}
+function quoteStatusColor(status){return status==='Perdida'?'red':status==='Pendiente'?'orange':status==='Aceptada'?'green':status==='Borrador'?'gray':'blue'}
+function quoteSnapshotSummary(snapshot){
+  const q=cloneDemo(snapshot);const t=quoteTotals(q);
+  return {revision:q.revision||0,total:t.total,subtotal:t.subtotal,cost:t.mc+t.lc,margin:t.margin};
+}
+function startQuoteRevision(row){
+  ensureQuoteMeta(row);
+  const current=savedQuoteObject(row);
+  row.revisions.push({
+    revision:row.revision||0,
+    status:row.status,
+    date:row.date,
+    snapshot:cloneDemo(current),
+    total:row.total
+  });
+  const next=cloneDemo(current);
+  next.revision=(row.revision||0)+1;
+  next.status='Borrador';
+  next.step=2;
+  row.revision=next.revision;
+  row.status='Borrador';
+  row.snapshot=cloneDemo(next);
+  state.quoteDetail=null;
+  state.quote=next;
+  renderQuote();
+}
+function registerQuoteFollowup(row){
+  const note=document.querySelector('#followup-note')?.value.trim();
+  const type=document.querySelector('#followup-type')?.value||'Llamada';
+  const nextDate=document.querySelector('#followup-next')?.value||'';
+  if(!note)return alert('Agrega una nota breve del seguimiento.');
+  ensureQuoteMeta(row);
+  row.followups.unshift({type,note,nextDate,date:'28 sep 2026',owner:'Usuario actual'});
+  if(row.status==='Enviada')row.status='Pendiente';
+  if(row.snapshot)row.snapshot.status=row.status;
+  render();
+}
+function demoQuoteTemplate(row){
+  return {id:row.id,revision:row.revision||0,status:row.status||'Enviada',step:7,clientId:row.clientId,name:row.name,currency:'MXN',materials:[{model:'DS-2CD2143G2-I',desc:'Cámara IP domo 4 MP',qty:8,cost:1850,markup:35,category:'VIDEO VIGILANCIA'},{model:'UTP-CAT6-BL',desc:'Cable Cat6 caja 305 m',qty:2,cost:2890,markup:30,category:'VIDEO VIGILANCIA'}],laborRows:[{activity:'CANALIZACIÓN',category:'VIDEO VIGILANCIA',personId:1,mode:'día',normalQty:1,satQty:0,sunQty:0,markup:70}],indirect:{safety:.02,tools:.03,general:.10,field:.03,finance:.03},truckDays:2,truckDaily:250,directedTo:clients.find(c=>c.id===row.clientId)?.contact||'',payment:'Contado',delivery:'15 días hábiles',validity:'15 días',ivaRate:16,retainISR:false,isrRate:0,scope:'',materialPresentation:'detail',laborPresentation:'detail'};
+}
+function savedQuoteObject(row){return row.snapshot?cloneDemo(row.snapshot):demoQuoteTemplate(row)}
+function persistQuoteSnapshot(q,status){
+  let row=quotes.find(x=>x.id===q.id);
+  if(!row){
+    row={id:q.id,clientId:q.clientId,name:q.name||'Proyecto nuevo',status:status||q.status||'Borrador',date:'28 sep 2026',owner:'Usuario actual',revision:q.revision,total:quoteTotals(q).total,year:'2026',followups:[],revisions:[]};
+    quotes.unshift(row);folioConfig.nextQuote++;
+  }
+  ensureQuoteMeta(row);
+  row.clientId=q.clientId;
+  row.name=q.name||row.name;
+  row.status=status||q.status||row.status;
+  row.revision=q.revision||0;
+  row.total=quoteTotals(q).total;
+  q.status=row.status;
+  row.snapshot=cloneDemo(q);
+}
+
+function laborLineCost(line){const p=personnel.find(x=>x.id===+line.personId)||personnel[0];let unit=0;if(line.mode==='hora')unit=line.dayType==='Sábado'?p.hour*1.5:line.dayType==='Domingo'?p.hour*2:p.hour;else unit=line.dayType==='Sábado'?p.satDay:line.dayType==='Domingo'?p.sunDay:p.day;return unit*(+line.qty||0)}
+function blankLaborBuilder(){return{activity:activityCatalog[0],category:'VIDEO VIGILANCIA',lines:[{personId:personnel[0].id,mode:'día',dayType:'Normal',qty:1,markup:70}]}}
+function groupedLabor(q){const map=new Map();q.laborRows.forEach((x,i)=>{let k=x.activity+'|'+x.category;if(!map.has(k))map.set(k,{activity:x.activity,category:x.category,items:[]});map.get(k).items.push({...x,_i:i})});return [...map.values()]}
+function rowToBuilderLine(x){let dayType=x.satQty?'Sábado':x.sunQty?'Domingo':'Normal',qty=x.satQty||x.sunQty||x.normalQty||0;return{personId:x.personId,mode:x.mode,dayType,qty,markup:x.markup}}
+function builderToLaborRows(b){return b.lines.filter(l=>(+l.qty||0)>0).map(l=>({activity:b.activity,category:b.category,personId:+l.personId,mode:l.mode,normalQty:l.dayType==='Normal'?+l.qty:0,satQty:l.dayType==='Sábado'?+l.qty:0,sunQty:l.dayType==='Domingo'?+l.qty:0,markup:+l.markup||0}))}
+
+const baseRenderQuote=renderQuote;
+renderQuote=function(){baseRenderQuote();enhanceQuotePage()}
+function enhanceQuotePage(){const q=state.quote;if(!q)return;
+  if(q.step===3){const body=document.querySelector('#qbody');if(body&&!document.querySelector('#material-filter')){const box=document.createElement('div');box.className='toolbar';box.style.marginBottom='12px';box.innerHTML='<input id="material-filter" class="input" style="min-width:320px" placeholder="Buscar dentro de materiales agregados por modelo o descripción">';body.insertBefore(box,body.children[2]||body.firstChild);document.querySelector('#material-filter').oninput=e=>{let term=e.target.value.toLowerCase();document.querySelectorAll('#qbody tbody tr').forEach(r=>r.style.display=!term||r.innerText.toLowerCase().includes(term)?'':'none')}}}
+  if(q.step===4)renderLaborBuilder(q);
+  const save=document.querySelector('#save-quote');if(save)save.onclick=()=>{if(!q.name)q.name='Proyecto nuevo';persistQuoteSnapshot(q,'Borrador');state.quote=null;state.quoteDetail=q.id;render()};
+  const sent=document.querySelector('#mark-sent');if(sent)sent.onclick=()=>{q.status='Enviada';persistQuoteSnapshot(q,'Enviada');const row=quotes.find(x=>x.id===q.id);ensureQuoteMeta(row);row.followups.unshift({type:'Envío',note:'Cotización enviada al cliente.',nextDate:'',date:'28 sep 2026',owner:'Usuario actual'});state.quote=null;state.quoteDetail=q.id;render()};
+}
+function renderLaborBuilder(q){let b=state.laborBuilder||blankLaborBuilder();state.laborBuilder=b;const body=document.querySelector('#qbody');const groups=groupedLabor(q);const people=personnel.filter(x=>x.active);
+ body.innerHTML=`<h3>Mano de obra presupuestada</h3><p class="muted">Busca la actividad y agrega todos los recursos que realmente requiera. Una misma actividad puede combinar técnicos, ayudantes, días y horas.</p><div class="note"><div class="grid-2"><div><label>Buscar / seleccionar actividad</label><input id="lab-act" class="input" list="act-list" value="${b.activity}" style="width:100%"><datalist id="act-list">${activityCatalog.map(x=>`<option value="${x}">`).join('')}</datalist></div><div><label>Asignar a</label><input id="lab-cat" class="input" list="cat-list" value="${b.category}" style="width:100%"><datalist id="cat-list"><option value="VIDEO VIGILANCIA"><option value="CONTROL DE ACCESO"><option value="REDES"><option value="FIBRA ÓPTICA"><option value="No asignado"></datalist></div></div><h4 style="margin:16px 0 8px">Recursos de la actividad</h4><div class="table-wrap"><table class="table"><thead><tr><th>Buscar recurso</th><th>Modo</th><th>Jornada</th><th>Cantidad</th><th>% utilidad</th><th>Costo empresa</th><th>Cliente</th><th></th></tr></thead><tbody>${b.lines.map((l,i)=>{let p=people.find(x=>x.id===+l.personId)||people[0],cost=laborLineCost(l);return `<tr><td><input class="input lb-person" data-i="${i}" list="people-list" value="${p.name} · ${p.position}" style="min-width:190px"></td><td><select class="select lb-mode" data-i="${i}"><option value="día" ${l.mode==='día'?'selected':''}>Por día</option><option value="hora" ${l.mode==='hora'?'selected':''}>Por hora</option></select></td><td><select class="select lb-day" data-i="${i}"><option ${l.dayType==='Normal'?'selected':''}>Normal</option><option ${l.dayType==='Sábado'?'selected':''}>Sábado</option><option ${l.dayType==='Domingo'?'selected':''}>Domingo</option></select></td><td><input class="input lb-qty" data-i="${i}" type="number" min="0" value="${l.qty}" style="width:75px"></td><td><input class="input lb-mark" data-i="${i}" type="number" min="0" value="${l.markup}" style="width:80px"></td><td>${fmt(cost)}</td><td><strong>${fmt(cost*(1+l.markup/100))}</strong></td><td><button class="ghost lb-del" data-i="${i}">Quitar</button></td></tr>`}).join('')}</tbody></table><datalist id="people-list">${people.map(p=>`<option value="${p.name} · ${p.position}">`).join('')}</datalist></div><div class="toolbar" style="margin-top:12px"><button class="ghost" id="lb-add">+ Agregar recurso</button><button class="primary" id="lb-save">Guardar actividad en resumen</button></div></div><h3 style="margin-top:22px">Resumen de actividades</h3><div class="table-wrap"><table class="table"><thead><tr><th>Asignado a</th><th>Actividad</th><th>Recursos</th><th>Costo</th><th>Cliente</th><th></th></tr></thead><tbody>${groups.length?groups.map((g,gi)=>{let cost=g.items.reduce((s,x)=>s+laborRowCost(x),0),sale=g.items.reduce((s,x)=>s+laborRowCost(x)*(1+x.markup/100),0);return `<tr><td>${g.category}</td><td><strong>${g.activity}</strong></td><td>${g.items.length}</td><td>${fmt(cost)}</td><td><strong>${fmt(sale)}</strong></td><td><button class="ghost lb-edit-group" data-i="${gi}">Editar</button> <button class="ghost lb-delete-group" data-i="${gi}">Eliminar</button></td></tr>`}).join(''):'<tr><td colspan="6" class="muted">Todavía no has agregado mano de obra a esta cotización.</td></tr>'}</tbody></table></div>`;
+ const sync=()=>{b.activity=document.querySelector('#lab-act').value;b.category=document.querySelector('#lab-cat').value};document.querySelector('#lab-act').onchange=sync;document.querySelector('#lab-cat').onchange=sync;
+ document.querySelectorAll('.lb-person').forEach(el=>el.onchange=e=>{let i=+e.target.dataset.i,p=people.find(p=>e.target.value.startsWith(p.name+' ·'));if(p)b.lines[i].personId=p.id;renderQuote()});document.querySelectorAll('.lb-mode').forEach(el=>el.onchange=e=>{b.lines[+e.target.dataset.i].mode=e.target.value;renderQuote()});document.querySelectorAll('.lb-day').forEach(el=>el.onchange=e=>{b.lines[+e.target.dataset.i].dayType=e.target.value;renderQuote()});document.querySelectorAll('.lb-qty').forEach(el=>el.onchange=e=>{b.lines[+e.target.dataset.i].qty=+e.target.value;renderQuote()});document.querySelectorAll('.lb-mark').forEach(el=>el.onchange=e=>{b.lines[+e.target.dataset.i].markup=+e.target.value;renderQuote()});document.querySelectorAll('.lb-del').forEach(el=>el.onclick=()=>{b.lines.splice(+el.dataset.i,1);if(!b.lines.length)b.lines.push({personId:people[0].id,mode:'día',dayType:'Normal',qty:1,markup:70});renderQuote()});
+ document.querySelector('#lb-add').onclick=()=>{sync();b.lines.push({personId:people[0].id,mode:'día',dayType:'Normal',qty:1,markup:70});renderQuote()};document.querySelector('#lb-save').onclick=()=>{sync();q.laborRows.push(...builderToLaborRows(b));state.laborBuilder=blankLaborBuilder();renderQuote()};
+ document.querySelectorAll('.lb-delete-group').forEach(el=>el.onclick=()=>{const g=groups[+el.dataset.i];q.laborRows=q.laborRows.filter(x=>!(x.activity===g.activity&&x.category===g.category));renderQuote()});document.querySelectorAll('.lb-edit-group').forEach(el=>el.onclick=()=>{const g=groups[+el.dataset.i];state.laborBuilder={activity:g.activity,category:g.category,lines:g.items.map(rowToBuilderLine)};q.laborRows=q.laborRows.filter(x=>!(x.activity===g.activity&&x.category===g.category));renderQuote()});
+}
+
+cotizaciones=function(){
+  if(state.quote){renderQuote();return ''}
+  if(state.quoteDetail)return quoteDetailView();
+  setHead('Cotizaciones','Comercial','Nueva cotización');
+  document.querySelector('#primary-action').onclick=()=>newQuote();
+  let term=state.quoteSearch.toLowerCase();
+  let rows=quotes.filter(x=>{
+    ensureQuoteMeta(x);
+    let c=clients.find(c=>c.id===x.clientId);
+    return (state.quoteStatus==='Todos'||x.status===state.quoteStatus)
+      &&(state.quoteYear==='Todos'||x.year===state.quoteYear)
+      &&(state.quoteOwner==='Todos'||x.owner===state.quoteOwner)
+      &&(!term||[x.id,x.name,c?.name,x.owner].some(v=>String(v).toLowerCase().includes(term)));
+  });
+  setTimeout(()=>{
+    document.querySelector('#quote-search').oninput=e=>{state.quoteSearch=e.target.value;render()};
+    document.querySelector('#quote-status').onchange=e=>{state.quoteStatus=e.target.value;render()};
+    document.querySelector('#quote-year').onchange=e=>{state.quoteYear=e.target.value;render()};
+    document.querySelector('#quote-owner').onchange=e=>{state.quoteOwner=e.target.value;render()};
+    document.querySelectorAll('.open-quote').forEach(b=>b.onclick=()=>{state.quoteDetail=b.dataset.id;render()});
+  },0);
+  const openCount=rows.filter(x=>!['Aceptada','Perdida'].includes(x.status)).length;
+  const openValue=rows.filter(x=>!['Perdida'].includes(x.status)).reduce((sum,x)=>sum+(+x.total||0),0);
+  return `<div class="kpi-grid"><div class="card kpi"><div class="label">Cotizaciones visibles</div><div class="value">${rows.length}</div><div class="delta">Según filtros actuales</div></div><div class="card kpi"><div class="label">Abiertas</div><div class="value">${openCount}</div><div class="delta">Por mover comercialmente</div></div><div class="card kpi"><div class="label">Valor visible</div><div class="value">${fmt(openValue)}</div><div class="delta">Sin cotizaciones perdidas</div></div><div class="card kpi"><div class="label">Conversión demo</div><div class="value">${quotes.filter(x=>x.status==='Aceptada').length}</div><div class="delta">Cotizaciones aceptadas</div></div></div>
+  <div class="toolbar"><input id="quote-search" class="input" style="min-width:300px" value="${state.quoteSearch}" placeholder="Buscar folio, cliente, proyecto o promotor"><select id="quote-status" class="select">${['Todos','Borrador','Enviada','Pendiente','Aceptada','Perdida'].map(v=>`<option ${v===state.quoteStatus?'selected':''}>${v}</option>`).join('')}</select><select id="quote-year" class="select">${quoteYearOptions().map(v=>`<option ${v===state.quoteYear?'selected':''}>${v}</option>`).join('')}</select><select id="quote-owner" class="select">${quoteOwnerOptions().map(v=>`<option ${v===state.quoteOwner?'selected':''}>${v}</option>`).join('')}</select></div>
+  <div class="card panel"><div class="table-wrap"><table class="table"><thead><tr><th>Folio</th><th>Cliente</th><th>Proyecto</th><th>Fecha</th><th>Rev.</th><th>Responsable</th><th>Estado</th><th>Total</th><th></th></tr></thead><tbody>${rows.map(x=>{let c=clients.find(c=>c.id===x.clientId);return `<tr><td><strong>${x.id}</strong></td><td>${c?.name||''}</td><td>${x.name}</td><td>${x.date}</td><td>${x.revision}</td><td>${x.owner}</td><td>${chip(x.status,quoteStatusColor(x.status))}</td><td>${fmt(x.total)}</td><td><button class="ghost open-quote" data-id="${x.id}">Abrir</button></td></tr>`}).join('')}</tbody></table></div></div>
+  <div class="note" style="margin-top:14px"><strong>Regla Atlas:</strong> una cotización puede tener varias revisiones y seguimientos, pero el proyecto nace únicamente cuando se registra una autorización.</div>`;
+}
+
+function quoteDetailView(){
+  const row=ensureQuoteMeta(quotes.find(x=>x.id===state.quoteDetail));
+  if(!row)return '<div class="card empty"><h3>Cotización no encontrada</h3></div>';
+  const q=savedQuoteObject(row),c=clients.find(x=>x.id===row.clientId),t=quoteTotals(q);
+  setHead(row.id,'Cotización guardada','');
+  setTimeout(()=>{
+    document.querySelector('#qd-back').onclick=()=>{state.quoteDetail=null;render()};
+    const edit=document.querySelector('#qd-edit');if(edit)edit.onclick=()=>{state.quoteDetail=null;state.quote=q;state.quote.step=2;renderQuote()};
+    const rev=document.querySelector('#qd-revision');if(rev)rev.onclick=()=>startQuoteRevision(row);
+    document.querySelector('#qd-pdf').onclick=()=>{const old=state.quote;state.quote=q;atlasQuotePdf();state.quote=old};
+    const lost=document.querySelector('#qd-lost');if(lost)lost.onclick=()=>{row.status='Perdida';if(row.snapshot)row.snapshot.status='Perdida';render()};
+    const follow=document.querySelector('#qd-followup');if(follow)follow.onclick=()=>registerQuoteFollowup(row);
+    const accept=document.querySelector('#qd-accept');if(accept)accept.onclick=()=>acceptQuoteDemo(row,q);
+    const project=document.querySelector('#qd-project');if(project)project.onclick=()=>{state.quoteDetail=null;state.page='proyectos';state.projectDetailId=row.projectId;render()};
+  },0);
+  const canOperate=!['Aceptada','Perdida'].includes(row.status);
+  const canDirectEdit=row.status==='Borrador';
+  const history=[...row.revisions].reverse();
+  return `<div class="card panel"><div class="project-header"><div><h2 style="margin:0 0 6px">${row.name}</h2><div class="project-meta">${chip(row.status,quoteStatusColor(row.status))} ${chip(c?.name||'')} ${chip('Rev. '+row.revision)} ${row.projectId?chip('Proyecto '+row.projectId,'green'):''}</div></div><button class="ghost" id="qd-back">← Volver</button></div>
+  <div class="metric-strip"><div class="metric-box"><small>Folio</small><strong style="font-size:16px">${row.id}</strong></div><div class="metric-box"><small>Venta antes de IVA</small><strong>${fmt(t.subtotal)}</strong></div><div class="metric-box"><small>Costo base</small><strong>${fmt(t.mc+t.lc+t.ind)}</strong></div><div class="metric-box"><small>Margen referencia</small><strong>${t.subtotal?(((t.subtotal-(t.mc+t.lc+t.ind))/t.subtotal)*100).toFixed(1):'0.0'}%</strong></div></div>
+  <div class="toolbar" style="margin-top:18px">${canDirectEdit?'<button class="ghost" id="qd-edit">Editar borrador</button>':canOperate?'<button class="primary" id="qd-revision">+ Nueva revisión</button>':''}<button class="ghost" id="qd-pdf">Descargar PDF</button>${canOperate?'<button class="ghost" id="qd-lost">Marcar perdida</button>':''}${row.projectId?'<button class="primary" id="qd-project">Abrir proyecto →</button>':''}</div>
+  <div class="grid-2" style="margin-top:16px"><div class="card panel"><h3>Seguimiento comercial</h3>${canOperate?`<div class="toolbar"><select id="followup-type" class="select"><option>Llamada</option><option>WhatsApp</option><option>Correo</option><option>Reunión</option><option>Envío</option></select><input id="followup-note" class="input" style="min-width:260px" placeholder="¿Qué pasó con el cliente?"><input id="followup-next" class="input" type="date"><button class="primary" id="qd-followup">Registrar</button></div>`:''}<div class="timeline">${row.followups.length?row.followups.map(f=>`<div><strong>${f.date} · ${f.type}</strong><span>${f.note}${f.nextDate?' · Próximo: '+f.nextDate:''}</span></div>`).join(''):'<div><strong>Sin seguimientos</strong><span>Registra el primer contacto después del envío.</span></div>'}</div></div>
+  <div class="card panel"><h3>Historial de revisiones</h3><div class="action-list"><div class="action-item"><div><strong>Rev. ${row.revision} · actual</strong><span>${row.status} · ${fmt(row.total)}</span></div>${chip('Actual','blue')}</div>${history.map(h=>`<div class="action-item"><div><strong>Rev. ${h.revision}</strong><span>${h.status} · ${fmt(h.total||0)}</span></div>${chip('Histórica','gray')}</div>`).join('')}</div></div></div>
+  ${canOperate?`<div class="note" style="margin-top:18px"><h3 style="margin-top:0">Aceptar cotización y crear proyecto</h3><p class="muted">Al aceptar, Atlas congela esta revisión como línea base del proyecto. Los cambios posteriores ya se comparan contra lo aprobado.</p><div class="toolbar"><select id="accept-type" class="select"><option>Orden de compra</option><option>Anticipo</option><option>Contrato</option><option>Otro</option></select><input id="accept-ref" class="input" placeholder="OC / referencia"><input id="accept-date" class="input" type="date" value="2026-09-28"><button class="primary" id="qd-accept">Aceptar y crear proyecto</button></div></div>`:''}</div>`;
+}
+
+function acceptQuoteDemo(row,q){
+  const ref=document.querySelector('#accept-ref')?.value.trim();
+  if(!ref)return alert('Captura la OC o referencia de autorización.');
+  const authorizationType=document.querySelector('#accept-type')?.value||'Orden de compra';
+  const acceptedDate=document.querySelector('#accept-date')?.value||'2026-09-28';
+  const id=folioConfig.projectTemplate.replace('{00000}',String(folioConfig.nextProject).padStart(5,'0'));
+  const pin=String(1000+(folioConfig.nextProject%9000));
+  const c=clients.find(x=>x.id===row.clientId),t=quoteTotals(q);
+  const baselineCost=t.mc+t.lc+t.ind;
+  const baseline={
+    quoteId:row.id,
+    revision:row.revision||0,
+    approvedAt:acceptedDate,
+    authorizationType,
+    authorizationRef:ref,
+    clientId:row.clientId,
+    client:c?.name||'',
+    name:row.name,
+    currency:q.currency,
+    scope:q.scope||'',
+    materials:cloneDemo(q.materials||[]),
+    laborRows:cloneDemo(q.laborRows||[]),
+    indirect:cloneDemo(q.indirect||{}),
+    truckDays:q.truckDays||0,
+    truckDaily:q.truckDaily||0,
+    payment:q.payment||'',
+    delivery:q.delivery||'',
+    validity:q.validity||'',
+    costMaterial:t.mc,
+    costLabor:t.lc,
+    costIndirect:t.ind,
+    cost:baselineCost,
+    sale:t.subtotal,
+    margin:t.subtotal?((t.subtotal-baselineCost)/t.subtotal*100):0
+  };
+  projects.unshift({id,client:c?.name||'',name:row.name,owner:row.owner,status:'Aprobado',sale:baseline.sale,budget:baseline.cost,real:0,margin:+baseline.margin.toFixed(1),po:ref,alert:'Por surtir',year:2026,pin,sourceQuote:row.id,sourceRevision:row.revision||0,authorizationType,acceptedDate,baseline});
+  folioConfig.nextProject++;
+  row.status='Aceptada';row.projectId=id;row.acceptedDate=acceptedDate;row.authorizationType=authorizationType;row.authorizationRef=ref;
+  if(row.snapshot)row.snapshot.status='Aceptada';
+  row.followups.unshift({type:'Aceptación',note:`${authorizationType}: ${ref}. Se creó el proyecto ${id}.`,nextDate:'',date:'28 sep 2026',owner:'Usuario actual'});
+  state.quoteDetail=null;state.page='proyectos';state.projectDetailId=id;render();
+}
+
+const baseProyectos=proyectos;
+proyectos=function(){if(state.projectDetailId)return projectDetailView(projects.find(p=>p.id===state.projectDetailId));let html=baseProyectos();setTimeout(()=>{document.querySelectorAll('#content tbody tr').forEach((tr,i)=>{tr.style.cursor='pointer';tr.onclick=()=>{let visible=projects.filter(p=>(state.projectYear==='Todos'||String(p.year)===state.projectYear)&&(!state.projectSearch||[p.id,p.client,p.name,p.owner,p.po].some(v=>String(v).toLowerCase().includes(state.projectSearch.toLowerCase()))));if(visible[i]){state.projectDetailId=visible[i].id;render()}}})},0);return html}
+function projectDetailView(p){
+  if(!p)return '<div class="card empty"><h3>Proyecto no encontrado</h3></div>';
+  setHead(p.id,'Proyecto','');
+  setTimeout(()=>{document.querySelector('#pd-back').onclick=()=>{state.projectDetailId=null;render()};document.querySelector('#pd-print').onclick=()=>atlasProjectPdf(p);const q=document.querySelector('#pd-source');if(q)q.onclick=()=>{state.projectDetailId=null;state.page='cotizaciones';state.quoteDetail=p.sourceQuote;render()}},0);
+  const b=p.baseline||null;
+  return `<div class="card panel"><div class="project-header"><div><h2 style="margin:0 0 6px">${p.name}</h2><div class="project-meta">${chip(p.status,'green')} ${chip(p.client,'blue')} ${chip(p.owner)} ${chip(p.po)} ${p.sourceRevision!=null?chip('Rev. '+p.sourceRevision,'gray'):''}</div></div><button class="ghost" id="pd-back">← Volver</button></div>
+  <div class="metric-strip"><div class="metric-box"><small>Proyecto</small><strong>${p.id}</strong></div><div class="metric-box"><small>Venta aprobada</small><strong>${fmt(b?.sale||p.sale)}</strong></div><div class="metric-box"><small>Costo línea base</small><strong>${fmt(b?.cost||p.budget)}</strong></div><div class="metric-box"><small>Margen aprobado</small><strong>${(b?.margin??p.margin).toFixed(1)}%</strong></div></div>
+  ${b?`<div class="grid-2" style="margin-top:16px"><div class="card panel"><h3>Línea base aprobada</h3><div class="action-list"><div class="action-item"><div><strong>Materiales</strong><span>${b.materials.length} partidas congeladas</span></div><strong>${fmt(b.costMaterial)}</strong></div><div class="action-item"><div><strong>Mano de obra</strong><span>${b.laborRows.length} registros presupuestados</span></div><strong>${fmt(b.costLabor)}</strong></div><div class="action-item"><div><strong>Indirectos</strong><span>Base aprobada para comparación</span></div><strong>${fmt(b.costIndirect)}</strong></div></div></div><div class="card panel"><h3>Autorización</h3><div class="action-list"><div class="action-item"><div><strong>${b.authorizationType}</strong><span>${b.authorizationRef}</span></div>${chip('Aprobada','green')}</div><div class="action-item"><div><strong>Fecha</strong><span>${b.approvedAt}</span></div>${chip('Origen '+b.quoteId,'blue')}</div></div></div></div>`:''}
+  <div class="note" style="margin-top:16px"><strong>Regla Atlas:</strong> la línea base ya no cambia. Material, mano de obra y costos reales del proyecto se compararán contra esta revisión aprobada.</div>
+  <div class="toolbar" style="margin-top:16px">${p.sourceQuote?'<button class="ghost" id="pd-source">Ver cotización origen</button>':''}<button class="primary" id="pd-print">Imprimir proyecto / hoja de surtido</button></div></div>`;
+}
+
+function atlasProjectPdf(p){const {jsPDF}=window.jspdf,doc=new jsPDF();doc.setFontSize(18);doc.text('ATLAS INTEGRADOR',14,18);doc.setFontSize(13);doc.text('Proyecto '+p.id,14,30);doc.setFontSize(11);doc.text('Cliente: '+p.client,14,42);doc.text('Proyecto: '+p.name,14,50);doc.text('OC / referencia: '+p.po,14,58);doc.setFontSize(18);doc.text('PIN: '+(p.pin||'5837'),14,73);doc.setFontSize(10);doc.text('Documento interno para operación y surtido de materiales.',14,84);doc.save('Proyecto-'+p.id+'.pdf')}
+
+atlasQuotePdf=function(){const q=state.quote;if(!q)return;const {jsPDF}=window.jspdf,doc=new jsPDF(),c=clients.find(x=>x.id===q.clientId),t=quoteTotals(q);doc.setFontSize(18);doc.text('ATLAS INTEGRADOR',14,16);doc.setFontSize(11);doc.text('Cotización '+q.id+' · Rev. '+q.revision,14,25);doc.text('Cliente: '+(c?.name||''),14,34);doc.text('Contacto: '+(q.directedTo||c?.contact||''),14,41);doc.text('Proyecto: '+(q.name||''),14,48);let y=58;if(q.scope){doc.setFontSize(10);doc.text('Alcance: '+q.scope,14,y,{maxWidth:180});y+=18}doc.setFontSize(13);doc.text('Materiales',14,y);y+=5;if(q.materialPresentation==='summary'){doc.autoTable({startY:y,head:[['Descripción','Importe']],body:[['PRODUCTOS Y MATERIALES',fmt(t.ms)]],theme:'striped'});}else{doc.autoTable({startY:y,head:[['Descripción','Cant.','P. Unitario','Importe']],body:q.materials.map(x=>[x.model+' · '+x.desc,x.qty,fmt(materialPrice(x)),fmt(x.qty*materialPrice(x))]),theme:'striped'});}y=doc.lastAutoTable.finalY+12;if(q.laborRows.length){doc.setFontSize(13);doc.text('Mano de obra',14,y);let groups=groupedLabor(q);doc.autoTable({startY:y+5,head:[['Actividad','Importe']],body:groups.map(g=>[g.activity,fmt(g.items.reduce((s,x)=>s+laborRowCost(x)*(1+x.markup/100),0))]),theme:'striped'});y=doc.lastAutoTable.finalY+12}doc.autoTable({startY:y,body:[['Subtotal',fmt(t.subtotal)],['IVA '+q.ivaRate+'%',fmt(t.iva)],['TOTAL',fmt(t.total)]],theme:'plain',styles:{fontStyle:'bold'},columnStyles:{0:{halign:'right'},1:{halign:'right'}}});doc.setFontSize(9);doc.text('Condiciones de pago: '+q.payment+' · Entrega: '+q.delivery+' · Vigencia: '+q.validity,14,doc.lastAutoTable.finalY+12,{maxWidth:180});doc.save('Cotizacion-'+q.id+'.pdf')}
+
+// Buscar también en inventario sin recargar manualmente.
+const baseInventario=inventario;
+inventario=function(){let html=baseInventario();setTimeout(()=>{const inp=document.querySelector('#content .toolbar input');if(inp)inp.oninput=e=>{let term=e.target.value.toLowerCase();document.querySelectorAll('#content tbody tr').forEach(r=>r.style.display=!term||r.innerText.toLowerCase().includes(term)?'':'none')}},0);return html}
+
+// Limpieza de estados al navegar.
+const baseNav=nav;
+nav=function(){baseNav();document.querySelectorAll('.nav-btn').forEach(b=>{const old=b.onclick;b.onclick=()=>{state.quoteDetail=null;state.projectDetailId=null;state.laborBuilder=null;old&&old()}})}
+render();
+
+
+  </script>
 </body>
 </html>
