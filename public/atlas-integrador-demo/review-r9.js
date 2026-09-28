@@ -153,12 +153,6 @@ atlasConfigClients=function(){
     const fxFields='<div><label>Monedas permitidas</label><select id="ca-currencies" class="select" style="width:100%"><option value="MXN" '+(!both?'selected':'')+'>Solo MXN</option><option value="MXN,USD" '+(both?'selected':'')+'>MXN y USD</option></select></div><div><label>Moneda preferida</label><select id="ca-preferred" class="select" style="width:100%"><option '+(form.preferredCurrency==='MXN'?'selected':'')+'>MXN</option><option '+(form.preferredCurrency==='USD'?'selected':'')+'>USD</option></select></div>';
     h=h.replace('<div style="grid-column:1/-1"><label>Dirección</label>',fxFields+'<div style="grid-column:1/-1"><label>Dirección</label>');
   }
-  h=h.replace('<th>Estado</th><th></th>','<th>Moneda</th><th>Estado</th><th></th>');
-  clients.forEach(function(c){
-    const marker='<td>'+chip(c.active===false?'Inactivo':'Activo',c.active===false?'gray':'green')+'</td>';
-    const cur='<td>'+chip(c.preferredCurrency||'MXN',(c.preferredCurrency||'MXN')==='USD'?'blue':'gray')+'</td>';
-    h=h.replace(marker,cur+marker);
-  });
   return h;
 };
 const atlasConfigR9ClientBase=config;
