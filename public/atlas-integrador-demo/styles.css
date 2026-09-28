@@ -100,3 +100,8 @@
   body{background:#fff!important}
   .card{box-shadow:none!important}
 }
+
+
+/* Atlas R7 — proveedores y órdenes de compra */
+.purchase-total{display:flex;justify-content:flex-end;gap:18px;align-items:center;margin-top:14px;padding:12px 14px;border-top:1px solid #e8e1db;font-size:14px}
+.purchase-total strong{font-size:20px;color:#0f233c}
