@@ -42,7 +42,7 @@ function atlasChartCard(id,title,caption,height){
   return '<div class="card panel atlas-chart-card"><div class="atlas-chart-title"><h3>'+title+'</h3>'+(caption?'<p class="muted">'+caption+'</p>':'')+'</div><div class="atlas-chart-wrap" style="height:'+(height||330)+'px"><canvas id="'+id+'"></canvas></div></div>';
 }
 function atlasProjectMarginData(rows){
-  return rows.slice().sort(function(a,b){return (+a.margin||0)-atlasProjectCurrentMargin(a)-((+b.margin||0)-atlasProjectCurrentMargin(b))}).slice(0,10);
+  return rows.slice().sort(function(a,b){const ea=(+a.margin||0)-atlasProjectCurrentMargin(a),eb=(+b.margin||0)-atlasProjectCurrentMargin(b);return eb-ea}).slice(0,10);
 }
 function atlasQuoteStatusData(rows){
   const statuses=['Borrador','Enviada','Pendiente','Aceptada','Perdida'];
@@ -124,7 +124,7 @@ function atlasRenderQuoteStatusChart(id,rows){
   atlasChartDestroy(id);const c=atlasChartColors(),d=atlasQuoteStatusData(rows);
   atlasChartInstances[id]=new Chart(el,{
     type:'doughnut',
-    data:{labels:d.map(function(x){return x.status}),datasets:[{data:d.map(function(x){return x.count}),backgroundColor:[c.gray,c.blue,c.orange,c.teal,c.red],borderWidth:0,hoverOffset:4}]},
+    data:{labels:d.map(function(x){return x.status}),datasets:[{data:d.map(function(x){return x.count}),backgroundColor:d.map(function(x){return x.status==='Aceptada'?c.teal:x.status==='Perdida'?c.red:x.status==='Pendiente'?c.orange:x.status==='Enviada'?c.blue:c.gray}),borderWidth:0,hoverOffset:4}]},
     options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:10,font:{size:11}}},tooltip:{backgroundColor:'#0f233c'}}}
   });
 }
