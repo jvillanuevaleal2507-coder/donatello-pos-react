@@ -102,7 +102,7 @@ function atlasConfigClients(){
   const edit=state.clientAdminId==='new'?null:clients.find(function(c){return c.id===+state.clientAdminId});
   const form=edit||{legalName:'',tradeName:'',rfc:'',contact:'',phone:'',email:'',address:'',active:true};
   const term=state.clientAdminSearch.toLowerCase();
-  const rows=clients.filter(function(c){return !term||[c.legalName,c.tradeName,c.name,c.rfc,c.contact,c.email].some(function(v){return String(v||'').toLowerCase().includes(term))});
+  const rows=clients.filter(function(c){return !term||[c.legalName,c.tradeName,c.name,c.rfc,c.contact,c.email].some(function(v){return String(v||'').toLowerCase().includes(term)})});
   let h='<div class="card panel"><div class="project-header"><div><h3>Clientes</h3><p class="muted">Catálogo maestro. Solo usuarios con permiso de Configuración pueden crear o modificar clientes.</p></div><button class="primary" id="client-admin-new">+ Nuevo cliente</button></div>';
   h+='<div class="toolbar"><input id="client-admin-search" class="input" style="min-width:320px" placeholder="Buscar razón social, nombre, RFC o contacto" value="'+state.clientAdminSearch+'"></div>';
   if(state.clientAdminId){
