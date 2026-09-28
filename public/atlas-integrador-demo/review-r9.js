@@ -363,6 +363,7 @@ acceptQuoteDemo=function(row,q){
       p.baseline.sale*=rate;p.baseline.cost*=rate;p.baseline.costMaterial*=rate;p.baseline.costLabor*=rate;p.baseline.costIndirect*=rate;
     }
   }
+  render();
 };
 const atlasProjectDetailR9Base=projectDetailView;
 projectDetailView=function(p){
@@ -467,7 +468,7 @@ atlasSaveBillingDraft=function(){
     d.fxDate=d.currency==='USD'?atlasFxSettings.referenceDate:'';
   }
   const before=atlasInvoices.length;atlasSaveBillingDraftR9Base();
-  if(atlasInvoices.length>before){const inv=atlasInvoices[atlasInvoices.length-1];inv.currency=d.currency;inv.fxAppliedRate=d.fxAppliedRate;inv.fxReferenceRate=d.fxReferenceRate;inv.fxDate=d.fxDate}
+  if(atlasInvoices.length>before){const inv=atlasInvoices[atlasInvoices.length-1];inv.currency=d.currency;inv.fxAppliedRate=d.fxAppliedRate;inv.fxReferenceRate=d.fxReferenceRate;inv.fxDate=d.fxDate;render()}
 };
 const atlasBillingIssuedR9Base=atlasBillingIssued;
 atlasBillingIssued=function(){
