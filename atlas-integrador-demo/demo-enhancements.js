@@ -10,7 +10,7 @@ let atlasTourIndex=0;
 
 function atlasRolePages(role){
  const map={
-  'Dirección':['inicio','clientes','cotizaciones','proyectos','inventario','compras','mano','almacen','reportes','config'],
+  'Dirección':['inicio','dashboard','clientes','cotizaciones','proyectos','inventario','compras','mano','almacen','reportes','config'],
   'Comercial':['inicio','clientes','cotizaciones','proyectos','reportes'],
   'Ingeniería':['inicio','cotizaciones','proyectos','inventario','mano','reportes'],
   'Compras':['inicio','proyectos','inventario','compras','almacen','reportes'],
