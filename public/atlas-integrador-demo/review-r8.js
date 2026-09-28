@@ -242,7 +242,7 @@ function facturacion(){
   else if(state.billingTab==='payments')body=atlasPaymentView();
   else if(state.billingTab==='credits')body=atlasCreditView();
   else body=atlasBillingProjects();
-  return '<div class="project-header"><div><h2 style="margin:0 0 6px">Facturación</h2><p class="muted" style="margin:0">La acción de facturar vive aquí, no dentro del Proyecto.</p></div>'+chip('Sin Punto de Venta','gray')+'</div>'+atlasBillingTabs()+(state.billingMessage?'<div class="note" style="margin:12px 0"><strong>'+state.billingMessage+'</strong></div>':'')+body;
+  return '<div class="project-header"><div><h2 style="margin:0 0 6px">Facturación</h2><p class="muted" style="margin:0">La acción de facturar vive aquí, no dentro del Proyecto.</p></div>'+chip('Acceso financiero','blue')+'</div>'+atlasBillingTabs()+(state.billingMessage?'<div class="note" style="margin:12px 0"><strong>'+state.billingMessage+'</strong></div>':'')+body;
 }
 
 /* ---------- Dashboards / Reportes financieros ---------- */
