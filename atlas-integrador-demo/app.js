@@ -1,4 +1,4 @@
-const navItems=[['inicio','⌂','Inicio'],['clientes','◉','Clientes'],['cotizaciones','▤','Cotizaciones'],['proyectos','▦','Proyectos'],['inventario','◫','Inventario'],['compras','⇄','Compras'],['mano','⌁','Mano de obra'],['almacen','⬡','Almacén'],['reportes','▥','Reportes'],['config','⚙','Configuración']];
+const navItems=[['inicio','⌂','Inicio'],['dashboard','▥','Dashboard'],['clientes','◉','Clientes'],['cotizaciones','▤','Cotizaciones'],['proyectos','▦','Proyectos'],['inventario','◫','Inventario'],['compras','⇄','Compras'],['mano','⌁','Mano de obra'],['almacen','⬡','Almacén'],['reportes','▥','Reportes'],['config','⚙','Configuración']];
 const roles=['Dirección','Comercial','Ingeniería','Compras','Almacén'];
 const state={page:'inicio',role:'Dirección',project:null,quote:null,projectTab:'Resumen',warehouse:null};
 const fmt=n=>new Intl.NumberFormat('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0}).format(n);
