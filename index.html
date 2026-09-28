@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0b1320" />
-  <title>Atlas Integrador — Demo Comercial R8</title>
-  <link rel="stylesheet" href="/atlas-integrador-demo/styles.css?v=20260928-R8" />
+  <title>Atlas Integrador — Demo Comercial R8.1</title>
+  <link rel="stylesheet" href="/atlas-integrador-demo/styles.css?v=20260928-R8-1" />
 </head>
 <body>
   <div class="app-shell">
@@ -13,7 +13,7 @@
       <button id="sidebar-toggle" type="button" title="Minimizar menú">‹</button>
       <div class="brand"><div class="brand-mark">A</div><div class="brand-copy"><strong>Atlas Integrador</strong><span>Operación de proyectos</span></div></div>
       <nav id="nav"></nav>
-      <div class="sidebar-footer"><span class="dot online"></span><div><strong>Demo comercial</strong><small>Datos ficticios · Entorno demostrativo · R8</small></div></div>
+      <div class="sidebar-footer"><span class="dot online"></span><div><strong>Demo comercial</strong><small>Datos ficticios · Entorno demostrativo · R8.1</small></div></div>
     </aside>
     <main class="main">
       <header class="topbar"><div><p class="eyebrow" id="eyebrow">Dirección</p><h1 id="page-title">Inicio</h1></div><div class="top-actions"><button class="ghost" id="role-btn">Rol: Dirección</button><button class="primary" id="primary-action">Nueva cotización</button></div></header>
@@ -24,8 +24,8 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script>
-window.ATLAS_BUILD="2026-09-28-review-R8";
-/* Atlas Integrador canonical runtime R8 */
+window.ATLAS_BUILD="2026-09-28-review-R8.1";
+/* Atlas Integrador canonical runtime R8.1 */
 
 
 /* ===== app.js ===== */
@@ -2335,6 +2335,10 @@ render=function(){
   }
   atlasRenderR8Base();
 };
+
+
+/* R8 startup: paint the final navigation after all R8 modules and permissions exist */
+render();
 
 
   </script>
