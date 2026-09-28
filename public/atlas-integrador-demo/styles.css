@@ -16,3 +16,23 @@
   .atlas-config-layout>div:first-child{position:static}
   .atlas-logo-row,.atlas-company-card .grid-2{grid-template-columns:1fr}
 }
+
+
+/* Atlas R4 — catálogos maestros y clientes administrativos */
+.atlas-config-content{min-width:0;max-width:100%}
+.atlas-config-menu{position:sticky;top:18px}
+.atlas-catalog-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.atlas-catalog-card{min-width:0}
+.atlas-catalog-card .project-header{margin-bottom:10px}
+.atlas-catalog-card .toolbar{align-items:center}
+.atlas-catalog-card input,.atlas-catalog-card select{max-width:100%}
+.atlas-admin-form{margin:14px 0}
+.atlas-admin-form .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:1180px){
+  .atlas-catalog-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:820px){
+  .atlas-catalog-grid{grid-template-columns:1fr}
+  .atlas-admin-form .grid-2{grid-template-columns:1fr}
+  .atlas-config-menu{position:static}
+}
