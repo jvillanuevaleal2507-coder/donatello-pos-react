@@ -299,3 +299,7 @@ render=function(){
   }
   atlasRenderR8Base();
 };
+
+
+/* R8 startup: paint the final navigation after all R8 modules and permissions exist */
+render();
