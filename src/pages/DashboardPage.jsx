@@ -6,14 +6,13 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  LineChart,
-  Line,
 } from "recharts";
 
 function money(value) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
+    maximumFractionDigits: 0,
   }).format(Number(value || 0));
 }
 
@@ -21,48 +20,24 @@ function saleDate(sale) {
   return new Date(sale.sale_date || sale.created_at || sale.date || Date.now());
 }
 
-function Card({ children, style = {} }) {
-  return (
-    <div
-      style={{
-        background: "#fffdf8",
-        border: "1px solid #ead6ad",
-        borderRadius: 24,
-        padding: 22,
-        boxShadow: "0 10px 24px rgba(80,45,8,.08)",
-        overflow: "hidden",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
+function safeDayKey(date) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
-function KpiCard({ label, value, sub }) {
+function Card({ children, className = "" }) {
+  return <div className={`card dashboard-card ${className}`}>{children}</div>;
+}
+
+function Kpi({ label, value, note, tone = "" }) {
   return (
-    <Card>
-      <span style={{ fontSize: "1.05rem", color: "#6d604d", fontWeight: 800 }}>
-        {label}
-      </span>
-
-      <div
-        style={{
-          marginTop: 10,
-          fontSize: "clamp(2rem, 5vw, 2.8rem)",
-          fontWeight: 900,
-          lineHeight: 1,
-          whiteSpace: "nowrap",
-        }}
-      >
-        {value}
-      </div>
-
-      {sub && (
-        <p style={{ marginTop: 8, color: "#6d604d", fontWeight: 700 }}>
-          {sub}
-        </p>
-      )}
+    <Card className={`dashboard-kpi ${tone}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      {note && <small>{note}</small>}
     </Card>
   );
 }
@@ -71,273 +46,242 @@ export default function DashboardPage({ sales = [], products = [] }) {
   const activeSales = sales.filter(
     (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
   );
-  const voidedSales = sales.filter(
-    (sale) => String(sale.status || "completed").toLowerCase() === "voided"
-  );
 
   const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const todayKey = safeDayKey(now);
 
-  const totalSales = activeSales.reduce((acc, sale) => acc + Number(sale.total || 0), 0);
-  const totalProfit = activeSales.reduce((acc, sale) => acc + Number(sale.profit || 0), 0);
-  const totalOrders = activeSales.length;
-  const totalItems = activeSales.reduce((acc, sale) => acc + Number(sale.items_count || 0), 0);
-  const averageTicket = totalOrders > 0 ? totalSales / totalOrders : 0;
+  const monthSalesRows = activeSales.filter((sale) => {
+    const date = saleDate(sale);
+    return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
+  });
 
-  const monthSales = activeSales
-    .filter((sale) => {
-      const date = saleDate(sale);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  const monthSales = monthSalesRows.reduce(
+    (sum, sale) => sum + Number(sale.total || 0),
+    0
+  );
+  const monthProfit = monthSalesRows.reduce(
+    (sum, sale) => sum + Number(sale.profit || 0),
+    0
+  );
+  const monthOrders = monthSalesRows.length;
+  const averageTicket = monthOrders ? monthSales / monthOrders : 0;
+
+  const todaySalesRows = activeSales.filter(
+    (sale) => safeDayKey(saleDate(sale)) === todayKey
+  );
+  const todaySales = todaySalesRows.reduce(
+    (sum, sale) => sum + Number(sale.total || 0),
+    0
+  );
+  const todayProfit = todaySalesRows.reduce(
+    (sum, sale) => sum + Number(sale.profit || 0),
+    0
+  );
+  const todayItems = todaySalesRows.reduce(
+    (sum, sale) => sum + Number(sale.items_count || 0),
+    0
+  );
+
+  const stockUnits = products.reduce(
+    (sum, product) => sum + Math.max(Number(product.stock || 0), 0),
+    0
+  );
+  const inventoryCost = products.reduce(
+    (sum, product) =>
+      sum + Number(product.cost || 0) * Math.max(Number(product.stock || 0), 0),
+    0
+  );
+  const inventoryRetail = products.reduce(
+    (sum, product) =>
+      sum + Number(product.price || 0) * Math.max(Number(product.stock || 0), 0),
+    0
+  );
+  const lowStock = products
+    .filter((product) => {
+      const stock = Number(product.stock || 0);
+      return stock >= 0 && stock <= 3;
     })
-    .reduce((acc, sale) => acc + Number(sale.total || 0), 0);
+    .sort((a, b) => Number(a.stock || 0) - Number(b.stock || 0))
+    .slice(0, 7);
 
-  const monthProfit = activeSales
-    .filter((sale) => {
-      const date = saleDate(sale);
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
-    })
-    .reduce((acc, sale) => acc + Number(sale.profit || 0), 0);
-  const todayKey = now.toISOString().slice(0, 10);
+  const last14Days = Array.from({ length: 14 }, (_, index) => {
+    const date = new Date(now);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (13 - index));
+    return {
+      key: safeDayKey(date),
+      label: `${date.getDate()}/${date.getMonth() + 1}`,
+      total: 0,
+      profit: 0,
+    };
+  });
 
-const todaySales = activeSales.filter((sale) => {
-  const date = saleDate(sale);
-  return date.toISOString().slice(0, 10) === todayKey;
-});
-
-const todayTotal = todaySales.reduce(
-  (acc, sale) => acc + Number(sale.total || 0),
-  0
-);
-
-const todayProfit = todaySales.reduce(
-  (acc, sale) => acc + Number(sale.profit || 0),
-  0
-);
-
-const todayReceived = todaySales.reduce(
-  (acc, sale) => acc + Number(sale.received || 0),
-  0
-);
-
-const todayChange = todaySales.reduce(
-  (acc, sale) => acc + Number(sale.change_amount || 0),
-  0
-);
-
-const todayDiscounts = todaySales.reduce(
-  (acc, sale) => acc + Number(sale.discount_amount || 0),
-  0
-);
-
-const todayItems = todaySales.reduce(
-  (acc, sale) => acc + Number(sale.items_count || 0),
-  0
-);
-
-const expectedCash = todayReceived - todayChange;
-
-  const salesByDay = {};
+  const dayMap = Object.fromEntries(last14Days.map((day) => [day.key, day]));
 
   activeSales.forEach((sale) => {
     const date = saleDate(sale);
-    const key = date.toISOString().slice(0, 10);
-    const label = `${date.getDate()}/${date.getMonth() + 1}`;
-
-    if (!salesByDay[key]) {
-      salesByDay[key] = {
-        day: label,
-        total: 0,
-        profit: 0,
-        orders: 0,
-      };
-    }
-
-    salesByDay[key].total += Number(sale.total || 0);
-    salesByDay[key].profit += Number(sale.profit || 0);
-    salesByDay[key].orders += 1;
+    const key = safeDayKey(date);
+    if (!dayMap[key]) return;
+    dayMap[key].total += Number(sale.total || 0);
+    dayMap[key].profit += Number(sale.profit || 0);
   });
 
-  const chartData = Object.entries(salesByDay)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, value]) => value);
+  const chartData = last14Days;
 
   const productStats = {};
-
   activeSales.forEach((sale) => {
-    const items = sale.sale_items || [];
-
-    items.forEach((item) => {
+    (sale.sale_items || []).forEach((item) => {
       const key = item.code || item.name || "Producto";
-
       if (!productStats[key]) {
         productStats[key] = {
           code: item.code || "",
           name: item.name || "Producto",
           qty: 0,
           total: 0,
-          profit: 0,
         };
       }
-
       productStats[key].qty += Number(item.qty || 0);
       productStats[key].total += Number(item.subtotal || 0);
-      productStats[key].profit += Number(item.profit || 0);
     });
   });
 
   const topProducts = Object.values(productStats)
     .sort((a, b) => b.total - a.total)
-    .slice(0, 8);
+    .slice(0, 6);
 
-  const categoryStats = {};
+  const recentSales = [...activeSales]
+    .sort((a, b) => saleDate(b) - saleDate(a))
+    .slice(0, 6);
 
-  products.forEach((product) => {
-    const category = product.category || "Sin categoría";
-
-    if (!categoryStats[category]) {
-      categoryStats[category] = {
-        category,
-        products: 0,
-        inventoryValue: 0,
-      };
-    }
-
-    categoryStats[category].products += 1;
-    categoryStats[category].inventoryValue +=
-      Number(product.price || 0) * Number(product.stock || 0);
-  });
-
-  const categoryData = Object.values(categoryStats)
-    .sort((a, b) => b.inventoryValue - a.inventoryValue)
-    .slice(0, 8);
+  const potentialProfit = inventoryRetail - inventoryCost;
 
   return (
-    <div style={{ display: "grid", gap: 18 }}>
-      <Card
-        style={{
-          background:
-            "linear-gradient(135deg, #3b220f 0%, #9b5d14 45%, #f7b733 100%)",
-          color: "white",
-        }}
-      >
-        <h2 style={{ fontSize: "2.2rem", fontWeight: 900 }}>
-          Resumen ejecutivo
-        </h2>
-        <p style={{ marginTop: 6, opacity: 0.92, fontWeight: 600 }}>
-          Ventas, utilidad y comportamiento general de Ventas Donatello.
-        </p>
-      </Card>
+    <section className="dashboard-modern">
+      <div className="dashboard-heading">
+        <div>
+          <span className="eyebrow">Resumen ejecutivo</span>
+          <h2>Así va Donatello</h2>
+          <p>Ventas, utilidad e inventario sin ruido innecesario.</p>
+        </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-          gap: 16,
-        }}
-      >
-        <KpiCard label="Ventas acumuladas" value={money(totalSales)} />
-        <KpiCard label="Utilidad acumulada" value={money(totalProfit)} />
-        <KpiCard label="Ventas realizadas" value={totalOrders} sub={`${totalItems} piezas`} />
-        <KpiCard label="Ticket promedio" value={money(averageTicket)} />
-        <KpiCard label="Venta del mes" value={money(monthSales)} />
-        <KpiCard label="Utilidad del mes" value={money(monthProfit)} />
-        <KpiCard label="Productos registrados" value={products.length} />
-        <KpiCard
-          label="Ventas anuladas"
-          value={voidedSales.length}
-          sub="Se conservan para auditoría"
+        <div className="dashboard-today-pill">
+          <span>Venta de hoy</span>
+          <strong>{money(todaySales)}</strong>
+          <small>{todaySalesRows.length} ventas · {todayItems} piezas</small>
+        </div>
+      </div>
+
+      <div className="dashboard-kpi-grid">
+        <Kpi
+          label="Ventas del mes"
+          value={money(monthSales)}
+          note={`${monthOrders} ventas registradas`}
+        />
+        <Kpi
+          label="Utilidad del mes"
+          value={money(monthProfit)}
+          note={monthSales ? `${((monthProfit / monthSales) * 100).toFixed(1)}% sobre venta` : "Sin ventas todavía"}
+          tone="olive"
+        />
+        <Kpi
+          label="Ticket promedio"
+          value={money(averageTicket)}
+          note="Promedio del mes actual"
+        />
+        <Kpi
+          label="Inventario disponible"
+          value={stockUnits}
+          note={`${products.length} productos registrados`}
         />
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
-          gap: 18,
-        }}
-      >
-        <Card>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: 900, marginBottom: 16 }}>
-            Ventas por día
-          </h3>
+      <div className="dashboard-main-grid">
+        <Card className="dashboard-chart-card">
+          <div className="dashboard-section-heading">
+            <div>
+              <span className="eyebrow">Últimos 14 días</span>
+              <h3>Movimiento de ventas</h3>
+            </div>
+            <div className="dashboard-chart-legend">
+              <span><i className="sale-dot" /> Venta</span>
+              <span><i className="profit-dot" /> Utilidad</span>
+            </div>
+          </div>
 
-          <div style={{ width: "100%", height: 320 }}>
-            <ResponsiveContainer>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
+          <div className="dashboard-chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="#eee6de" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#837970" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#837970" }} axisLine={false} tickLine={false} width={54} />
                 <Tooltip formatter={(value) => money(value)} />
-                <Bar dataKey="total" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="total" fill="#b75f3d" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="profit" fill="#6f7651" radius={[5, 5, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <Card>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: 900, marginBottom: 16 }}>
-            Utilidad por día
-          </h3>
+        <div className="dashboard-side-stack">
+          <Card className="dashboard-today-card">
+            <span className="eyebrow">Corte rápido</span>
+            <h3>Hoy</h3>
 
-          <div style={{ width: "100%", height: 320 }}>
-            <ResponsiveContainer>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="day" />
-                <YAxis />
-                <Tooltip formatter={(value) => money(value)} />
-                <Line
-                  type="monotone"
-                  dataKey="profit"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
+            <div className="dashboard-today-grid">
+              <div>
+                <span>Venta</span>
+                <strong>{money(todaySales)}</strong>
+              </div>
+              <div>
+                <span>Utilidad</span>
+                <strong>{money(todayProfit)}</strong>
+              </div>
+              <div>
+                <span>Operaciones</span>
+                <strong>{todaySalesRows.length}</strong>
+              </div>
+              <div>
+                <span>Piezas</span>
+                <strong>{todayItems}</strong>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="dashboard-inventory-card">
+            <span className="eyebrow">Inventario</span>
+            <h3>Valor actual</h3>
+            <div className="dashboard-inventory-value">{money(inventoryCost)}</div>
+            <div className="dashboard-inventory-lines">
+              <div><span>Venta potencial</span><b>{money(inventoryRetail)}</b></div>
+              <div><span>Utilidad potencial</span><b>{money(potentialProfit)}</b></div>
+            </div>
+          </Card>
+        </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
-          gap: 18,
-        }}
-      >
+      <div className="dashboard-lists-grid">
         <Card>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: 900, marginBottom: 14 }}>
-            Top productos vendidos
-          </h3>
+          <div className="dashboard-section-heading compact">
+            <div>
+              <span className="eyebrow">Productos</span>
+              <h3>Los que más venden</h3>
+            </div>
+          </div>
 
           {topProducts.length === 0 ? (
-            <p style={{ color: "#6d604d", fontWeight: 700 }}>
-              Todavía no hay productos vendidos.
-            </p>
+            <div className="dashboard-empty">Aún no hay suficiente historial de productos vendidos.</div>
           ) : (
-            <div style={{ display: "grid", gap: 10 }}>
+            <div className="dashboard-ranked-list">
               {topProducts.map((product, index) => (
-                <div
-                  key={`${product.code}-${index}`}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "auto 1fr auto",
-                    gap: 12,
-                    alignItems: "center",
-                    background: "#fff7e8",
-                    borderRadius: 18,
-                    padding: 12,
-                  }}
-                >
-                  <strong style={{ fontSize: "1.2rem" }}>{index + 1}</strong>
+                <div className="dashboard-ranked-row" key={`${product.code}-${index}`}>
+                  <span className="rank-number">{index + 1}</span>
                   <div>
                     <strong>{product.name}</strong>
-                    <p style={{ color: "#6d604d", marginTop: 3 }}>
-                      {product.code} · {product.qty} pzas
-                    </p>
+                    <span>{product.code || "Sin código"} · {product.qty} pzas</span>
                   </div>
-                  <strong>{money(product.total)}</strong>
+                  <b>{money(product.total)}</b>
                 </div>
               ))}
             </div>
@@ -345,188 +289,60 @@ const expectedCash = todayReceived - todayChange;
         </Card>
 
         <Card>
-          <h3 style={{ fontSize: "1.5rem", fontWeight: 900, marginBottom: 14 }}>
-            Inventario por categoría
-          </h3>
+          <div className="dashboard-section-heading compact">
+            <div>
+              <span className="eyebrow">Atención</span>
+              <h3>Stock bajo o agotado</h3>
+            </div>
+            <span className="dashboard-count-badge">{lowStock.length}</span>
+          </div>
 
-          {categoryData.length === 0 ? (
-            <p style={{ color: "#6d604d", fontWeight: 700 }}>
-              Todavía no hay productos registrados.
-            </p>
+          {lowStock.length === 0 ? (
+            <div className="dashboard-empty">No hay productos con stock crítico.</div>
           ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {categoryData.map((item) => (
-                <div
-                  key={item.category}
-                  style={{
-                    background: "#fff7e8",
-                    borderRadius: 18,
-                    padding: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 10,
-                    }}
-                  >
-                    <strong>{item.category}</strong>
-                    <strong>{money(item.inventoryValue)}</strong>
+            <div className="dashboard-low-list">
+              {lowStock.map((product) => (
+                <div className="dashboard-low-row" key={product.id}>
+                  <div>
+                    <strong>{product.name}</strong>
+                    <span>{product.code || "Sin código"}</span>
                   </div>
-                  <p style={{ color: "#6d604d", marginTop: 4 }}>
-                    {item.products} productos registrados
-                  </p>
+                  <b className={Number(product.stock || 0) === 0 ? "out" : ""}>
+                    {Number(product.stock || 0) === 0 ? "Agotado" : `${product.stock} pzas`}
+                  </b>
                 </div>
               ))}
             </div>
           )}
         </Card>
       </div>
+
       <Card>
-  <div
-    style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: 12,
-      marginBottom: 20,
-      flexWrap: "wrap",
-    }}
-  >
-    <div>
-      <h2
-        style={{
-          fontSize: "2rem",
-          fontWeight: 900,
-        }}
-      >
-        Corte del día
-      </h2>
-
-      <p
-        style={{
-          color: "#6d604d",
-          marginTop: 4,
-          fontWeight: 700,
-        }}
-      >
-        Resumen operativo de caja y ventas del día actual.
-      </p>
-    </div>
-  </div>
-
-  <div
-    style={{
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-      gap: 14,
-      marginBottom: 24,
-    }}
-  >
-    <KpiCard
-      label="Ventas hoy"
-      value={money(todayTotal)}
-    />
-
-    <KpiCard
-      label="Utilidad hoy"
-      value={money(todayProfit)}
-    />
-
-    <KpiCard
-      label="Efectivo recibido"
-      value={money(todayReceived)}
-    />
-
-    <KpiCard
-      label="Cambio entregado"
-      value={money(todayChange)}
-    />
-
-    <KpiCard
-      label="Caja esperada"
-      value={money(expectedCash)}
-    />
-
-    <KpiCard
-      label="Descuentos"
-      value={money(todayDiscounts)}
-    />
-
-    <KpiCard
-      label="Piezas vendidas"
-      value={todayItems}
-    />
-
-    <KpiCard
-      label="Ventas realizadas"
-      value={todaySales.length}
-    />
-  </div>
-
-  <div style={{ display: "grid", gap: 10 }}>
-    {todaySales.length === 0 ? (
-      <p
-        style={{
-          color: "#6d604d",
-          fontWeight: 700,
-        }}
-      >
-        No hay ventas registradas hoy.
-      </p>
-    ) : (
-      todaySales.map((sale, index) => (
-        <div
-          key={sale.id || index}
-          style={{
-            background: "#fff7e8",
-            borderRadius: 18,
-            padding: 14,
-            display: "grid",
-            gap: 6,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <strong>
-              Venta #{index + 1}
-            </strong>
-
-            <strong>
-              {money(sale.total)}
-            </strong>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 10,
-              flexWrap: "wrap",
-              color: "#6d604d",
-              fontWeight: 700,
-            }}
-          >
-            <span>
-              {sale.items_count} piezas
-            </span>
-
-            <span>
-              Utilidad: {money(sale.profit)}
-            </span>
+        <div className="dashboard-section-heading compact">
+          <div>
+            <span className="eyebrow">Actividad</span>
+            <h3>Ventas recientes</h3>
           </div>
         </div>
-      ))
-    )}
-  </div>
-</Card>
-    </div>
+
+        {recentSales.length === 0 ? (
+          <div className="dashboard-empty">Todavía no hay ventas registradas.</div>
+        ) : (
+          <div className="dashboard-recent-list">
+            {recentSales.map((sale) => (
+              <div className="dashboard-recent-row" key={sale.id}>
+                <div className="dashboard-sale-icon">✓</div>
+                <div>
+                  <strong>Venta #{sale.id}</strong>
+                  <span>{saleDate(sale).toLocaleString("es-MX")}</span>
+                </div>
+                <span>{Number(sale.items_count || 0)} pzas</span>
+                <b>{money(sale.total)}</b>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </section>
   );
 }
