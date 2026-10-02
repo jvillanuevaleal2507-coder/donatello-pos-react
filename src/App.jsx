@@ -2280,6 +2280,8 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   });
   const [savingSale, setSavingSale] = useState(false);
   const [voidingSaleId, setVoidingSaleId] = useState(null);
+  const [salesSearch, setSalesSearch] = useState("");
+  const [salesStatus, setSalesStatus] = useState("all");
 
   const completedSales = sales.filter(
     (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
@@ -2297,6 +2299,27 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
     (sum, sale) => sum + Number(sale.items_count || 0),
     0
   );
+
+  const visibleSales = sales.filter((sale) => {
+    const isVoided = String(sale.status || "completed").toLowerCase() === "voided";
+    const matchesStatus =
+      salesStatus === "all" ||
+      (salesStatus === "completed" && !isVoided) ||
+      (salesStatus === "voided" && isVoided);
+
+    const query = salesSearch.trim().toLowerCase();
+    const itemText = (sale.sale_items || [])
+      .map((item) => `${item.name || ""} ${item.code || ""}`)
+      .join(" ")
+      .toLowerCase();
+
+    const matchesSearch =
+      !query ||
+      String(sale.id || "").includes(query) ||
+      itemText.includes(query);
+
+    return matchesStatus && matchesSearch;
+  });
 
   function openEditSale(sale) {
     if (String(sale.status || "completed").toLowerCase() === "voided") {
@@ -2426,18 +2449,19 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   }
 
   return (
-    <section className="inventory-section">
-      <div className="sales-header">
+    <section className="inventory-section sales-modern">
+      <div className="sales-header sales-heading-modern">
         <div>
+          <span className="eyebrow">Operación</span>
           <h2>Historial de ventas</h2>
           <p className="muted">
-            Últimas 50 ventas. Las anuladas permanecen visibles para auditoría.
+            Consulta tickets, corrige capturas y conserva la trazabilidad de anulaciones.
           </p>
         </div>
-        <Button onClick={loadSales}>Actualizar ventas</Button>
+        <Button variant="secondary" onClick={loadSales}>↻ Actualizar</Button>
       </div>
 
-      <div className="metrics-grid">
+      <div className="metrics-grid sales-kpi-grid">
         <Card>
           <span className="metric-label">Total vendido</span>
           <strong className="metric-value">{money(totalSold)}</strong>
@@ -2452,20 +2476,49 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
         </Card>
       </div>
 
+      <Card className="sales-toolbar-card">
+        <div className="sales-search-wrap">
+          <span aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={salesSearch}
+            onChange={(e) => setSalesSearch(e.target.value)}
+            placeholder="Buscar por número de venta, producto o código..."
+          />
+        </div>
+        <div className="sales-status-pills">
+          {[
+            ["all", "Todas"],
+            ["completed", "Completadas"],
+            ["voided", "Anuladas"],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              className={salesStatus === value ? "active" : ""}
+              onClick={() => setSalesStatus(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="sales-result-count">{visibleSales.length} registros</span>
+      </Card>
+
       {loadingSales ? (
         <Card><p className="muted">Cargando ventas...</p></Card>
       ) : sales.length === 0 ? (
         <Card><p className="muted">Todavía no hay ventas registradas.</p></Card>
       ) : (
-        <div className="sales-list">
-          {sales.map((sale) => {
+        <div className="sales-list sales-list-modern">
+          {visibleSales.map((sale) => {
             const isVoided =
               String(sale.status || "completed").toLowerCase() === "voided";
 
             return (
               <Card
                 key={sale.id}
-                className={isVoided ? "sale-card-voided" : ""}
+                className={`sales-history-card ${isVoided ? "sale-card-voided" : ""}`}
               >
                 <div className="sale-card-header">
                   <div>
