@@ -265,11 +265,11 @@ export default function DonatelloAtlas({
 
   const inputStyle = {
     width: "100%",
-    minHeight: 54,
+    minHeight: 46,
     border: "1px solid #dacda9",
-    borderRadius: 16,
-    padding: "12px 14px",
-    fontSize: "1.05rem",
+    borderRadius: 11,
+    padding: "9px 11px",
+    fontSize: ".9rem",
     background: "#fff",
     color: "#20170f",
     boxSizing: "border-box",
@@ -277,11 +277,11 @@ export default function DonatelloAtlas({
 
   const primaryButton = {
     width: "100%",
-    minHeight: 58,
+    minHeight: 48,
     border: 0,
-    borderRadius: 18,
-    padding: "14px 18px",
-    fontSize: "1.05rem",
+    borderRadius: 11,
+    padding: "10px 14px",
+    fontSize: ".9rem",
     fontWeight: 900,
     cursor: canAnalyze ? "pointer" : "not-allowed",
     background: canAnalyze ? "#244c3d" : "#a9b7b0",
@@ -291,14 +291,15 @@ export default function DonatelloAtlas({
 
   return (
     <section
+      className="atlas-panel"
       style={{
         border: "1px solid #cfb97a",
-        borderRadius: 26,
-        padding: 22,
+        borderRadius: 12,
+        padding: 16,
         background:
           "linear-gradient(145deg, rgba(255,252,242,.98), rgba(248,240,216,.96))",
         boxShadow: "0 18px 38px rgba(54,42,20,.10)",
-        marginBottom: 28,
+        marginBottom: 14,
       }}
     >
       <div
@@ -319,9 +320,9 @@ export default function DonatelloAtlas({
               background: "#244c3d",
               color: "#fff7df",
               borderRadius: 999,
-              padding: "8px 12px",
+              padding: "6px 10px",
               fontWeight: 900,
-              fontSize: ".85rem",
+              fontSize: ".74rem",
               letterSpacing: ".02em",
             }}
           >
@@ -330,8 +331,8 @@ export default function DonatelloAtlas({
 
           <h3
             style={{
-              margin: "14px 0 6px",
-              fontSize: "1.75rem",
+              margin: "10px 0 5px",
+              fontSize: "1.4rem",
               lineHeight: 1.05,
               color: "#24170e",
             }}
@@ -353,7 +354,7 @@ export default function DonatelloAtlas({
             style={{
               border: "1px solid #cbbd97",
               borderRadius: 14,
-              padding: "10px 14px",
+              padding: "8px 11px",
               background: "#fffaf0",
               color: "#473b2d",
               fontWeight: 800,
@@ -370,22 +371,22 @@ export default function DonatelloAtlas({
         style={{
           display: "grid",
           gridTemplateColumns: "minmax(0, 1.25fr) minmax(240px, .75fr)",
-          gap: 18,
-          marginTop: 22,
+          gap: 12,
+          marginTop: 14,
         }}
       >
         <div>
           <label
             style={{
-              minHeight: 235,
+              minHeight: 185,
               border: "2px dashed #bfa45f",
-              borderRadius: 22,
+              borderRadius: 16,
               background: "#fffdf7",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               textAlign: "center",
-              padding: 18,
+              padding: 14,
               cursor: "pointer",
               overflow: "hidden",
             }}
@@ -403,18 +404,18 @@ export default function DonatelloAtlas({
               />
             ) : (
               <div>
-                <div style={{ fontSize: "2.2rem" }}>📷</div>
+                <div style={{ fontSize: "1.7rem" }}>📷</div>
                 <strong
                   style={{
                     display: "block",
                     marginTop: 8,
-                    fontSize: "1.15rem",
+                    fontSize: "1rem",
                     color: "#2b2118",
                   }}
                 >
                   Seleccionar foto principal
                 </strong>
-                <span style={{ color: "#786a57", fontSize: ".92rem" }}>
+                <span style={{ color: "#786a57", fontSize: ".8rem" }}>
                   JPG, PNG o WEBP · máximo 12 MB
                 </span>
               </div>
@@ -429,7 +430,7 @@ export default function DonatelloAtlas({
           </label>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <Field label="Título de subasta (opcional)">
             <input
               style={inputStyle}
@@ -497,7 +498,7 @@ export default function DonatelloAtlas({
         <div
           style={{
             marginTop: 18,
-            borderRadius: 18,
+            borderRadius: 12,
             padding: 18,
             background: "#fff",
             border: "1px solid #e3d9bb",
@@ -514,7 +515,7 @@ export default function DonatelloAtlas({
         <div
           style={{
             marginTop: 18,
-            borderRadius: 18,
+            borderRadius: 12,
             padding: 18,
             background: "#fff8e8",
             border: "1px solid #d5b86a",
@@ -531,7 +532,7 @@ export default function DonatelloAtlas({
         <div style={{ marginTop: 20 }}>
           <div
             style={{
-              borderRadius: 18,
+              borderRadius: 12,
               padding: 16,
               background: "#f4fbf7",
               border: "1px solid #9dc4ad",
@@ -627,7 +628,7 @@ export default function DonatelloAtlas({
               marginBottom: 14,
             }}
           >
-            <h4 style={{ margin: 0, fontSize: "1.25rem" }}>
+            <h4 style={{ margin: 0, fontSize: "1.05rem" }}>
               Coincidencia propuesta
             </h4>
 
@@ -807,8 +808,8 @@ export default function DonatelloAtlas({
               onClick={showNextAlternative}
               disabled={!alternatives.length}
               style={{
-                minHeight: 58,
-                borderRadius: 18,
+                minHeight: 48,
+                borderRadius: 12,
                 border: "1px solid #bfa45f",
                 background: alternatives.length ? "#fffaf0" : "#eee8dc",
                 color: alternatives.length ? "#3e3022" : "#8c8375",
@@ -828,7 +829,7 @@ export default function DonatelloAtlas({
         <div
           style={{
             marginTop: 18,
-            borderRadius: 18,
+            borderRadius: 12,
             padding: 18,
             background: "#f4fbf7",
             border: "1px solid #9dc4ad",
@@ -846,8 +847,18 @@ export default function DonatelloAtlas({
 
       <style>{`
         @media (max-width: 760px) {
+          .atlas-panel {
+            padding: 12px !important;
+            border-radius: 14px !important;
+          }
           .atlas-entry-grid {
             grid-template-columns: 1fr !important;
+            gap: 10px !important;
+            margin-top: 12px !important;
+          }
+          .atlas-entry-grid > div:first-child > label {
+            min-height: 155px !important;
+            padding: 10px !important;
           }
         }
       `}</style>
