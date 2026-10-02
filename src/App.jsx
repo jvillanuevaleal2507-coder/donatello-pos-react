@@ -976,318 +976,313 @@ const salePayload = {
         <Route
           path="/"
           element={
-            <section className="sale-layout">
-              <div className="left-panel">
-                <div className="metrics-grid">
-                  <Card>
-                    <span className="metric-label">Total</span>
-                    <strong className="metric-value">{money(subtotal)}</strong>
-                  </Card>
-                  <Card>
-                    <span className="metric-label">Piezas</span>
-                    <strong className="metric-value">{itemsCount}</strong>
-                  </Card>
-                  <Card>
-                    <span className="metric-label">Utilidad</span>
-                    <strong className="metric-value">{money(adjustedProfit)}</strong>
-                  </Card>
+            <section className="sale-screen">
+              <div className="sale-page-heading">
+                <div>
+                  <span className="eyebrow">Punto de venta</span>
+                  <h2>Nueva venta</h2>
+                  <p className="muted">Busca el producto, agrégalo y cobra sin pasos innecesarios.</p>
                 </div>
-                <Card>
-  <h2>Agregar producto rápido</h2>
+                <div className="sale-heading-badge">
+                  <span>{itemsCount} {itemsCount === 1 ? "pieza" : "piezas"}</span>
+                  <strong>{money(totalFinal)}</strong>
+                </div>
+              </div>
 
-  <input
-    value={quickSearch}
-    onChange={(e) => setQuickSearch(e.target.value)}
-    placeholder="Buscar por nombre, código o categoría..."
-    style={{
-      minHeight: "64px",
-      fontSize: "1.4rem",
-      fontWeight: 700,
-    }}
-  />
-
-  {quickSearch.trim() && (
-    <div className="quick-results">
-      {products
-        .filter((p) => Number(p.stock || 0) > 0)
-        .filter((p) => {
-          const text = `${p.name || ""} ${p.code || ""} ${p.category || ""}`.toLowerCase();
-          return text.includes(quickSearch.toLowerCase());
-        })
-        .slice(0, 6)
-        .map((p) => (
-          <button
-            key={p.id}
-            className="quick-result-btn"
-            onClick={() => {
-              addToCart(p);
-              setQuickSearch("");
-            }}
-          >
-            <ProductImage src={p.image_url} alt={p.name} small />
-            <div>
-              <strong>{p.name}</strong>
-              <span>{p.code} · {money(p.price)} · Stock {p.stock}</span>
-            </div>
-          </button>
-        ))}
-    </div>
-  )}
-</Card>
-
-                <Card className="scanner-card">
-                  <div className="section-title-row">
-                    <div>
-                      <h2>Escanear QR</h2>
-                      <p>Usa Chrome en Android para escanear con cámara trasera.</p>
-                    </div>
-                    <span className="big-icon">📷</span>
-                  </div>
-
-                  <div className="scanner-box">
-                    {!scannerOn && <span>Scanner apagado</span>}
-                    <video ref={videoRef} className="scanner-video" muted playsInline />
-                    <canvas ref={canvasRef} style={{ display: "none" }} />
-                  </div>
-
-                  <div className="scanner-actions">
-                    {!scannerOn ? (
-                      <Button
-                        onClick={startScanner}
-                        style={{ fontSize: "2rem", fontWeight: 900 }}
-                      >
-                        Abrir cámara trasera
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="secondary"
-                        onClick={stopScanner}
-                        style={{ fontSize: "2rem", fontWeight: 900 }}
-                      >
-                        Cerrar cámara
-                      </Button>
-                    )}
-
-                    <div className="status-box">{scanStatus}</div>
-                  </div>
-
-                  <div className="manual-row">
-                    <input
-                      value={manualCode}
-                      onChange={(e) => setManualCode(e.target.value)}
-                      placeholder="DON-000001"
-                    />
-
-                    <Button
-                      onClick={() => {
-                        addToCartByCode(manualCode);
-                        setManualCode("");
-                      }}
-                      style={{ fontSize: "2rem", fontWeight: 900 }}
-                    >
-                      Agregar
-                    </Button>
-                  </div>
+              <div className="sale-kpis">
+                <Card className="sale-kpi-card">
+                  <span>Total actual</span>
+                  <strong>{money(subtotal)}</strong>
+                  <small>Antes de descuento</small>
+                </Card>
+                <Card className="sale-kpi-card">
+                  <span>Descuento</span>
+                  <strong>{Number(discountPercent || 0)}%</strong>
+                  <small>{money(discountAmount)}</small>
+                </Card>
+                <Card className="sale-kpi-card sale-profit-kpi">
+                  <span>Utilidad estimada</span>
+                  <strong>{money(adjustedProfit)}</strong>
+                  <small>Venta actual</small>
                 </Card>
               </div>
 
-              <div className="right-panel">
-                <Card>
-                  <h2>Carrito</h2>
-                  {cart.length === 0 ? (
-                    <p className="muted">Carrito vacío.</p>
-                  ) : (
-                    <div className="cart-list">
-                      {cart.map((item) => (
-                        <div className="cart-item" key={item.id}>
-                          <ProductImage src={item.image_url} alt={item.name} small />
-                          <div className="cart-info">
-                            <strong>{item.name}</strong>
-                            <span>Cantidad: {item.qty}</span>
-                          </div>
-                          <div className="cart-price">
-                            <strong>{money(Number(item.price || 0) * item.qty)}</strong>
-                            <button onClick={() => removeFromCart(item.id)}>🗑️ Quitar</button>
-                          </div>
+              <div className="sale-layout sale-layout-modern">
+                <div className="left-panel sale-product-column">
+                  <Card className="sale-search-card">
+                    <div className="sale-card-heading">
+                      <div>
+                        <span className="eyebrow">Producto</span>
+                        <h2>Agregar a la venta</h2>
+                      </div>
+                      <span className="sale-step">01</span>
+                    </div>
+
+                    <div className="sale-search-wrap">
+                      <span aria-hidden="true">⌕</span>
+                      <input
+                        value={quickSearch}
+                        onChange={(e) => setQuickSearch(e.target.value)}
+                        placeholder="Escribe nombre, código o categoría..."
+                        autoFocus
+                      />
+                    </div>
+
+                    {quickSearch.trim() ? (
+                      <div className="quick-results sale-quick-results">
+                        {products
+                          .filter((p) => Number(p.stock || 0) > 0)
+                          .filter((p) => {
+                            const text = `${p.name || ""} ${p.code || ""} ${p.category || ""}`.toLowerCase();
+                            return text.includes(quickSearch.toLowerCase());
+                          })
+                          .slice(0, 8)
+                          .map((p) => (
+                            <button
+                              key={p.id}
+                              className="quick-result-btn sale-result-btn"
+                              onClick={() => {
+                                addToCart(p);
+                                setQuickSearch("");
+                              }}
+                              type="button"
+                            >
+                              <ProductImage src={p.image_url} alt={p.name} small />
+                              <div className="sale-result-copy">
+                                <strong>{p.name}</strong>
+                                <span>{p.code} · {p.category || "General"}</span>
+                              </div>
+                              <div className="sale-result-meta">
+                                <strong>{money(p.price)}</strong>
+                                <span>Stock {p.stock}</span>
+                              </div>
+                            </button>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="sale-search-hint">
+                        <span>⌕</span>
+                        <div>
+                          <strong>Empieza a escribir para buscar</strong>
+                          <p>Solo aparecerán productos con existencia disponible.</p>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </Card>
+                      </div>
+                    )}
+                  </Card>
 
-                <Card>
-                  <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Cobro</span>
-
-                  <div style={{ marginTop: 16 }}>
-                    <span
-                      style={{
-                        fontSize: "1.2rem",
-                        fontWeight: 800,
-                        display: "block",
-                        marginBottom: 8,
-                      }}
-                    >
-                      Descuento %
-                    </span>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(4,1fr)",
-                        gap: 8,
-                        marginBottom: 10,
-                      }}
-                    >
-                      {[0, 5, 10, 15].map((value) => (
-                        <button
-                          key={value}
-                          onClick={() => setDiscountPercent(value)}
-                          style={{
-                            minHeight: 52,
-                            borderRadius: 14,
-                            border: "none",
-                            fontWeight: 900,
-                            cursor: "pointer",
-                            background:
-                              Number(discountPercent) === value
-                                ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-                                : "#fff7e8",
-                            color: Number(discountPercent) === value ? "white" : "#24180d",
-                          }}
-                        >
-                          {value}%
-                        </button>
-                      ))}
+                  <Card className="sale-scanner-compact">
+                    <div className="sale-card-heading scanner-heading-modern">
+                      <div>
+                        <span className="eyebrow">Alternativa rápida</span>
+                        <h2>Escanear QR o capturar código</h2>
+                      </div>
+                      <span className="sale-step">02</span>
                     </div>
 
-                    <input
-                      type="number"
-                      value={discountPercent}
-                      onChange={(e) => setDiscountPercent(e.target.value)}
-                      placeholder="Descuento personalizado"
-                    />
-                  </div>
+                    <div className={`scanner-box scanner-box-modern ${scannerOn ? "active" : ""}`}>
+                      {!scannerOn && (
+                        <div className="scanner-idle">
+                          <span>⌁</span>
+                          <strong>Cámara apagada</strong>
+                          <small>Úsala cuando quieras leer una etiqueta QR.</small>
+                        </div>
+                      )}
+                      <video ref={videoRef} className="scanner-video" muted playsInline />
+                      <canvas ref={canvasRef} style={{ display: "none" }} />
+                    </div>
 
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr 1fr",
-                      gap: 10,
-                      margin: "14px 0",
-                    }}
-                  >
-                    <button
-                      onClick={() => setSaleMode("sale")}
-                      style={{
-                        minHeight: 54,
-                        borderRadius: 16,
-                        border: "none",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        background:
-                          saleMode === "sale"
-                            ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-                            : "#fff7e8",
-                        color: saleMode === "sale" ? "white" : "#24180d",
-                      }}
-                    >
-                      Venta normal
-                    </button>
+                    <div className="scanner-actions scanner-actions-modern">
+                      {!scannerOn ? (
+                        <Button onClick={startScanner}>Abrir cámara</Button>
+                      ) : (
+                        <Button variant="secondary" onClick={stopScanner}>Cerrar cámara</Button>
+                      )}
+                      <div className="status-box status-box-modern">{scanStatus}</div>
+                    </div>
 
-                    <button
-                      onClick={() => setSaleMode("layaway")}
-                      style={{
-                        minHeight: 54,
-                        borderRadius: 16,
-                        border: "none",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        background:
-                          saleMode === "layaway"
-                            ? "linear-gradient(135deg,#f7b733,#fc4a1a)"
-                            : "#fff7e8",
-                        color: saleMode === "layaway" ? "white" : "#24180d",
-                      }}
-                    >
-                      Apartado
-                    </button>
-                  </div>
-
-                  {saleMode === "layaway" && (
-                    <div
-                      style={{
-                        display: "grid",
-                        gap: 10,
-                        marginBottom: 14,
-                      }}
-                    >
+                    <div className="manual-row manual-row-modern">
                       <input
-                        placeholder="Nombre cliente"
-                        value={customerName}
-                        onChange={(e) => setCustomerName(e.target.value)}
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value)}
+                        placeholder="Ej. DON-000001"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            addToCartByCode(manualCode);
+                            setManualCode("");
+                          }
+                        }}
                       />
+                      <Button
+                        onClick={() => {
+                          addToCartByCode(manualCode);
+                          setManualCode("");
+                        }}
+                      >
+                        Agregar
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
 
-                      <input
-                        placeholder="Teléfono"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                      />
+                <div className="right-panel sale-checkout-column">
+                  <Card className="sale-cart-card">
+                    <div className="sale-card-heading">
+                      <div>
+                        <span className="eyebrow">Pedido actual</span>
+                        <h2>Carrito</h2>
+                      </div>
+                      <span className="sale-step">{itemsCount}</span>
+                    </div>
 
+                    {cart.length === 0 ? (
+                      <div className="sale-cart-empty">
+                        <span>□</span>
+                        <strong>Aún no hay productos</strong>
+                        <p>Busca un artículo a la izquierda para iniciar la venta.</p>
+                      </div>
+                    ) : (
+                      <div className="cart-list sale-cart-list">
+                        {cart.map((item) => (
+                          <div className="cart-item sale-cart-item" key={item.id}>
+                            <ProductImage src={item.image_url} alt={item.name} small />
+                            <div className="cart-info">
+                              <strong>{item.name}</strong>
+                              <span>{item.code} · Cant. {item.qty}</span>
+                            </div>
+                            <div className="cart-price">
+                              <strong>{money(Number(item.price || 0) * item.qty)}</strong>
+                              <button onClick={() => removeFromCart(item.id)} type="button">Quitar</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
+
+                  <Card className="sale-checkout-card">
+                    <div className="sale-card-heading">
+                      <div>
+                        <span className="eyebrow">Finalizar</span>
+                        <h2>Cobro</h2>
+                      </div>
+                      <span className="sale-step">03</span>
+                    </div>
+
+                    <div className="sale-mode-toggle">
+                      <button
+                        onClick={() => setSaleMode("sale")}
+                        className={saleMode === "sale" ? "active" : ""}
+                        type="button"
+                      >
+                        Venta normal
+                      </button>
+                      <button
+                        onClick={() => setSaleMode("layaway")}
+                        className={saleMode === "layaway" ? "active" : ""}
+                        type="button"
+                      >
+                        Apartado
+                      </button>
+                    </div>
+
+                    <div className="sale-discount-section">
+                      <label>Descuento</label>
+                      <div className="sale-discount-pills">
+                        {[0, 5, 10, 15].map((value) => (
+                          <button
+                            key={value}
+                            onClick={() => setDiscountPercent(value)}
+                            className={Number(discountPercent) === value ? "active" : ""}
+                            type="button"
+                          >
+                            {value}%
+                          </button>
+                        ))}
+                      </div>
                       <input
                         type="number"
-                        placeholder="Anticipo"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                      />
-
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => setDueDate(e.target.value)}
+                        value={discountPercent}
+                        onChange={(e) => setDiscountPercent(e.target.value)}
+                        placeholder="Otro porcentaje"
                       />
                     </div>
-                  )}
 
-                  <input
-                    type="number"
-                    value={received}
-                    onChange={(e) => setReceived(e.target.value)}
-                    placeholder="Monto recibido"
-                  />
+                    {saleMode === "layaway" && (
+                      <div className="sale-layaway-fields">
+                        <input
+                          placeholder="Nombre del cliente"
+                          value={customerName}
+                          onChange={(e) => setCustomerName(e.target.value)}
+                        />
+                        <input
+                          placeholder="Teléfono"
+                          value={customerPhone}
+                          onChange={(e) => setCustomerPhone(e.target.value)}
+                        />
+                        <input
+                          type="number"
+                          placeholder="Anticipo"
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                        />
+                        <input
+                          type="date"
+                          value={dueDate}
+                          onChange={(e) => setDueDate(e.target.value)}
+                        />
+                      </div>
+                    )}
 
-                  <div className="pay-grid">
-                    <div>
-                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>
-                        {saleMode === "layaway" ? "Saldo" : "Cambio"}
-                      </span>
-                      <strong style={{ fontSize: "2.4rem", fontWeight: 900 }}>
-                        {saleMode === "layaway"
-                          ? money(Math.max(totalFinal - Number(depositAmount || 0), 0))
-                          : change >= 0
-                          ? money(change)
-                          : money(0)}
-                      </strong>
+                    {saleMode === "sale" && (
+                      <div className="sale-received-field">
+                        <label>Monto recibido</label>
+                        <input
+                          type="number"
+                          value={received}
+                          onChange={(e) => setReceived(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    )}
+
+                    <div className="sale-total-summary">
+                      <div>
+                        <span>Subtotal</span>
+                        <b>{money(subtotal)}</b>
+                      </div>
+                      <div>
+                        <span>Descuento</span>
+                        <b>-{money(discountAmount)}</b>
+                      </div>
+                      <div className="sale-total-final-row">
+                        <span>Total final</span>
+                        <strong>{money(totalFinal)}</strong>
+                      </div>
+                      <div className="sale-change-row">
+                        <span>{saleMode === "layaway" ? "Saldo pendiente" : "Cambio"}</span>
+                        <strong>
+                          {saleMode === "layaway"
+                            ? money(Math.max(totalFinal - Number(depositAmount || 0), 0))
+                            : change >= 0
+                            ? money(change)
+                            : money(0)}
+                        </strong>
+                      </div>
                     </div>
-                    <div>
-                      <span style={{ fontSize: "2.2rem", fontWeight: 800 }}>Total final</span>
-                      <strong style={{ fontSize: "2.2rem", fontWeight: 900 }}>
-                        {money(totalFinal)}
-                      </strong>
-                    </div>
-                  </div>
 
-                  <Button
-                    disabled={
-                      cart.length === 0 ||
-                      (saleMode === "sale" && Number(received || 0) < totalFinal) ||
-                      (saleMode === "layaway" && Number(depositAmount || 0) <= 0)
-                    }
-                    onClick={checkout}
-                    style={{ fontSize: "2rem", fontWeight: 900 }}
-                  >
-                    {saleMode === "layaway" ? "🧾 Registrar apartado" : "💳 Cobrar venta"}
-                  </Button>
-                </Card>
+                    <Button
+                      disabled={
+                        cart.length === 0 ||
+                        (saleMode === "sale" && Number(received || 0) < totalFinal) ||
+                        (saleMode === "layaway" && Number(depositAmount || 0) <= 0)
+                      }
+                      onClick={checkout}
+                      style={{ minHeight: 58, fontSize: "1.15rem", width: "100%" }}
+                    >
+                      {saleMode === "layaway" ? "Registrar apartado" : "Cobrar venta"}
+                    </Button>
+                  </Card>
+                </div>
               </div>
             </section>
           }
@@ -5773,6 +5768,493 @@ body {
   .donatello-nav-icon {
     width: 25px;
     height: 25px;
+  }
+}
+
+
+/* ===== Venta · flujo comercial ===== */
+.sale-screen {
+  display: grid;
+  gap: 14px;
+}
+
+.sale-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  padding: 4px 2px;
+}
+
+.sale-page-heading h2 {
+  margin-top: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  line-height: 1;
+}
+
+.sale-page-heading .muted {
+  margin-top: 8px;
+  font-size: .94rem;
+}
+
+.sale-heading-badge {
+  min-width: 160px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  padding: 10px 14px;
+  text-align: right;
+  box-shadow: 0 8px 22px rgba(59,44,32,.05);
+}
+
+.sale-heading-badge span {
+  display: block;
+  color: #8a8078;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.sale-heading-badge strong {
+  display: block;
+  margin-top: 2px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+}
+
+.sale-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: 12px;
+}
+
+.sale-kpi-card {
+  min-height: 105px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 15px 17px;
+}
+
+.sale-kpi-card > span {
+  color: var(--soft-text);
+  font-size: .82rem;
+  font-weight: 800;
+}
+
+.sale-kpi-card > strong {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.sale-kpi-card > small {
+  color: #9b9188;
+  font-weight: 650;
+}
+
+.sale-profit-kpi {
+  background: #f1f4eb;
+  border-color: #dfe5d3;
+}
+
+.sale-layout-modern {
+  grid-template-columns: minmax(0, 1.45fr) minmax(340px, .85fr);
+  align-items: start;
+}
+
+.sale-checkout-column {
+  position: sticky;
+  top: 18px;
+}
+
+.sale-card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.sale-card-heading h2 {
+  margin-top: 3px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.45rem;
+}
+
+.sale-step {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 9px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #f2e9df;
+  color: var(--terracotta-dark);
+  font-weight: 900;
+}
+
+.sale-search-card {
+  overflow: visible;
+}
+
+.sale-search-wrap {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 9px;
+  align-items: center;
+  border: 1px solid #ded5cb;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: #fff;
+}
+
+.sale-search-wrap > span {
+  font-size: 1.4rem;
+  color: #8d837a;
+}
+
+.sale-search-wrap input {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  min-height: 54px;
+  font-size: 1.05rem;
+  background: transparent;
+}
+
+.sale-search-wrap input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.sale-search-hint {
+  margin-top: 12px;
+  min-height: 90px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  background: #faf6f1;
+  border: 1px dashed #ded4ca;
+  border-radius: 14px;
+  color: #81776f;
+  text-align: left;
+}
+
+.sale-search-hint > span {
+  font-size: 1.8rem;
+  color: #b8aba0;
+}
+
+.sale-search-hint p {
+  margin-top: 2px;
+  font-size: .8rem;
+  color: #9b9189;
+}
+
+.sale-quick-results {
+  max-height: 410px;
+  overflow: auto;
+}
+
+.sale-result-btn {
+  grid-template-columns: auto minmax(0,1fr) auto;
+  background: #fff;
+  border-color: #e7ddd3;
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.sale-result-btn:hover {
+  border-color: #c99a86;
+  background: #fffaf6;
+}
+
+.sale-result-copy {
+  min-width: 0;
+}
+
+.sale-result-copy strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sale-result-meta {
+  text-align: right;
+}
+
+.sale-result-meta strong {
+  font-size: .95rem;
+}
+
+.sale-result-meta span {
+  font-size: .72rem;
+}
+
+.sale-scanner-compact {
+  padding: 15px;
+}
+
+.scanner-box-modern {
+  min-height: 150px;
+  border-radius: 16px;
+  background: #2a2826;
+  box-shadow: none;
+}
+
+.scanner-box-modern.active {
+  min-height: 300px;
+}
+
+.scanner-box-modern::after {
+  inset: 12px;
+  border-radius: 12px;
+}
+
+.scanner-idle {
+  display: grid;
+  place-items: center;
+  gap: 4px;
+  color: #f7f0e9;
+  text-align: center;
+}
+
+.scanner-idle > span {
+  position: static !important;
+  font-size: 1.8rem;
+}
+
+.scanner-idle small {
+  color: #bdb4ad;
+  font-weight: 650;
+}
+
+.scanner-actions-modern {
+  grid-template-columns: auto 1fr;
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.status-box-modern {
+  min-height: 44px;
+  border-radius: 12px;
+  font-size: .82rem;
+  background: #f7f3ee;
+}
+
+.manual-row-modern {
+  margin-top: 8px;
+  grid-template-columns: 1fr auto;
+}
+
+.manual-row-modern input {
+  border-radius: 12px;
+}
+
+.sale-cart-card,
+.sale-checkout-card {
+  padding: 15px;
+}
+
+.sale-cart-empty {
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  text-align: center;
+  color: #81776f;
+  border: 1px dashed #ded5cb;
+  border-radius: 14px;
+  background: #faf6f1;
+}
+
+.sale-cart-empty > span {
+  font-size: 1.7rem;
+  color: #b8aaa0;
+}
+
+.sale-cart-empty p {
+  font-size: .78rem;
+  color: #9a9088;
+}
+
+.sale-cart-list {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.sale-cart-item {
+  border: 1px solid #eee5dd;
+  background: #faf6f1;
+  border-radius: 13px;
+  padding: 9px;
+}
+
+.sale-cart-item .product-img.small {
+  width: 46px;
+  height: 46px;
+  border-radius: 11px;
+}
+
+.sale-mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: #f2ece5;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.sale-mode-toggle button {
+  border: 0;
+  background: transparent;
+  border-radius: 9px;
+  padding: 10px;
+  font-weight: 850;
+  color: #70665e;
+  cursor: pointer;
+}
+
+.sale-mode-toggle button.active {
+  background: #fff;
+  color: var(--terracotta-dark);
+  box-shadow: 0 4px 12px rgba(50,35,24,.07);
+}
+
+.sale-discount-section,
+.sale-received-field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.sale-discount-section > label,
+.sale-received-field > label {
+  color: #6e655e;
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.sale-discount-pills {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 6px;
+}
+
+.sale-discount-pills button {
+  min-height: 38px;
+  border: 1px solid #e4dbd2;
+  border-radius: 10px;
+  background: #faf6f1;
+  color: #6f655e;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.sale-discount-pills button.active {
+  background: var(--terracotta);
+  color: #fff;
+  border-color: var(--terracotta);
+}
+
+.sale-checkout-card input {
+  border-radius: 12px;
+  min-height: 46px;
+}
+
+.sale-layaway-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 13px;
+}
+
+.sale-total-summary {
+  display: grid;
+  gap: 7px;
+  margin: 14px 0;
+  border-top: 1px solid #ece3da;
+  padding-top: 12px;
+}
+
+.sale-total-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #776d65;
+  font-size: .84rem;
+}
+
+.sale-total-final-row {
+  align-items: end;
+  padding-top: 5px;
+}
+
+.sale-total-final-row strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.85rem;
+  color: var(--ink);
+}
+
+.sale-change-row {
+  background: #f1f4eb;
+  border-radius: 10px;
+  padding: 9px 10px;
+  color: var(--olive-dark) !important;
+  font-weight: 850;
+}
+
+@media (max-width: 1040px) {
+  .sale-layout-modern {
+    grid-template-columns: 1fr;
+  }
+
+  .sale-checkout-column {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .sale-page-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sale-heading-badge {
+    text-align: left;
+  }
+
+  .sale-kpis {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .sale-kpi-card {
+    min-width: 215px;
+  }
+
+  .sale-result-btn {
+    grid-template-columns: auto minmax(0,1fr);
+  }
+
+  .sale-result-meta {
+    grid-column: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+  }
+
+  .scanner-actions-modern {
+    grid-template-columns: 1fr;
+  }
+
+  .sale-layaway-fields {
+    grid-template-columns: 1fr;
   }
 }
 
