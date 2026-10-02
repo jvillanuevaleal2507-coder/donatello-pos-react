@@ -6714,6 +6714,471 @@ body {
   }
 }
 
+
+/* ===== Alta de producto ===== */
+.add-product-modern {
+  display: grid;
+  gap: 14px;
+}
+
+.add-product-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  padding: 4px 2px;
+}
+
+.add-product-heading h2 {
+  margin-top: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  line-height: 1;
+}
+
+.add-product-heading p {
+  margin-top: 8px;
+  color: var(--soft-text);
+  font-size: .94rem;
+  font-weight: 650;
+}
+
+.add-product-margin-badge {
+  min-width: 190px;
+  border-radius: 16px;
+  padding: 10px 14px;
+  background: #f1f4eb;
+  border: 1px solid #dfe5d3;
+  text-align: right;
+}
+
+.add-product-margin-badge span,
+.add-product-margin-badge small {
+  display: block;
+  color: #6d7457;
+  font-size: .74rem;
+  font-weight: 800;
+}
+
+.add-product-margin-badge strong {
+  display: block;
+  margin: 2px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.55rem;
+  color: var(--olive-dark);
+}
+
+.add-product-atlas-card {
+  padding: 12px;
+}
+
+.add-product-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(290px, .7fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.add-product-side {
+  display: grid;
+  gap: 14px;
+  position: sticky;
+  top: 18px;
+}
+
+.add-product-section-title {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.add-product-section-title h3,
+.add-product-save-card h3 {
+  margin-top: 3px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+}
+
+.add-product-form-grid,
+.add-image-url-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.add-product-form-grid label,
+.add-image-url-grid label {
+  display: grid;
+  gap: 7px;
+  color: #6d645d;
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.add-product-form-grid input,
+.add-image-url-grid input {
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: .95rem;
+}
+
+.add-product-form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.add-product-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  color: #9a9088;
+  font-size: .72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+}
+
+.add-product-divider::before,
+.add-product-divider::after {
+  content: "";
+  height: 1px;
+  background: #ece3da;
+  flex: 1;
+}
+
+.add-cost-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.add-cost-summary > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #ece4db;
+  padding-top: 8px;
+  color: #766d65;
+  font-size: .82rem;
+}
+
+.add-cost-summary > div:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.add-cost-summary .total,
+.add-cost-summary .profit {
+  margin-top: 4px;
+  border-radius: 10px;
+  padding: 10px;
+  border: 0;
+}
+
+.add-cost-summary .total {
+  background: #f7f3ee;
+  color: #544c46;
+}
+
+.add-cost-summary .profit {
+  background: #f1f4eb;
+  color: var(--olive-dark);
+}
+
+.add-cost-summary strong {
+  font-size: 1rem;
+}
+
+.add-product-save-card p {
+  margin-top: 6px;
+  color: #8c8179;
+  font-size: .8rem;
+  font-weight: 650;
+}
+
+.add-product-images-card {
+  padding: 16px;
+}
+
+.add-image-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 10px;
+  border: 1px dashed #d6b9aa;
+  background: #fff8f3;
+  color: var(--terracotta-dark);
+  font-size: .78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.add-image-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.add-image-preview-card {
+  border: 1px solid #e9e0d7;
+  border-radius: 14px;
+  padding: 8px;
+  background: #fff;
+  min-width: 0;
+}
+
+.add-image-preview-card > span {
+  display: block;
+  margin-top: 6px;
+  color: #82776f;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+/* ===== Historial de ventas ===== */
+.sales-modern {
+  gap: 14px;
+}
+
+.sales-heading-modern h2 {
+  margin-top: 4px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 3.6vw, 3rem);
+  line-height: 1;
+}
+
+.sales-heading-modern .muted {
+  margin-top: 8px;
+  font-size: .94rem;
+}
+
+.sales-kpi-grid .card {
+  min-height: 105px;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 15px 17px;
+}
+
+.sales-kpi-grid .metric-label {
+  font-size: .82rem;
+  color: var(--soft-text);
+}
+
+.sales-kpi-grid .metric-value {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+}
+
+.sales-toolbar-card {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+
+.sales-search-wrap {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  border: 1px solid #e0d7ce;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #fff;
+}
+
+.sales-search-wrap > span {
+  color: #92877e;
+  font-size: 1.2rem;
+}
+
+.sales-search-wrap input {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  min-height: 42px;
+  background: transparent;
+  font-size: .92rem;
+}
+
+.sales-search-wrap input:focus {
+  border: 0;
+  box-shadow: none;
+}
+
+.sales-status-pills {
+  display: flex;
+  gap: 5px;
+  background: #f4eee7;
+  padding: 4px;
+  border-radius: 11px;
+}
+
+.sales-status-pills button {
+  border: 0;
+  background: transparent;
+  color: #6e655e;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.sales-status-pills button.active {
+  background: #fff;
+  color: var(--terracotta-dark);
+  box-shadow: 0 3px 10px rgba(45,32,23,.07);
+}
+
+.sales-result-count {
+  color: #968b83;
+  font-size: .74rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.sales-list-modern {
+  gap: 10px;
+}
+
+.sales-history-card {
+  padding: 14px 15px;
+}
+
+.sales-history-card .sale-card-header {
+  align-items: center;
+}
+
+.sales-history-card .sale-title-row h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.2rem;
+}
+
+.sales-history-card .sale-total-box {
+  background: #f7f3ee;
+  border-radius: 12px;
+  min-width: 135px;
+}
+
+.sales-history-card .sale-summary-grid {
+  gap: 7px;
+}
+
+.sales-history-card .sale-summary-grid div {
+  border-radius: 11px;
+  padding: 8px 10px;
+  background: #faf6f1;
+}
+
+.sales-history-card .sale-items-list {
+  background: #fff;
+  border: 1px solid #eee6de;
+  border-radius: 12px;
+  padding: 0 10px 8px;
+}
+
+.sales-history-card .sale-admin-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.sales-history-card.sale-card-voided {
+  opacity: .72;
+  background: #fbf8f5;
+}
+
+@media (max-width: 980px) {
+  .add-product-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .add-product-side {
+    position: static;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sales-toolbar-card {
+    grid-template-columns: 1fr;
+  }
+
+  .sales-status-pills {
+    width: max-content;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .add-product-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .add-product-margin-badge {
+    text-align: left;
+  }
+
+  .add-product-side,
+  .add-product-form-grid,
+  .add-image-url-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .add-product-form-grid .span-2 {
+    grid-column: auto;
+  }
+
+  .add-image-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sales-heading-modern {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sales-kpi-grid {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .sales-kpi-grid .card {
+    min-width: 215px;
+  }
+
+  .sales-status-pills {
+    overflow-x: auto;
+  }
+
+  .sales-history-card .sale-card-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .sales-history-card .sale-total-box {
+    text-align: left;
+  }
+
+  .sales-history-card .sale-summary-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .sales-history-card .sale-admin-actions {
+    justify-content: stretch;
+  }
+
+  .sales-history-card .sale-admin-actions .btn {
+    flex: 1;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
