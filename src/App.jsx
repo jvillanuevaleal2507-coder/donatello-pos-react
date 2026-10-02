@@ -1666,71 +1666,114 @@ function QRSection({ products }) {
   }
 
   return (
-    <Card>
-      <h2>Etiquetas QR</h2>
-      <p className="muted" style={{ marginTop: 6 }}>
-        Selecciona un producto, descarga QR individuales o genera etiquetas imprimibles.
-      </p>
+    <section className="qr-modern">
+      <div className="qr-heading-modern">
+        <div>
+          <span className="eyebrow">Etiquetado</span>
+          <h2>Etiquetas QR</h2>
+          <p>Genera códigos individuales o imprime todas las etiquetas del inventario.</p>
+        </div>
+        <div className="qr-count-badge">
+          <span>Productos</span>
+          <strong>{products.length}</strong>
+        </div>
+      </div>
 
       {products.length === 0 ? (
-        <p className="muted" style={{ marginTop: 12 }}>No hay productos cargados.</p>
+        <Card className="qr-empty-card">
+          <strong>No hay productos cargados.</strong>
+          <span>Agrega productos al inventario para generar sus etiquetas.</span>
+        </Card>
       ) : (
-        <div className="qr-layout">
-          <div className="qr-controls">
-            <label>Producto</label>
-            <select
-              value={selectedProduct?.id || ""}
-              onChange={(e) => setSelectedId(e.target.value)}
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.code} · {p.name}
-                </option>
-              ))}
-            </select>
-
-            <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-              <Button onClick={downloadAllQRCodes} disabled={downloadingAll}>
-                {downloadingAll ? "Generando ZIP..." : "Descargar QR"}
-              </Button>
-
-              <Button onClick={generateLabelsPDF} disabled={generatingPdf}>
-                {generatingPdf ? "Generando PDF..." : "Descargar PDF"}
-              </Button>
+        <div className="qr-layout qr-layout-modern">
+          <Card className="qr-controls qr-controls-modern">
+            <div className="qr-section-title">
+              <div>
+                <span className="eyebrow">Seleccionar</span>
+                <h3>Producto</h3>
+              </div>
+              <span className="sale-step">01</span>
             </div>
 
+            <label className="qr-product-select">
+              Buscar en inventario
+              <select
+                value={selectedProduct?.id || ""}
+                onChange={(e) => setSelectedId(e.target.value)}
+              >
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} · {p.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             {selectedProduct && (
-              <div className="qr-product-box">
+              <div className="qr-product-box qr-product-box-modern">
                 <ProductImage src={selectedProduct.image_url} alt={selectedProduct.name} />
-                <h3>{selectedProduct.name}</h3>
-                <p>{selectedProduct.code}</p>
-                <p>Precio: <b>{money(selectedProduct.price)}</b></p>
-                <p>Stock: <b>{selectedProduct.stock}</b></p>
+                <div>
+                  <h3>{selectedProduct.name}</h3>
+                  <p>{selectedProduct.code} · {selectedProduct.category || "General"}</p>
+                  <div className="qr-product-meta">
+                    <span>Precio <b>{money(selectedProduct.price)}</b></span>
+                    <span>Stock <b>{selectedProduct.stock}</b></span>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
 
-          <div className="qr-preview">
+            <div className="qr-bulk-actions">
+              <button className="qr-action-card" onClick={downloadAllQRCodes} disabled={downloadingAll} type="button">
+                <span className="qr-action-icon">ZIP</span>
+                <div>
+                  <strong>{downloadingAll ? "Generando..." : "Todos los QR"}</strong>
+                  <small>Descarga un ZIP con todos los códigos.</small>
+                </div>
+              </button>
+
+              <button className="qr-action-card" onClick={generateLabelsPDF} disabled={generatingPdf} type="button">
+                <span className="qr-action-icon">PDF</span>
+                <div>
+                  <strong>{generatingPdf ? "Generando..." : "Etiquetas imprimibles"}</strong>
+                  <small>Hoja carta con 10 etiquetas por página.</small>
+                </div>
+              </button>
+            </div>
+          </Card>
+
+          <Card className="qr-preview qr-preview-modern">
+            <div className="qr-section-title">
+              <div>
+                <span className="eyebrow">Vista previa</span>
+                <h3>QR individual</h3>
+              </div>
+              <span className="sale-step">02</span>
+            </div>
+
             {qrDataUrl ? (
-              <>
+              <div className="qr-code-stage">
                 <img src={qrDataUrl} alt={`QR ${selectedProduct?.code}`} />
+                <strong>{selectedProduct?.code}</strong>
+                <span>{selectedProduct?.name}</span>
                 <a
-                  className="download-btn"
+                  className="download-btn qr-download-single"
                   href={qrDataUrl}
                   download={`QR_${selectedProduct?.code}.png`}
                 >
                   Descargar QR individual
                 </a>
-              </>
+              </div>
             ) : (
               <p className="muted">Generando QR...</p>
             )}
-          </div>
+          </Card>
         </div>
       )}
-    </Card>
+    </section>
   );
 }
+
 function ReceiptModal({ sale, onClose }) {
   const printLockRef = useRef(false);
   const ticketRef = useRef(null);
@@ -2988,19 +3031,54 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     }
   }
 
+  const totalLayawayValue = layaways.reduce(
+    (sum, item) => sum + Number(item.total || 0),
+    0
+  );
+  const totalLayawayBalance = layaways.reduce(
+    (sum, item) => sum + Number(item.balance || 0),
+    0
+  );
+  const totalLayawayDeposit = layaways.reduce(
+    (sum, item) => sum + Number(item.deposit || 0),
+    0
+  );
+
   return (
-    <section className="inventory-section">
-      <div className="sales-header">
+    <section className="inventory-section layaways-modern">
+      <div className="sales-header layaways-heading">
         <div>
-          <h2>Apartados activos</h2>
-          <p className="muted">
-            Gestiona pagos y liquidaciones. Registros activos: {layaways.length}
-          </p>
+          <span className="eyebrow">Seguimiento</span>
+          <h2>Apartados</h2>
+          <p className="muted">Controla saldos, fechas límite, abonos y recibos desde una sola pantalla.</p>
         </div>
 
-        <Button onClick={refreshLayaways} disabled={loadingLayaways}>
-          {loadingLayaways ? "Actualizando..." : "Actualizar"}
+        <Button variant="secondary" onClick={refreshLayaways} disabled={loadingLayaways}>
+          {loadingLayaways ? "Actualizando..." : "↻ Actualizar"}
         </Button>
+      </div>
+
+      <div className="layaway-kpi-grid">
+        <Card className="layaway-kpi">
+          <span>Activos</span>
+          <strong>{layaways.length}</strong>
+          <small>Apartados abiertos</small>
+        </Card>
+        <Card className="layaway-kpi">
+          <span>Valor apartado</span>
+          <strong>{money(totalLayawayValue)}</strong>
+          <small>Total comprometido</small>
+        </Card>
+        <Card className="layaway-kpi">
+          <span>Anticipos recibidos</span>
+          <strong>{money(totalLayawayDeposit)}</strong>
+          <small>Capital ya cobrado</small>
+        </Card>
+        <Card className="layaway-kpi olive">
+          <span>Saldo pendiente</span>
+          <strong>{money(totalLayawayBalance)}</strong>
+          <small>Por recuperar</small>
+        </Card>
       </div>
 
       {loadingLayaways ? (
@@ -3010,14 +3088,13 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
       ) : layaways.length === 0 ? (
         <Card>
           <p className="muted">
-            No hay apartados activos. Si en Supabase sí aparecen, revisa la consola:
-            ahora el sistema imprime “Apartados recibidos” para validar qué responde la base.
+            No hay apartados activos por el momento.
           </p>
         </Card>
       ) : (
-        <div className="sales-list">
+        <div className="sales-list layaways-list">
           {layaways.map((item) => (
-            <Card key={item.id}>
+            <Card key={item.id} className="layaway-card">
               <div className="sale-card-header">
                 <div>
                   <h3>{item.customer_name}</h3>
@@ -3071,14 +3148,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                 </div>
               )}
 
-              <div
-                style={{
-                  marginTop: 14,
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 10,
-                }}
-              >
+              <div className="layaway-actions">
                 <Button
                   onClick={() => {
                     setSelected(item);
@@ -3101,24 +3171,8 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
               </div>
 
               {Number(expandedLayawayHistoryId) === Number(item.id) && (
-                <div
-                  style={{
-                    marginTop: 14,
-                    padding: 14,
-                    borderRadius: 18,
-                    background: "#fff7e8",
-                    border: "1px solid #ead6ad",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 10,
-                    }}
-                  >
+                <div className="layaway-history-panel">
+                  <div className="layaway-history-heading">
                     <div>
                       <h3 style={{ margin: 0 }}>Historial de abonos</h3>
                       <p className="muted" style={{ marginTop: 4 }}>
@@ -3177,9 +3231,10 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
         </div>
       )}
 
-      <Card>
-        <div className="sales-header">
+      <Card className="layaway-payments-card">
+        <div className="sales-header layaway-payments-heading">
           <div>
+            <span className="eyebrow">Movimientos recientes</span>
             <h2>Historial de abonos</h2>
             <p className="muted">Últimos 30 abonos registrados para reimprimir recibos.</p>
           </div>
@@ -3218,8 +3273,9 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
 
       {selected && (
         <div className="receipt-overlay">
-          <div className="receipt-panel">
-            <h2>Pago apartado</h2>
+          <div className="receipt-panel layaway-payment-panel">
+            <span className="eyebrow">Registrar movimiento</span>
+            <h2>Pago de apartado</h2>
 
             <div style={{ marginTop: 12, display: "grid", gap: 10 }}>
               <div>
@@ -3341,38 +3397,69 @@ function ImportCSV({ products, loadProducts }) {
   }
 
   return (
-    <Card>
-      <h2>Importar productos CSV</h2>
-      <p className="muted" style={{ marginTop: 6 }}>
-        Usa el CSV exportado del sistema anterior. Se cargarán código, nombre, categoría, costo real, precio, stock e imagen URL.
-      </p>
-
-      <div className="import-box">
-        <input type="file" accept=".csv" onChange={handleFile} />
-        <p>{message}</p>
+    <section className="import-modern">
+      <div className="import-heading">
+        <div>
+          <span className="eyebrow">Herramientas</span>
+          <h2>Importar inventario</h2>
+          <p>Carga productos en lote desde un archivo CSV sin capturarlos uno por uno.</p>
+        </div>
       </div>
 
+      <Card className="import-main-card">
+        <div className="import-step-heading">
+          <div>
+            <span className="eyebrow">Archivo fuente</span>
+            <h3>Selecciona el CSV</h3>
+          </div>
+          <span className="sale-step">01</span>
+        </div>
+
+        <label className="import-drop-zone">
+          <span className="import-file-icon">CSV</span>
+          <div>
+            <strong>Seleccionar archivo .csv</strong>
+            <small>Se leerán código, nombre, categoría, costo, precio, stock e imagen.</small>
+          </div>
+          <input type="file" accept=".csv" onChange={handleFile} />
+        </label>
+
+        <div className="import-status-box">
+          <span>Estado</span>
+          <p>{message}</p>
+        </div>
+      </Card>
+
       {preview.length > 0 && (
-        <div className="products-grid" style={{ marginTop: 14 }}>
-          {preview.map((p) => (
-            <Card key={p.code}>
-              <div className="product-card with-image">
-                <ProductImage src={p.image_url} alt={p.name} />
-                <div className="product-main">
-                  <h3>{p.name}</h3>
-                  <p>{p.code} · {p.category}</p>
-                  <p>Precio: <b>{money(p.price)}</b> · Costo: <b>{money(p.cost)}</b></p>
+        <Card className="import-preview-card">
+          <div className="import-step-heading">
+            <div>
+              <span className="eyebrow">Resultado</span>
+              <h3>Productos importados</h3>
+            </div>
+            <span className="sale-step">02</span>
+          </div>
+
+          <p className="import-preview-note">Mostrando hasta 10 productos del último archivo procesado.</p>
+
+          <div className="import-preview-grid">
+            {preview.map((p) => (
+              <div className="import-product-row" key={p.code}>
+                <ProductImage src={p.image_url} alt={p.name} small />
+                <div>
+                  <strong>{p.name}</strong>
+                  <span>{p.code} · {p.category}</span>
                 </div>
-                <div className="stock-pill">
-                  <span>Stock</span>
-                  <strong>{p.stock}</strong>
+                <div className="import-product-price">
+                  <strong>{money(p.price)}</strong>
+                  <span>Costo {money(p.cost)} · Stock {p.stock}</span>
                 </div>
               </div>
-            </Card>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Card>
       )}
-    </Card>
+    </section>
   );
 }
 
