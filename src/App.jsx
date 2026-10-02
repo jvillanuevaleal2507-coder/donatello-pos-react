@@ -7909,6 +7909,717 @@ body {
   }
 }
 
+
+/* ===== Pulido final de densidad · desktop + mobile ===== */
+html {
+  font-size: 15px;
+}
+
+body {
+  line-height: 1.35;
+}
+
+.app {
+  padding: 12px;
+}
+
+.shell {
+  width: min(1420px, 100%);
+  gap: 14px;
+}
+
+.brand-header-modern {
+  padding: 13px 16px;
+  border-radius: 18px;
+  gap: 12px;
+}
+
+.brand-logo-modern {
+  width: 62px;
+  height: 62px;
+  border-radius: 15px;
+}
+
+.brand-copy-modern h1 {
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
+}
+
+.brand-copy-modern p {
+  font-size: .84rem;
+}
+
+.brand-session-modern {
+  min-width: 150px;
+}
+
+.workspace {
+  grid-template-columns: 198px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.sidebar-shell {
+  padding: 9px;
+  border-radius: 18px;
+}
+
+.nav-section-label {
+  padding: 8px 10px 5px;
+  font-size: .62rem;
+}
+
+.donatello-nav-link {
+  min-height: 40px;
+  border-radius: 10px;
+  grid-template-columns: 26px 1fr;
+  gap: 6px;
+  padding: 6px 9px;
+  font-size: .82rem;
+}
+
+.donatello-nav-icon {
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
+  font-size: .92rem;
+}
+
+.sidebar-signout {
+  min-height: 38px;
+  border-radius: 10px;
+  font-size: .8rem;
+}
+
+.card {
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.btn {
+  min-height: 38px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  font-size: .84rem;
+  line-height: 1.15;
+}
+
+input,
+select {
+  border-radius: 10px;
+  padding: 9px 11px;
+  font-size: .9rem;
+}
+
+.muted,
+.section-title-row p {
+  font-size: .86rem;
+}
+
+.inventory-heading-row h2,
+.sale-page-heading h2,
+.dashboard-heading h2,
+.sales-heading-modern h2,
+.add-product-heading h2,
+.layaways-heading h2,
+.qr-heading-modern h2,
+.import-heading h2 {
+  font-size: clamp(1.75rem, 2.7vw, 2.3rem);
+}
+
+.inventory-heading-row .muted,
+.sale-page-heading .muted,
+.sales-heading-modern .muted,
+.layaways-heading .muted,
+.dashboard-heading p,
+.add-product-heading p,
+.qr-heading-modern p,
+.import-heading p {
+  font-size: .84rem;
+}
+
+.eyebrow {
+  font-size: .67rem;
+  letter-spacing: .1em;
+}
+
+.inventory-kpi-card,
+.sale-kpi-card,
+.dashboard-kpi,
+.layaway-kpi {
+  min-height: 92px;
+  padding: 12px 14px;
+}
+
+.inventory-kpi-card .metric-value,
+.sale-kpi-card > strong,
+.dashboard-kpi > strong,
+.layaway-kpi > strong {
+  font-size: clamp(1.35rem, 1.9vw, 1.72rem);
+}
+
+.metric-label,
+.sales-kpi-grid .metric-label {
+  font-size: .78rem;
+}
+
+.metric-value,
+.sales-kpi-grid .metric-value {
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+}
+
+.inventory-toolbar-card {
+  padding: 11px;
+  gap: 9px;
+}
+
+.inventory-search-wrap {
+  min-height: 46px;
+  border-radius: 11px;
+  padding: 0 11px;
+}
+
+.inventory-search-input {
+  min-height: 42px !important;
+  font-size: .92rem !important;
+}
+
+.category-pill {
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: .75rem;
+}
+
+.inventory-view-toggle button {
+  padding: 6px 8px;
+  font-size: .74rem;
+}
+
+.inventory-product-content {
+  padding: 11px;
+  gap: 9px;
+}
+
+.inventory-product-topline h3 {
+  font-size: 1.02rem;
+}
+
+.inventory-price-row strong {
+  font-size: 1.18rem;
+}
+
+.stock-status {
+  padding: 5px 8px;
+  font-size: .65rem;
+}
+
+.sale-heading-badge,
+.dashboard-today-pill,
+.add-product-margin-badge,
+.qr-count-badge {
+  padding: 8px 11px;
+  border-radius: 13px;
+}
+
+.sale-heading-badge strong,
+.dashboard-today-pill strong,
+.add-product-margin-badge strong,
+.qr-count-badge strong {
+  font-size: 1.28rem;
+}
+
+.sale-card-heading {
+  margin-bottom: 10px;
+}
+
+.sale-card-heading h2,
+.dashboard-section-heading h3,
+.dashboard-today-card h3,
+.dashboard-inventory-card h3,
+.add-product-section-title h3,
+.add-product-save-card h3,
+.qr-section-title h3,
+.import-step-heading h3,
+.layaway-payments-heading h2 {
+  font-size: 1.18rem;
+}
+
+.sale-step {
+  min-width: 31px;
+  height: 31px;
+  border-radius: 9px;
+  font-size: .8rem;
+}
+
+.sale-search-wrap {
+  min-height: 48px;
+  border-radius: 11px;
+  padding: 0 11px;
+}
+
+.sale-search-wrap input {
+  min-height: 44px;
+  font-size: .94rem;
+}
+
+.sale-search-hint {
+  min-height: 72px;
+}
+
+.sale-result-btn {
+  border-radius: 11px;
+  padding: 8px;
+}
+
+.sale-cart-card,
+.sale-checkout-card,
+.sale-scanner-compact {
+  padding: 12px;
+}
+
+.sale-checkout-card .btn {
+  min-height: 48px !important;
+  font-size: .95rem !important;
+}
+
+.sale-checkout-card input,
+.add-product-form-grid input,
+.add-image-url-grid input,
+.qr-product-select select {
+  min-height: 42px;
+}
+
+.scanner-box-modern {
+  min-height: 125px;
+}
+
+.scanner-box-modern.active {
+  min-height: 250px;
+}
+
+.sale-mode-toggle button,
+.sale-discount-pills button {
+  min-height: 34px;
+  padding: 7px 8px;
+  font-size: .78rem;
+}
+
+.sale-total-final-row strong {
+  font-size: 1.55rem;
+}
+
+.dashboard-card,
+.add-product-form-card,
+.add-product-cost-card,
+.add-product-save-card,
+.add-product-images-card,
+.qr-controls-modern,
+.qr-preview-modern,
+.import-main-card,
+.import-preview-card,
+.layaway-payments-card {
+  padding: 13px;
+}
+
+.dashboard-chart {
+  height: 285px;
+}
+
+.dashboard-inventory-value {
+  font-size: 1.65rem;
+}
+
+.sales-history-card,
+.layaway-card {
+  padding: 11px 13px;
+}
+
+.sales-history-card .sale-title-row h3,
+.layaway-card .sale-card-header h3 {
+  font-size: 1.08rem;
+}
+
+.sale-summary-grid {
+  gap: 7px;
+}
+
+.sale-summary-grid div {
+  padding: 8px;
+  border-radius: 10px;
+}
+
+.sale-summary-grid span {
+  font-size: .7rem;
+}
+
+.sale-total-box {
+  border-radius: 11px;
+  padding: 8px 10px;
+}
+
+.sale-total-box strong {
+  font-size: 1.05rem;
+}
+
+.sales-toolbar-card {
+  padding: 10px;
+}
+
+.add-product-layout {
+  gap: 11px;
+}
+
+.add-product-form-grid,
+.add-image-url-grid {
+  gap: 9px;
+}
+
+.add-product-form-grid label,
+.add-image-url-grid label {
+  gap: 5px;
+  font-size: .73rem;
+}
+
+.add-product-divider {
+  margin: 14px 0 9px;
+}
+
+.add-image-upload {
+  min-height: 34px;
+  font-size: .73rem;
+}
+
+.qr-code-stage {
+  min-height: 335px;
+  padding: 15px;
+}
+
+.qr-code-stage img {
+  width: min(210px, 72%);
+}
+
+.qr-action-card {
+  padding: 9px;
+  border-radius: 10px;
+}
+
+.import-drop-zone {
+  min-height: 118px;
+  padding: 14px;
+}
+
+.receipt-panel {
+  border-radius: 18px;
+}
+
+@media (min-width: 1280px) {
+  .inventory-products-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  html {
+    font-size: 15px;
+  }
+
+  .app {
+    padding: 8px;
+  }
+
+  .brand-header-modern {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .brand-logo-modern {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+  }
+
+  .brand-copy-modern h1 {
+    font-size: 1.28rem;
+  }
+
+  .workspace {
+    gap: 9px;
+  }
+
+  .sidebar-shell {
+    position: sticky;
+    top: 5px;
+    z-index: 30;
+    padding: 5px;
+    border-radius: 13px;
+    background: rgba(255,253,249,.96);
+    backdrop-filter: blur(12px);
+  }
+
+  .donatello-nav-link {
+    min-height: 38px;
+    padding: 5px 8px;
+    font-size: .74rem;
+  }
+
+  .inventory-heading-row,
+  .sale-page-heading,
+  .dashboard-heading,
+  .sales-heading-modern,
+  .add-product-heading,
+  .layaways-heading,
+  .qr-heading-modern {
+    gap: 9px;
+  }
+}
+
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+
+  .app {
+    padding: 6px;
+  }
+
+  .shell {
+    gap: 8px;
+  }
+
+  .brand-header-modern {
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    padding: 8px 9px;
+  }
+
+  .brand-logo-modern {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+  }
+
+  .brand-copy-modern h1 {
+    font-size: 1.08rem;
+  }
+
+  .card {
+    border-radius: 13px;
+    padding: 11px;
+  }
+
+  .btn {
+    min-height: 40px;
+    font-size: .82rem;
+  }
+
+  input,
+  select {
+    min-height: 42px;
+    font-size: 16px;
+  }
+
+  .sidebar-shell {
+    margin-inline: -1px;
+  }
+
+  .donatello-nav {
+    gap: 3px;
+  }
+
+  .donatello-nav-link {
+    min-width: 62px;
+    min-height: 42px;
+    padding: 5px 6px;
+    font-size: .64rem;
+    border-radius: 9px;
+  }
+
+  .donatello-nav-icon {
+    width: 22px;
+    height: 22px;
+    font-size: .82rem;
+  }
+
+  .inventory-heading-row h2,
+  .sale-page-heading h2,
+  .dashboard-heading h2,
+  .sales-heading-modern h2,
+  .add-product-heading h2,
+  .layaways-heading h2,
+  .qr-heading-modern h2,
+  .import-heading h2 {
+    font-size: 1.62rem;
+  }
+
+  .inventory-heading-row .muted,
+  .sale-page-heading .muted,
+  .sales-heading-modern .muted,
+  .layaways-heading .muted,
+  .dashboard-heading p,
+  .add-product-heading p,
+  .qr-heading-modern p,
+  .import-heading p {
+    font-size: .78rem;
+  }
+
+  .inventory-kpi-card,
+  .sale-kpi-card,
+  .dashboard-kpi,
+  .layaway-kpi {
+    min-width: 184px;
+    min-height: 82px;
+    padding: 10px 11px;
+  }
+
+  .inventory-products-grid {
+    gap: 8px;
+  }
+
+  .inventory-product-content {
+    padding: 10px;
+  }
+
+  .inventory-image-wrap {
+    aspect-ratio: 16 / 9;
+  }
+
+  .inventory-product-topline h3 {
+    font-size: 1rem;
+  }
+
+  .inventory-heading-actions .btn {
+    min-height: 40px;
+  }
+
+  .sale-layout-modern {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sale-product-column,
+  .sale-checkout-column {
+    display: contents;
+  }
+
+  .sale-search-card {
+    order: 1;
+  }
+
+  .sale-cart-card {
+    order: 2;
+  }
+
+  .sale-checkout-card {
+    order: 3;
+  }
+
+  .sale-scanner-compact {
+    order: 4;
+  }
+
+  .sale-heading-badge {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sale-kpis {
+    gap: 8px;
+  }
+
+  .sale-card-heading h2,
+  .dashboard-section-heading h3,
+  .dashboard-today-card h3,
+  .dashboard-inventory-card h3,
+  .add-product-section-title h3,
+  .add-product-save-card h3,
+  .qr-section-title h3,
+  .import-step-heading h3 {
+    font-size: 1.08rem;
+  }
+
+  .sale-checkout-card .btn {
+    min-height: 46px !important;
+  }
+
+  .scanner-box-modern {
+    min-height: 100px;
+  }
+
+  .scanner-box-modern.active {
+    min-height: 220px;
+  }
+
+  .dashboard-chart {
+    height: 225px;
+  }
+
+  .dashboard-today-grid {
+    gap: 6px;
+  }
+
+  .dashboard-recent-row {
+    gap: 7px;
+  }
+
+  .sales-history-card,
+  .layaway-card {
+    padding: 10px;
+  }
+
+  .sale-summary-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .sale-items-list {
+    font-size: .82rem;
+  }
+
+  .add-product-layout,
+  .add-product-side {
+    gap: 9px;
+  }
+
+  .add-product-atlas-card {
+    padding: 8px;
+  }
+
+  .add-product-form-grid,
+  .add-image-url-grid {
+    gap: 8px;
+  }
+
+  .add-image-preview {
+    gap: 7px;
+  }
+
+  .qr-code-stage {
+    min-height: 270px;
+  }
+
+  .qr-code-stage img {
+    width: min(190px, 68vw);
+  }
+
+  .import-product-row {
+    gap: 8px;
+  }
+
+  .receipt-overlay {
+    padding: 7px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .receipt-panel {
+    margin: 8px auto;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .receipt-actions {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
