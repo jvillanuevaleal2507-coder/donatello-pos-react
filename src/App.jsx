@@ -8620,6 +8620,108 @@ select {
   }
 }
 
+
+/* ===== Fix móvil: layout a una sola columna ===== */
+@media (max-width: 640px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .app,
+  .shell,
+  .workspace,
+  .workspace-content,
+  .inventory-section,
+  .sale-screen,
+  .dashboard-modern,
+  .add-product-modern,
+  .layaways-modern,
+  .qr-modern,
+  .import-modern {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .workspace {
+    display: block !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .sidebar-shell {
+    position: static !important;
+    top: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 8px 0 !important;
+    overflow-x: auto;
+  }
+
+  .workspace-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .sale-page-heading,
+  .inventory-heading-row,
+  .dashboard-heading,
+  .sales-heading-modern,
+  .add-product-heading,
+  .layaways-heading,
+  .qr-heading-modern,
+  .import-heading {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .sale-layout-modern,
+  .sale-kpis,
+  .dashboard-main-grid,
+  .dashboard-lists-grid,
+  .add-product-layout,
+  .qr-layout-modern {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .sale-search-card,
+  .sale-cart-card,
+  .sale-checkout-card,
+  .sale-scanner-compact,
+  .inventory-toolbar-card,
+  .inventory-product-card,
+  .dashboard-card,
+  .add-product-form-card,
+  .add-product-cost-card,
+  .add-product-save-card,
+  .add-product-images-card,
+  .layaway-card,
+  .layaway-payments-card,
+  .qr-controls-modern,
+  .qr-preview-modern,
+  .import-main-card,
+  .import-preview-card {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .sale-heading-badge,
+  .dashboard-today-pill,
+  .add-product-margin-badge,
+  .qr-count-badge {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
