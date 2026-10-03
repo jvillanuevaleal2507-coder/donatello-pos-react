@@ -10,17 +10,27 @@ function Card({ children, className = "" }) {
   return <div className={`card ${className}`}>{children}</div>;
 }
 
-function ProductImage({ src, alt = "Producto" }) {
+function ProductImage({ src, alt = "Producto", priority = false }) {
+  const [loaded, setLoaded] = useState(false);
+
   if (!src) return <div className="inventory-product-image placeholder">Sin foto</div>;
+
   return (
-    <img
-      src={src}
-      alt={alt}
-      className="inventory-product-image"
-      onError={(e) => {
-        e.currentTarget.style.display = "none";
-      }}
-    />
+    <>
+      {!loaded && <div className="inventory-image-skeleton" aria-hidden="true" />}
+      <img
+        src={src}
+        alt={alt}
+        className={`inventory-product-image ${loaded ? "is-loaded" : "is-loading"}`}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : "auto"}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={(e) => {
+          e.currentTarget.style.display = "none";
+        }}
+      />
+    </>
   );
 }
 
@@ -328,7 +338,7 @@ export default function InventoryPage({
         </Card>
       ) : (
         <div className={`products-grid inventory-products-grid ${viewMode === "list" ? "list-mode" : ""}`}>
-          {visibleProducts.map((p) => {
+          {visibleProducts.map((p, index) => {
             const status = stockMeta(p);
             const extraPhotos = [p.image_url_2, p.image_url_3, p.image_url_4].filter(Boolean).length;
 
@@ -336,7 +346,7 @@ export default function InventoryPage({
               <Card key={p.id} className="inventory-product-card">
                 <div className="inventory-product-card-main">
                   <div className="inventory-image-wrap">
-                    <ProductImage src={p.image_url} alt={p.name} />
+                    <ProductImage src={p.image_url} alt={p.name} priority={index < 8} />
                     {extraPhotos > 0 && <span className="inventory-photo-count">+{extraPhotos} fotos</span>}
                   </div>
 
@@ -405,7 +415,7 @@ async function uploadProductImage(file) {
   const filePath = `products/${safeName}`;
   const { error } = await supabase.storage
     .from("product-images")
-    .upload(filePath, file, { cacheControl: "3600", upsert: false });
+    .upload(filePath, file, { cacheControl: "31536000", upsert: false });
 
   if (error) throw new Error(error.message);
   const { data } = supabase.storage.from("product-images").getPublicUrl(filePath);
