@@ -8806,6 +8806,45 @@ select {
   }
 }
 
+
+/* ===== Carga visual de imágenes ===== */
+.inventory-image-wrap {
+  background: #eee5dc;
+}
+
+.inventory-image-skeleton {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.46) 45%, rgba(255,255,255,0) 90%),
+    linear-gradient(135deg, #eee5dc, #f5efe8);
+  background-size: 220% 100%, 100% 100%;
+  animation: donatello-image-shimmer 1.15s linear infinite;
+}
+
+.inventory-product-image {
+  transition: opacity .18s ease;
+}
+
+.inventory-product-image.is-loading {
+  opacity: 0;
+}
+
+.inventory-product-image.is-loaded {
+  opacity: 1;
+}
+
+@keyframes donatello-image-shimmer {
+  from { background-position: 200% 0, 0 0; }
+  to { background-position: -20% 0, 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventory-image-skeleton {
+    animation: none;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
