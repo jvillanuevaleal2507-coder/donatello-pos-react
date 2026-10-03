@@ -99,7 +99,7 @@ async function uploadProductImage(file) {
   const { error } = await supabase.storage
     .from("product-images")
     .upload(filePath, file, {
-      cacheControl: "3600",
+      cacheControl: "31536000",
       upsert: false,
     });
 
@@ -142,6 +142,8 @@ function ProductImage({ src, alt = "Producto", small = false }) {
       src={src}
       alt={alt}
       className={small ? "product-img small" : "product-img"}
+      loading="lazy"
+      decoding="async"
       onError={(e) => {
         e.currentTarget.style.display = "none";
       }}
@@ -184,6 +186,88 @@ function VentasDonatelloPOSApp() {
   const scanTimerRef = useRef(null);
   const [quickSearch, setQuickSearch] = useState("");
   const lastScannedRef = useRef({ value: "", time: 0 });
+
+  useEffect(() => {
+    if (!products.length || typeof window === "undefined") return;
+
+    const saveData = navigator.connection?.saveData;
+    if (saveData) return;
+
+    const urls = products
+      .map((product) => product.image_url)
+      .filter(Boolean);
+
+    const uniqueUrls = [...new Set(urls)];
+    if (!uniqueUrls.length) return;
+
+    // Abre conexiones antes de que el usuario entre a Inventario.
+    const origins = [...new Set(
+      uniqueUrls
+        .map((url) => {
+          try {
+            return new URL(url).origin;
+          } catch {
+            return null;
+          }
+        })
+        .filter(Boolean)
+    )].slice(0, 4);
+
+    const connectionLinks = [];
+    origins.forEach((origin) => {
+      ["preconnect", "dns-prefetch"].forEach((rel) => {
+        if (document.head.querySelector(`link[rel="${rel}"][href="${origin}"]`)) return;
+        const link = document.createElement("link");
+        link.rel = rel;
+        link.href = origin;
+        if (rel === "preconnect") link.crossOrigin = "anonymous";
+        document.head.appendChild(link);
+        connectionLinks.push(link);
+      });
+    });
+
+    // Prioridad alta para las fotos que suelen quedar arriba de Inventario.
+    uniqueUrls.slice(0, 12).forEach((url) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = url;
+    });
+
+    // El resto se llena en caché cuando el navegador queda libre.
+    const remaining = uniqueUrls.slice(12);
+    let cancelled = false;
+    let cursor = 0;
+
+    const warmBatch = () => {
+      if (cancelled) return;
+      remaining.slice(cursor, cursor + 10).forEach((url) => {
+        const img = new Image();
+        img.decoding = "async";
+        img.src = url;
+      });
+      cursor += 10;
+
+      if (cursor < remaining.length) {
+        if ("requestIdleCallback" in window) {
+          window.requestIdleCallback(warmBatch, { timeout: 1200 });
+        } else {
+          window.setTimeout(warmBatch, 250);
+        }
+      }
+    };
+
+    if (remaining.length) {
+      if ("requestIdleCallback" in window) {
+        window.requestIdleCallback(warmBatch, { timeout: 800 });
+      } else {
+        window.setTimeout(warmBatch, 180);
+      }
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [products]);
 
   useEffect(() => {
     let mounted = true;
