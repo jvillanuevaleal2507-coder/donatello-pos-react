@@ -157,192 +157,226 @@ export default function DashboardPage({ sales = [], products = [] }) {
 
   const potentialProfit = inventoryRetail - inventoryCost;
 
+  const priorMonthRows = activeSales.filter((sale) => {
+    const date = saleDate(sale);
+    const prior = new Date(thisYear, thisMonth - 1, 1);
+    return date.getMonth() === prior.getMonth() && date.getFullYear() === prior.getFullYear();
+  });
+
+  const priorMonthSales = priorMonthRows.reduce(
+    (sum, sale) => sum + Number(sale.total || 0),
+    0
+  );
+
+  const monthChange = priorMonthSales
+    ? ((monthSales - priorMonthSales) / priorMonthSales) * 100
+    : null;
+
+  const criticalStock = products.filter((product) => Number(product.stock || 0) <= 1);
+  const healthyStock = products.filter((product) => Number(product.stock || 0) > 3);
+  const inventoryHealth = products.length
+    ? Math.round((healthyStock.length / products.length) * 100)
+    : 100;
+
+  const attentionCount = criticalStock.length + (todaySalesRows.length === 0 ? 1 : 0);
+
   return (
-    <section className="dashboard-modern">
-      <div className="dashboard-heading">
+    <section className="dashboard-v3">
+      <div className="dashboard-v3-topbar">
         <div>
-          <span className="eyebrow">Resumen ejecutivo</span>
-          <h2>Así va Donatello</h2>
-          <p>Ventas, utilidad e inventario sin ruido innecesario.</p>
+          <span className="dashboard-v3-kicker">DONATELLO · COMMAND CENTER</span>
+          <h2>Panel operativo</h2>
+          <p>Ventas, inventario y alertas en una vista de decisión.</p>
         </div>
 
-        <div className="dashboard-today-pill">
-          <span>Venta de hoy</span>
+        <div className="dashboard-v3-live">
+          <span>HOY</span>
           <strong>{money(todaySales)}</strong>
           <small>{todaySalesRows.length} ventas · {todayItems} piezas</small>
         </div>
       </div>
 
-      <div className="dashboard-kpi-grid">
-        <Kpi
-          label="Ventas del mes"
-          value={money(monthSales)}
-          note={`${monthOrders} ventas registradas`}
-        />
-        <Kpi
-          label="Utilidad del mes"
-          value={money(monthProfit)}
-          note={monthSales ? `${((monthProfit / monthSales) * 100).toFixed(1)}% sobre venta` : "Sin ventas todavía"}
-          tone="olive"
-        />
-        <Kpi
-          label="Ticket promedio"
-          value={money(averageTicket)}
-          note="Promedio del mes actual"
-        />
-        <Kpi
-          label="Inventario disponible"
-          value={stockUnits}
-          note={`${products.length} productos registrados`}
-        />
-      </div>
-
-      <div className="dashboard-main-grid">
-        <Card className="dashboard-chart-card">
-          <div className="dashboard-section-heading">
+      <div className="dashboard-v3-bento">
+        <article className="dashboard-v3-tile dashboard-v3-primary">
+          <div className="dashboard-v3-tile-head">
+            <span>VENTAS DEL MES</span>
+            <span className="dashboard-v3-chip">
+              {monthChange === null ? "Sin comparativo" : `${monthChange >= 0 ? "+" : ""}${monthChange.toFixed(1)}%`}
+            </span>
+          </div>
+          <strong className="dashboard-v3-big-number">{money(monthSales)}</strong>
+          <small>{monthOrders} ventas registradas</small>
+          <div className="dashboard-v3-inline-metrics">
             <div>
-              <span className="eyebrow">Últimos 14 días</span>
-              <h3>Movimiento de ventas</h3>
+              <span>Utilidad</span>
+              <b>{money(monthProfit)}</b>
+            </div>
+            <div>
+              <span>Ticket</span>
+              <b>{money(averageTicket)}</b>
+            </div>
+          </div>
+        </article>
+
+        <article className="dashboard-v3-tile dashboard-v3-attention">
+          <div className="dashboard-v3-tile-head">
+            <span>ATENCIÓN HOY</span>
+            <span className="dashboard-v3-alert-dot">{attentionCount}</span>
+          </div>
+          <strong>{attentionCount === 0 ? "Todo en orden" : "Requiere revisión"}</strong>
+          <div className="dashboard-v3-attention-list">
+            <div>
+              <span>Stock crítico</span>
+              <b>{criticalStock.length}</b>
+            </div>
+            <div>
+              <span>Ventas hoy</span>
+              <b>{todaySalesRows.length}</b>
+            </div>
+            <div>
+              <span>Inventario sano</span>
+              <b>{inventoryHealth}%</b>
+            </div>
+          </div>
+        </article>
+
+        <article className="dashboard-v3-tile dashboard-v3-inventory">
+          <div className="dashboard-v3-tile-head">
+            <span>INVENTARIO</span>
+            <span>{products.length} SKUs</span>
+          </div>
+          <strong className="dashboard-v3-big-number">{stockUnits}</strong>
+          <small>piezas disponibles</small>
+          <div className="dashboard-v3-progress">
+            <span style={{ width: `${inventoryHealth}%` }} />
+          </div>
+          <div className="dashboard-v3-money-row">
+            <div><span>Costo</span><b>{money(inventoryCost)}</b></div>
+            <div><span>Venta potencial</span><b>{money(inventoryRetail)}</b></div>
+          </div>
+        </article>
+
+        <article className="dashboard-v3-tile dashboard-v3-today">
+          <div className="dashboard-v3-tile-head">
+            <span>RESULTADO DE HOY</span>
+            <span>EN VIVO</span>
+          </div>
+          <div className="dashboard-v3-today-grid">
+            <div><span>Venta</span><strong>{money(todaySales)}</strong></div>
+            <div><span>Utilidad</span><strong>{money(todayProfit)}</strong></div>
+            <div><span>Operaciones</span><strong>{todaySalesRows.length}</strong></div>
+            <div><span>Piezas</span><strong>{todayItems}</strong></div>
+          </div>
+        </article>
+
+        <article className="dashboard-v3-tile dashboard-v3-chart-tile">
+          <div className="dashboard-v3-tile-head">
+            <div>
+              <span>TENDENCIA · 14 DÍAS</span>
+              <strong>Movimiento comercial</strong>
             </div>
             <div className="dashboard-chart-legend">
               <span><i className="sale-dot" /> Venta</span>
               <span><i className="profit-dot" /> Utilidad</span>
             </div>
           </div>
-
-          <div className="dashboard-chart">
+          <div className="dashboard-v3-chart">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="#eee6de" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#837970" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#837970" }} axisLine={false} tickLine={false} width={54} />
-                <Tooltip formatter={(value) => money(value)} />
-                <Bar dataKey="total" fill="#b75f3d" radius={[5, 5, 0, 0]} />
-                <Bar dataKey="profit" fill="#6f7651" radius={[5, 5, 0, 0]} />
+              <BarChart data={chartData} margin={{ top: 8, right: 6, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke="#34312f" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#9f9891" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: "#9f9891" }} axisLine={false} tickLine={false} width={52} />
+                <Tooltip formatter={(value) => money(value)} contentStyle={{ background:"#211f1d", border:"1px solid #49433f", borderRadius:8 }} labelStyle={{ color:"#fff" }} />
+                <Bar dataKey="total" fill="#d26f47" radius={[4,4,0,0]} />
+                <Bar dataKey="profit" fill="#909a67" radius={[4,4,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </article>
 
-        <div className="dashboard-side-stack">
-          <Card className="dashboard-today-card">
-            <span className="eyebrow">Corte rápido</span>
-            <h3>Hoy</h3>
-
-            <div className="dashboard-today-grid">
-              <div>
-                <span>Venta</span>
-                <strong>{money(todaySales)}</strong>
-              </div>
-              <div>
-                <span>Utilidad</span>
-                <strong>{money(todayProfit)}</strong>
-              </div>
-              <div>
-                <span>Operaciones</span>
-                <strong>{todaySalesRows.length}</strong>
-              </div>
-              <div>
-                <span>Piezas</span>
-                <strong>{todayItems}</strong>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="dashboard-inventory-card">
-            <span className="eyebrow">Inventario</span>
-            <h3>Valor actual</h3>
-            <div className="dashboard-inventory-value">{money(inventoryCost)}</div>
-            <div className="dashboard-inventory-lines">
-              <div><span>Venta potencial</span><b>{money(inventoryRetail)}</b></div>
-              <div><span>Utilidad potencial</span><b>{money(potentialProfit)}</b></div>
-            </div>
-          </Card>
-        </div>
-      </div>
-
-      <div className="dashboard-lists-grid">
-        <Card>
-          <div className="dashboard-section-heading compact">
+        <article className="dashboard-v3-tile dashboard-v3-critical">
+          <div className="dashboard-v3-tile-head">
             <div>
-              <span className="eyebrow">Productos</span>
-              <h3>Los que más venden</h3>
+              <span>ALERTAS DE STOCK</span>
+              <strong>Qué necesita atención</strong>
             </div>
+            <span className="dashboard-v3-alert-dot">{lowStock.length}</span>
           </div>
-
-          {topProducts.length === 0 ? (
-            <div className="dashboard-empty">Aún no hay suficiente historial de productos vendidos.</div>
-          ) : (
-            <div className="dashboard-ranked-list">
-              {topProducts.map((product, index) => (
-                <div className="dashboard-ranked-row" key={`${product.code}-${index}`}>
-                  <span className="rank-number">{index + 1}</span>
-                  <div>
-                    <strong>{product.name}</strong>
-                    <span>{product.code || "Sin código"} · {product.qty} pzas</span>
-                  </div>
-                  <b>{money(product.total)}</b>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-
-        <Card>
-          <div className="dashboard-section-heading compact">
-            <div>
-              <span className="eyebrow">Atención</span>
-              <h3>Stock bajo o agotado</h3>
-            </div>
-            <span className="dashboard-count-badge">{lowStock.length}</span>
-          </div>
-
           {lowStock.length === 0 ? (
             <div className="dashboard-empty">No hay productos con stock crítico.</div>
           ) : (
-            <div className="dashboard-low-list">
-              {lowStock.map((product) => (
-                <div className="dashboard-low-row" key={product.id}>
+            <div className="dashboard-v3-critical-list">
+              {lowStock.slice(0, 5).map((product) => (
+                <div key={product.id}>
                   <div>
                     <strong>{product.name}</strong>
                     <span>{product.code || "Sin código"}</span>
                   </div>
-                  <b className={Number(product.stock || 0) === 0 ? "out" : ""}>
-                    {Number(product.stock || 0) === 0 ? "Agotado" : `${product.stock} pzas`}
+                  <b className={Number(product.stock || 0) === 0 ? "out" : "low"}>
+                    {Number(product.stock || 0) === 0 ? "Agotado" : product.stock}
                   </b>
                 </div>
               ))}
             </div>
           )}
-        </Card>
-      </div>
+        </article>
 
-      <Card>
-        <div className="dashboard-section-heading compact">
-          <div>
-            <span className="eyebrow">Actividad</span>
-            <h3>Ventas recientes</h3>
+        <article className="dashboard-v3-tile dashboard-v3-ranking">
+          <div className="dashboard-v3-tile-head">
+            <div>
+              <span>TOP PRODUCTOS</span>
+              <strong>Los que más venden</strong>
+            </div>
           </div>
-        </div>
+          {topProducts.length === 0 ? (
+            <div className="dashboard-empty">Aún no hay suficiente historial.</div>
+          ) : (
+            <div className="dashboard-v3-ranking-list">
+              {topProducts.map((product, index) => {
+                const max = Number(topProducts[0]?.total || 1);
+                const pct = Math.max(8, Math.round((Number(product.total || 0) / max) * 100));
+                return (
+                  <div key={`${product.code}-${index}`}>
+                    <span className="rank-number">{index + 1}</span>
+                    <div className="dashboard-v3-rank-main">
+                      <div>
+                        <strong>{product.name}</strong>
+                        <span>{product.qty} pzas · {money(product.total)}</span>
+                      </div>
+                      <div className="dashboard-v3-rank-bar"><span style={{ width: `${pct}%` }} /></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </article>
 
-        {recentSales.length === 0 ? (
-          <div className="dashboard-empty">Todavía no hay ventas registradas.</div>
-        ) : (
-          <div className="dashboard-recent-list">
-            {recentSales.map((sale) => (
-              <div className="dashboard-recent-row" key={sale.id}>
-                <div className="dashboard-sale-icon">✓</div>
-                <div>
-                  <strong>Venta #{sale.id}</strong>
-                  <span>{saleDate(sale).toLocaleString("es-MX")}</span>
+        <article className="dashboard-v3-tile dashboard-v3-activity">
+          <div className="dashboard-v3-tile-head">
+            <div>
+              <span>ACTIVIDAD</span>
+              <strong>Ventas recientes</strong>
+            </div>
+          </div>
+          {recentSales.length === 0 ? (
+            <div className="dashboard-empty">Todavía no hay ventas registradas.</div>
+          ) : (
+            <div className="dashboard-v3-timeline">
+              {recentSales.map((sale) => (
+                <div key={sale.id}>
+                  <span className="dashboard-v3-time-dot" />
+                  <div>
+                    <strong>Venta #{sale.id}</strong>
+                    <span>{saleDate(sale).toLocaleString("es-MX")}</span>
+                  </div>
+                  <b>{money(sale.total)}</b>
                 </div>
-                <span>{Number(sale.items_count || 0)} pzas</span>
-                <b>{money(sale.total)}</b>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              ))}
+            </div>
+          )}
+        </article>
+      </div>
     </section>
   );
 }
