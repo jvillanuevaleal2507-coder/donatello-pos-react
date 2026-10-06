@@ -158,118 +158,125 @@ export default function DashboardPage({ sales = [], products = [] }) {
   const potentialProfit = inventoryRetail - inventoryCost;
 
   return (
-    <section className="dashboard-modern">
-      <div className="dashboard-heading">
-        <div>
-          <span className="eyebrow">Resumen ejecutivo</span>
-          <h2>Así va Donatello</h2>
-          <p>Ventas, utilidad e inventario sin ruido innecesario.</p>
+    <section className="dashboard-v2">
+      <div className="dashboard-v2-hero">
+        <div className="dashboard-v2-hero-copy">
+          <span className="eyebrow">Centro de control</span>
+          <h2>Resumen Donatello</h2>
+          <p>Lo importante del negocio en una sola vista.</p>
         </div>
-
-        <div className="dashboard-today-pill">
-          <span>Venta de hoy</span>
-          <strong>{money(todaySales)}</strong>
-          <small>{todaySalesRows.length} ventas · {todayItems} piezas</small>
+        <div className="dashboard-v2-hero-metrics">
+          <div>
+            <span>Venta de hoy</span>
+            <strong>{money(todaySales)}</strong>
+            <small>{todaySalesRows.length} operaciones</small>
+          </div>
+          <div>
+            <span>Utilidad de hoy</span>
+            <strong>{money(todayProfit)}</strong>
+            <small>{todayItems} piezas</small>
+          </div>
         </div>
       </div>
 
-      <div className="dashboard-kpi-grid">
-        <Kpi
-          label="Ventas del mes"
-          value={money(monthSales)}
-          note={`${monthOrders} ventas registradas`}
-        />
-        <Kpi
-          label="Utilidad del mes"
-          value={money(monthProfit)}
-          note={monthSales ? `${((monthProfit / monthSales) * 100).toFixed(1)}% sobre venta` : "Sin ventas todavía"}
-          tone="olive"
-        />
-        <Kpi
-          label="Ticket promedio"
-          value={money(averageTicket)}
-          note="Promedio del mes actual"
-        />
-        <Kpi
-          label="Inventario disponible"
-          value={stockUnits}
-          note={`${products.length} productos registrados`}
-        />
+      <div className="dashboard-v2-kpis">
+        <Kpi label="Ventas del mes" value={money(monthSales)} note={`${monthOrders} ventas registradas`} />
+        <Kpi label="Utilidad del mes" value={money(monthProfit)} note={monthSales ? `${((monthProfit / monthSales) * 100).toFixed(1)}% sobre venta` : "Sin ventas todavía"} />
+        <Kpi label="Ticket promedio" value={money(averageTicket)} note="Promedio del mes actual" />
+        <Kpi label="Inventario disponible" value={stockUnits} note={`${products.length} productos registrados`} />
       </div>
 
-      <div className="dashboard-main-grid">
-        <Card className="dashboard-chart-card">
-          <div className="dashboard-section-heading">
+      <div className="dashboard-v2-main">
+        <Card className="dashboard-v2-chart-card">
+          <div className="dashboard-v2-section-head">
             <div>
-              <span className="eyebrow">Últimos 14 días</span>
-              <h3>Movimiento de ventas</h3>
+              <span className="eyebrow">Tendencia</span>
+              <h3>Ventas y utilidad · 14 días</h3>
             </div>
             <div className="dashboard-chart-legend">
               <span><i className="sale-dot" /> Venta</span>
               <span><i className="profit-dot" /> Utilidad</span>
             </div>
           </div>
-
-          <div className="dashboard-chart">
+          <div className="dashboard-v2-chart">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 12, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid stroke="#eee6de" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#837970" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#837970" }} axisLine={false} tickLine={false} width={54} />
+                <CartesianGrid stroke="#e7e2dc" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#766f68" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#766f68" }} axisLine={false} tickLine={false} width={54} />
                 <Tooltip formatter={(value) => money(value)} />
-                <Bar dataKey="total" fill="#b75f3d" radius={[5, 5, 0, 0]} />
-                <Bar dataKey="profit" fill="#6f7651" radius={[5, 5, 0, 0]} />
+                <Bar dataKey="total" fill="#b75f3d" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="profit" fill="#6f7651" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <div className="dashboard-side-stack">
-          <Card className="dashboard-today-card">
-            <span className="eyebrow">Corte rápido</span>
-            <h3>Hoy</h3>
+        <div className="dashboard-v2-ops">
+          <Card className="dashboard-v2-inventory">
+            <span className="eyebrow">Inventario</span>
+            <h3>Salud del stock</h3>
+            <div className="dashboard-v2-inventory-number">{stockUnits}</div>
+            <span className="dashboard-v2-caption">piezas disponibles</span>
 
-            <div className="dashboard-today-grid">
+            <div className="dashboard-v2-status-grid">
               <div>
-                <span>Venta</span>
-                <strong>{money(todaySales)}</strong>
+                <span>Valor costo</span>
+                <strong>{money(inventoryCost)}</strong>
               </div>
               <div>
-                <span>Utilidad</span>
-                <strong>{money(todayProfit)}</strong>
+                <span>Venta potencial</span>
+                <strong>{money(inventoryRetail)}</strong>
               </div>
               <div>
-                <span>Operaciones</span>
-                <strong>{todaySalesRows.length}</strong>
+                <span>Utilidad potencial</span>
+                <strong>{money(potentialProfit)}</strong>
               </div>
               <div>
-                <span>Piezas</span>
-                <strong>{todayItems}</strong>
+                <span>Stock crítico</span>
+                <strong>{lowStock.length}</strong>
               </div>
             </div>
           </Card>
 
-          <Card className="dashboard-inventory-card">
-            <span className="eyebrow">Inventario</span>
-            <h3>Valor actual</h3>
-            <div className="dashboard-inventory-value">{money(inventoryCost)}</div>
-            <div className="dashboard-inventory-lines">
-              <div><span>Venta potencial</span><b>{money(inventoryRetail)}</b></div>
-              <div><span>Utilidad potencial</span><b>{money(potentialProfit)}</b></div>
+          <Card className="dashboard-v2-alerts">
+            <div className="dashboard-v2-section-head compact">
+              <div>
+                <span className="eyebrow">Atención</span>
+                <h3>Stock crítico</h3>
+              </div>
+              <span className="dashboard-count-badge">{lowStock.length}</span>
             </div>
+
+            {lowStock.length === 0 ? (
+              <div className="dashboard-empty">No hay productos con stock crítico.</div>
+            ) : (
+              <div className="dashboard-low-list">
+                {lowStock.slice(0, 5).map((product) => (
+                  <div className="dashboard-low-row" key={product.id}>
+                    <div>
+                      <strong>{product.name}</strong>
+                      <span>{product.code || "Sin código"}</span>
+                    </div>
+                    <b className={Number(product.stock || 0) === 0 ? "out" : Number(product.stock || 0) === 1 ? "critical" : ""}>
+                      {Number(product.stock || 0) === 0 ? "Agotado" : `${product.stock} pzas`}
+                    </b>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </div>
       </div>
 
-      <div className="dashboard-lists-grid">
+      <div className="dashboard-v2-bottom">
         <Card>
-          <div className="dashboard-section-heading compact">
+          <div className="dashboard-v2-section-head compact">
             <div>
-              <span className="eyebrow">Productos</span>
-              <h3>Los que más venden</h3>
+              <span className="eyebrow">Ranking</span>
+              <h3>Productos que más venden</h3>
             </div>
           </div>
-
           {topProducts.length === 0 ? (
             <div className="dashboard-empty">Aún no hay suficiente historial de productos vendidos.</div>
           ) : (
@@ -289,60 +296,31 @@ export default function DashboardPage({ sales = [], products = [] }) {
         </Card>
 
         <Card>
-          <div className="dashboard-section-heading compact">
+          <div className="dashboard-v2-section-head compact">
             <div>
-              <span className="eyebrow">Atención</span>
-              <h3>Stock bajo o agotado</h3>
+              <span className="eyebrow">Actividad</span>
+              <h3>Ventas recientes</h3>
             </div>
-            <span className="dashboard-count-badge">{lowStock.length}</span>
           </div>
-
-          {lowStock.length === 0 ? (
-            <div className="dashboard-empty">No hay productos con stock crítico.</div>
+          {recentSales.length === 0 ? (
+            <div className="dashboard-empty">Todavía no hay ventas registradas.</div>
           ) : (
-            <div className="dashboard-low-list">
-              {lowStock.map((product) => (
-                <div className="dashboard-low-row" key={product.id}>
+            <div className="dashboard-recent-list">
+              {recentSales.map((sale) => (
+                <div className="dashboard-recent-row" key={sale.id}>
+                  <div className="dashboard-sale-icon">✓</div>
                   <div>
-                    <strong>{product.name}</strong>
-                    <span>{product.code || "Sin código"}</span>
+                    <strong>Venta #{sale.id}</strong>
+                    <span>{saleDate(sale).toLocaleString("es-MX")}</span>
                   </div>
-                  <b className={Number(product.stock || 0) === 0 ? "out" : ""}>
-                    {Number(product.stock || 0) === 0 ? "Agotado" : `${product.stock} pzas`}
-                  </b>
+                  <span>{Number(sale.items_count || 0)} pzas</span>
+                  <b>{money(sale.total)}</b>
                 </div>
               ))}
             </div>
           )}
         </Card>
       </div>
-
-      <Card>
-        <div className="dashboard-section-heading compact">
-          <div>
-            <span className="eyebrow">Actividad</span>
-            <h3>Ventas recientes</h3>
-          </div>
-        </div>
-
-        {recentSales.length === 0 ? (
-          <div className="dashboard-empty">Todavía no hay ventas registradas.</div>
-        ) : (
-          <div className="dashboard-recent-list">
-            {recentSales.map((sale) => (
-              <div className="dashboard-recent-row" key={sale.id}>
-                <div className="dashboard-sale-icon">✓</div>
-                <div>
-                  <strong>Venta #{sale.id}</strong>
-                  <span>{saleDate(sale).toLocaleString("es-MX")}</span>
-                </div>
-                <span>{Number(sale.items_count || 0)} pzas</span>
-                <b>{money(sale.total)}</b>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
     </section>
   );
 }
