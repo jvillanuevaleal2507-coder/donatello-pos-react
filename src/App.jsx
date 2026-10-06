@@ -8845,6 +8845,167 @@ select {
   }
 }
 
+/* ===== EXPERIMENTO UI/UX PRO MAX · Dashboard operativo ===== */
+.dashboard-modern {
+  gap: 10px;
+}
+
+.dashboard-modern .dashboard-heading {
+  align-items: center;
+  padding: 0;
+}
+
+.dashboard-modern .dashboard-heading h2,
+.dashboard-modern .dashboard-section-heading h3,
+.dashboard-modern .dashboard-today-card h3,
+.dashboard-modern .dashboard-inventory-card h3,
+.dashboard-modern .dashboard-kpi > strong,
+.dashboard-modern .dashboard-today-pill strong,
+.dashboard-modern .dashboard-inventory-value {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-modern .dashboard-heading h2 {
+  font-size: clamp(1.65rem, 2.8vw, 2.25rem);
+  line-height: 1.08;
+}
+
+.dashboard-modern .dashboard-heading p {
+  margin-top: 5px;
+  font-size: .84rem;
+  font-weight: 600;
+}
+
+.dashboard-modern .dashboard-today-pill {
+  border-radius: 10px;
+  background: #fff;
+  border-color: #dedbd5;
+  padding: 9px 12px;
+}
+
+.dashboard-modern .dashboard-card {
+  border-radius: 10px;
+  border: 1px solid #dedbd5;
+  box-shadow: none !important;
+  background: #fff;
+  padding: 13px;
+}
+
+.dashboard-modern .dashboard-kpi-grid {
+  gap: 8px;
+}
+
+.dashboard-modern .dashboard-kpi {
+  min-height: 88px;
+  align-content: start;
+  padding-top: 12px;
+  border-top: 3px solid #b75f3d;
+}
+
+.dashboard-modern .dashboard-kpi.olive {
+  background: #fff;
+  border-color: #6f7651;
+}
+
+.dashboard-modern .dashboard-kpi > span {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .045em;
+}
+
+.dashboard-modern .dashboard-kpi > strong {
+  margin-top: 2px;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+}
+
+.dashboard-modern .dashboard-kpi > small {
+  font-size: .7rem;
+}
+
+.dashboard-modern .dashboard-main-grid,
+.dashboard-modern .dashboard-lists-grid,
+.dashboard-modern .dashboard-side-stack {
+  gap: 8px;
+}
+
+.dashboard-modern .dashboard-chart-card,
+.dashboard-modern .dashboard-today-card,
+.dashboard-modern .dashboard-inventory-card {
+  background: #fff;
+}
+
+.dashboard-modern .dashboard-today-grid {
+  gap: 5px;
+}
+
+.dashboard-modern .dashboard-today-grid div {
+  border-radius: 8px;
+  padding: 8px;
+  background: #faf9f7;
+  border-color: #e7e3dd;
+}
+
+.dashboard-modern .dashboard-ranked-row,
+.dashboard-modern .dashboard-low-row,
+.dashboard-modern .dashboard-recent-row {
+  padding: 8px 0;
+  gap: 8px;
+}
+
+.dashboard-modern .rank-number,
+.dashboard-modern .dashboard-count-badge,
+.dashboard-modern .dashboard-sale-icon {
+  border-radius: 7px;
+}
+
+.dashboard-modern .dashboard-low-row > b {
+  min-width: 72px;
+  text-align: center;
+  border-radius: 7px;
+  padding: 5px 8px;
+  background: #fff4cc;
+  color: #805b00;
+  border: 1px solid #f3d970;
+}
+
+.dashboard-modern .dashboard-low-row > b.critical {
+  background: #fff0d9;
+  color: #994f00;
+  border-color: #f2b467;
+}
+
+.dashboard-modern .dashboard-low-row > b.out {
+  background: #fde8e8;
+  color: #a33131;
+  border-color: #efb4b4;
+}
+
+.dashboard-modern .dashboard-chart {
+  height: 300px;
+}
+
+@media (max-width: 760px) {
+  .dashboard-modern .dashboard-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+  }
+
+  .dashboard-modern .dashboard-kpi {
+    min-width: 0;
+    min-height: 84px;
+  }
+
+  .dashboard-modern .dashboard-heading {
+    align-items: stretch;
+  }
+
+  .dashboard-modern .dashboard-today-pill {
+    text-align: left;
+  }
+}
+
+
 `;
   export default function VentasDonatelloPOS() {
   return (
