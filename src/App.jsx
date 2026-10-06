@@ -8845,6 +8845,108 @@ select {
   }
 }
 
+/* ===== UI PRO MAX V2 · Centro de control ===== */
+.dashboard-v2{display:grid;gap:12px}
+.dashboard-v2 .card{box-shadow:none;border:1px solid #ddd8d1;border-radius:12px;background:#fff}
+.dashboard-v2-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:18px;
+  align-items:center;
+  padding:20px 22px;
+  border-radius:14px;
+  background:#2b2927;
+  color:#fff;
+}
+.dashboard-v2-hero .eyebrow{color:#d99a7f}
+.dashboard-v2-hero h2{
+  margin:3px 0 4px;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:clamp(1.7rem,3vw,2.4rem);
+  letter-spacing:-.03em;
+}
+.dashboard-v2-hero p{margin:0;color:#d6d0cb;font-size:.88rem}
+.dashboard-v2-hero-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dashboard-v2-hero-metrics>div{
+  min-width:155px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:10px;
+  background:rgba(255,255,255,.06)
+}
+.dashboard-v2-hero-metrics span,
+.dashboard-v2-hero-metrics small{display:block;color:#cfc8c2;font-size:.7rem;font-weight:750}
+.dashboard-v2-hero-metrics strong{
+  display:block;margin:2px 0;
+  font-size:1.35rem;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+.dashboard-v2-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.dashboard-v2-kpis .dashboard-kpi{min-height:94px;padding:12px;border-radius:10px;border-top:3px solid #b75f3d}
+.dashboard-v2-kpis .dashboard-kpi:nth-child(2){border-top-color:#6f7651}
+.dashboard-v2-kpis .dashboard-kpi:nth-child(3){border-top-color:#c79456}
+.dashboard-v2-kpis .dashboard-kpi:nth-child(4){border-top-color:#5f7183}
+.dashboard-v2-kpis .dashboard-kpi>span{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+.dashboard-v2-kpis .dashboard-kpi>strong{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:1.45rem
+}
+.dashboard-v2-kpis .dashboard-kpi>small{font-size:.7rem}
+
+.dashboard-v2-main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,.8fr);gap:10px}
+.dashboard-v2-chart-card{padding:14px}
+.dashboard-v2-section-head{display:flex;justify-content:space-between;gap:12px;align-items:start;margin-bottom:10px}
+.dashboard-v2-section-head.compact{align-items:center}
+.dashboard-v2-section-head h3,
+.dashboard-v2-inventory h3{
+  margin:2px 0 0;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:1.08rem;
+  letter-spacing:-.01em
+}
+.dashboard-v2-chart{height:320px}
+.dashboard-v2-ops{display:grid;gap:10px}
+.dashboard-v2-inventory{padding:15px;background:#f8f7f4!important}
+.dashboard-v2-inventory-number{
+  margin-top:8px;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:2.6rem;
+  font-weight:800;
+  line-height:1
+}
+.dashboard-v2-caption{display:block;margin-top:3px;color:#827a72;font-size:.72rem;font-weight:700}
+.dashboard-v2-status-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px}
+.dashboard-v2-status-grid>div{padding:8px;border:1px solid #e4dfd8;border-radius:8px;background:#fff}
+.dashboard-v2-status-grid span{display:block;color:#847b73;font-size:.68rem;font-weight:750}
+.dashboard-v2-status-grid strong{display:block;margin-top:2px;font-size:.9rem}
+.dashboard-v2-alerts{padding:14px}
+.dashboard-v2-bottom{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.dashboard-v2-bottom>.card{padding:14px}
+
+.dashboard-v2 .dashboard-ranked-row,
+.dashboard-v2 .dashboard-low-row,
+.dashboard-v2 .dashboard-recent-row{padding:8px 0}
+.dashboard-v2 .dashboard-low-row>b{border-radius:7px}
+.dashboard-v2 .dashboard-low-row>b.critical{background:#fff0d9;color:#994f00;border:1px solid #f2b467}
+.dashboard-v2 .dashboard-low-row>b.out{background:#fde8e8;color:#a33131;border:1px solid #efb4b4}
+
+@media(max-width:1100px){
+  .dashboard-v2-main{grid-template-columns:1fr}
+  .dashboard-v2-ops{grid-template-columns:1fr 1fr}
+}
+@media(max-width:760px){
+  .dashboard-v2-hero{grid-template-columns:1fr;padding:16px}
+  .dashboard-v2-hero-metrics{grid-template-columns:1fr 1fr}
+  .dashboard-v2-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dashboard-v2-ops,.dashboard-v2-bottom{grid-template-columns:1fr}
+  .dashboard-v2-chart{height:240px}
+}
+@media(max-width:460px){
+  .dashboard-v2-hero-metrics{grid-template-columns:1fr}
+}
+
+
 `;
   export default function VentasDonatelloPOS() {
   return (
