@@ -307,7 +307,15 @@ export default function DashboardPage({ sales = [], products = [] }) {
                     <strong>{product.name}</strong>
                     <span>{product.code || "Sin código"}</span>
                   </div>
-                  <b className={Number(product.stock || 0) === 0 ? "out" : ""}>
+                  <b
+                    className={
+                      Number(product.stock || 0) === 0
+                        ? "out"
+                        : Number(product.stock || 0) === 1
+                          ? "critical"
+                          : "warning"
+                    }
+                  >
                     {Number(product.stock || 0) === 0 ? "Agotado" : `${product.stock} pzas`}
                   </b>
                 </div>
