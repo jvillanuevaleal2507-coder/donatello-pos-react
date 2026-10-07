@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 
@@ -195,6 +195,18 @@ export default function InventoryPage({
   const [editingId, setEditingId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState("cards");
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 760px)").matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const media = window.matchMedia("(max-width: 760px)");
+    const sync = () => setIsMobile(media.matches);
+    sync();
+    media.addEventListener?.("change", sync);
+    return () => media.removeEventListener?.("change", sync);
+  }, []);
 
   const visibleProducts = useMemo(() => {
     const query = normalizeSearchText(searchTerm);
@@ -263,192 +275,415 @@ export default function InventoryPage({
     ["no-photo", "Sin foto"],
   ];
 
-  return (
-    <section className="inventory-section inventory-modern demo-inventory-v2">
-      <style>{`
-        @media (max-width: 760px) {
-          .demo-inventory-v2 .inventory-heading-row {
-            display: block !important;
-            min-height: 0 !important;
-            padding: 16px !important;
+  if (isMobile) {
+    return (
+      <section className="inventory-mobile-shell">
+        <style>{`
+          .inventory-mobile-shell {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            display: grid;
+            gap: 10px;
           }
 
-          .demo-inventory-v2 .inventory-heading-row h2 {
-            font-size: 2rem !important;
-            line-height: 1 !important;
+          .inventory-mobile-hero,
+          .inventory-mobile-toolbar,
+          .inventory-mobile-card,
+          .inventory-mobile-empty {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
+            background: #fffdf9;
+            border: 1px solid #eadfd4;
+            border-radius: 16px;
+            box-shadow: 0 8px 22px rgba(77,51,33,.06);
           }
 
-          .demo-inventory-v2 .inventory-heading-row .muted {
-            margin-top: 8px !important;
-            font-size: .8rem !important;
+          .inventory-mobile-hero {
+            padding: 14px;
           }
 
-          .demo-inventory-v2 .inventory-heading-actions {
-            display: grid !important;
-            grid-template-columns: 1fr 1fr !important;
-            gap: 8px !important;
-            width: 100% !important;
-            margin-top: 14px !important;
+          .inventory-mobile-hero .eyebrow {
+            display: block;
+            margin-bottom: 5px;
+            font-size: .64rem;
           }
 
-          .demo-inventory-v2 .inventory-heading-actions .btn,
-          .demo-inventory-v2 .inventory-add-link {
-            width: 100% !important;
-            min-width: 0 !important;
-            min-height: 40px !important;
-            height: auto !important;
-            padding: 9px 10px !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            white-space: nowrap !important;
-            font-size: .74rem !important;
-            border-radius: 10px !important;
+          .inventory-mobile-hero h2 {
+            margin: 0;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 1.9rem;
+            line-height: 1;
           }
 
-          .demo-inventory-v2 .inventory-toolbar-card {
-            padding: 10px !important;
-            overflow: hidden !important;
+          .inventory-mobile-hero p {
+            margin: 7px 0 0;
+            color: #7f746c;
+            font-size: .78rem;
+            line-height: 1.35;
           }
 
-          .demo-inventory-v2 .inventory-filter-row,
-          .demo-inventory-v2 .inventory-category-row {
-            display: block !important;
+          .inventory-mobile-actions {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 7px;
           }
 
-          .demo-inventory-v2 .inventory-status-pills,
-          .demo-inventory-v2 .category-pills {
-            display: flex !important;
-            gap: 7px !important;
-            overflow-x: auto !important;
-            overscroll-behavior-inline: contain !important;
-            scrollbar-width: none !important;
-            padding-bottom: 3px !important;
+          .inventory-mobile-actions .btn,
+          .inventory-mobile-actions .inventory-add-link {
+            min-width: 0;
+            min-height: 38px;
+            padding: 8px 9px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: .72rem;
+            line-height: 1.1;
+            text-align: center;
+            white-space: nowrap;
+            border-radius: 10px;
           }
 
-          .demo-inventory-v2 .inventory-status-pills::-webkit-scrollbar,
-          .demo-inventory-v2 .category-pills::-webkit-scrollbar {
-            display: none !important;
+          .inventory-mobile-toolbar {
+            padding: 10px;
+            overflow: hidden;
           }
 
-          .demo-inventory-v2 .category-pill {
-            flex: 0 0 auto !important;
-            white-space: nowrap !important;
+          .inventory-mobile-search {
+            display: grid;
+            grid-template-columns: auto minmax(0,1fr);
+            align-items: center;
+            gap: 8px;
+            min-height: 44px;
+            padding: 0 10px;
+            border: 1px solid #dfd2c7;
+            border-radius: 11px;
+            background: #fff;
           }
 
-          .demo-inventory-v2 .inventory-view-toggle {
-            width: max-content !important;
-            margin-top: 9px !important;
-          }
-
-          .demo-inventory-v2 .inventory-filter-label {
-            display: block !important;
-            margin: 12px 0 7px !important;
-          }
-
-          .demo-inventory-v2 .inventory-product-card {
-            display: block !important;
+          .inventory-mobile-search input {
+            width: 100%;
+            min-width: 0;
+            border: 0 !important;
+            outline: 0 !important;
             padding: 0 !important;
-            overflow: hidden !important;
+            min-height: 42px;
+            background: transparent !important;
+            font-size: 16px;
           }
 
-          .demo-inventory-v2 .inventory-product-card-main {
-            display: grid !important;
-            grid-template-columns: 96px minmax(0, 1fr) !important;
-            align-items: stretch !important;
-            width: 100% !important;
-            min-width: 0 !important;
+          .inventory-mobile-scroll {
+            display: flex;
+            gap: 7px;
+            overflow-x: auto;
+            padding: 9px 0 2px;
+            scrollbar-width: none;
           }
 
-          .demo-inventory-v2 .inventory-image-wrap {
-            width: 96px !important;
-            height: 100% !important;
-            min-height: 138px !important;
-            aspect-ratio: auto !important;
-            border-radius: 0 !important;
-            overflow: hidden !important;
+          .inventory-mobile-scroll::-webkit-scrollbar {
+            display: none;
           }
 
-          .demo-inventory-v2 .inventory-product-image {
-            width: 96px !important;
-            height: 100% !important;
-            min-height: 138px !important;
+          .inventory-mobile-pill {
+            flex: 0 0 auto;
+            min-height: 32px;
+            padding: 6px 10px;
+            border: 0;
+            border-radius: 999px;
+            background: #f6eee7;
+            color: #65564b;
+            font-size: .72rem;
+            font-weight: 800;
+          }
+
+          .inventory-mobile-pill.active {
+            background: #b9532f;
+            color: #fff;
+          }
+
+          .inventory-mobile-label {
+            display: block;
+            margin-top: 10px;
+            color: #9a9088;
+            font-size: .62rem;
+            text-transform: uppercase;
+            letter-spacing: .11em;
+            font-weight: 900;
+          }
+
+          .inventory-mobile-counter {
+            margin: 8px 0 0;
+            color: #9a9088;
+            font-size: .72rem;
+            font-weight: 800;
+          }
+
+          .inventory-mobile-list {
+            display: grid;
+            gap: 9px;
+          }
+
+          .inventory-mobile-card {
+            padding: 10px;
+          }
+
+          .inventory-mobile-card-top {
+            display: grid;
+            grid-template-columns: 88px minmax(0,1fr);
+            gap: 10px;
+            align-items: start;
+          }
+
+          .inventory-mobile-photo {
+            position: relative;
+            width: 88px;
+            height: 88px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #eee5dc;
+          }
+
+          .inventory-mobile-photo .inventory-product-image {
+            width: 88px !important;
+            height: 88px !important;
+            min-height: 88px !important;
             object-fit: cover !important;
-          }
-
-          .demo-inventory-v2 .inventory-photo-count {
-            display: none !important;
-          }
-
-          .demo-inventory-v2 .inventory-product-content {
-            width: auto !important;
-            min-width: 0 !important;
-            padding: 10px 11px !important;
-            gap: 7px !important;
-          }
-
-          .demo-inventory-v2 .inventory-product-topline {
             display: block !important;
           }
 
-          .demo-inventory-v2 .inventory-product-topline h3 {
-            margin: 0 !important;
-            font-size: .96rem !important;
-            line-height: 1.14 !important;
-            display: -webkit-box !important;
-            -webkit-line-clamp: 2 !important;
-            -webkit-box-orient: vertical !important;
-            overflow: hidden !important;
+          .inventory-mobile-copy {
+            min-width: 0;
           }
 
-          .demo-inventory-v2 .inventory-product-topline p {
-            margin-top: 3px !important;
-            font-size: .68rem !important;
+          .inventory-mobile-copy h3 {
+            margin: 0;
+            color: #241b16;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 1rem;
+            line-height: 1.12;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
 
-          .demo-inventory-v2 .stock-status {
-            display: inline-flex !important;
-            margin-top: 6px !important;
-            padding: 3px 7px !important;
-            font-size: .6rem !important;
+          .inventory-mobile-code {
+            margin: 4px 0 0;
+            color: #8a8078;
+            font-size: .7rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
-          .demo-inventory-v2 .inventory-price-row {
-            grid-template-columns: 1fr auto !important;
-            gap: 7px !important;
-            align-items: end !important;
+          .inventory-mobile-status {
+            display: inline-flex;
+            margin-top: 6px;
+            padding: 4px 7px;
+            border-radius: 999px;
+            font-size: .6rem;
+            font-weight: 900;
           }
 
-          .demo-inventory-v2 .inventory-price-row span,
-          .demo-inventory-v2 .inventory-detail-strip {
-            font-size: .66rem !important;
+          .inventory-mobile-status.ok { background: #e9f1e2; color: #365529; }
+          .inventory-mobile-status.low { background: #fff0d8; color: #9a6416; }
+          .inventory-mobile-status.out { background: #fde5e2; color: #a43c32; }
+
+          .inventory-mobile-price-row {
+            margin-top: 9px;
+            padding-top: 8px;
+            border-top: 1px solid #eee5dc;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0,1fr));
+            gap: 6px;
           }
 
-          .demo-inventory-v2 .inventory-price-row strong {
-            font-size: .98rem !important;
+          .inventory-mobile-metric {
+            min-width: 0;
           }
 
-          .demo-inventory-v2 .inventory-detail-strip {
-            display: flex !important;
-            gap: 8px !important;
-            padding-top: 6px !important;
-            flex-wrap: wrap !important;
+          .inventory-mobile-metric span {
+            display: block;
+            color: #91867e;
+            font-size: .6rem;
+            font-weight: 750;
           }
 
-          .demo-inventory-v2 .inventory-card-actions {
-            display: flex !important;
-            gap: 6px !important;
-            align-items: center !important;
+          .inventory-mobile-metric strong {
+            display: block;
+            margin-top: 2px;
+            color: #2b211b;
+            font-size: .82rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
 
-          .demo-inventory-v2 .inventory-card-actions .btn,
-          .demo-inventory-v2 .inventory-danger-link {
-            min-height: 32px !important;
-            padding: 5px 8px !important;
-            font-size: .68rem !important;
+          .inventory-mobile-card-actions {
+            margin-top: 9px;
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 7px;
+            align-items: center;
           }
-        }
-      `}</style>
+
+          .inventory-mobile-card-actions .btn,
+          .inventory-mobile-card-actions .inventory-danger-link {
+            min-height: 34px;
+            padding: 6px 9px;
+            font-size: .7rem;
+          }
+
+          .inventory-mobile-edit {
+            margin-top: 10px;
+            border-top: 1px solid #eee5dc;
+            padding-top: 10px;
+          }
+
+          .inventory-mobile-empty {
+            padding: 24px 14px;
+            text-align: center;
+            color: #756c64;
+          }
+        `}</style>
+
+        <div className="inventory-mobile-hero">
+          <span className="eyebrow">Catálogo operativo</span>
+          <h2>Inventario</h2>
+          <p>Busca, revisa existencias y edita productos.</p>
+          <div className="inventory-mobile-actions">
+            <Link to="/agregar" className="btn btn-primary inventory-add-link">+ Nuevo producto</Link>
+            <button className="btn btn-secondary" onClick={downloadInventory}>⇩ Descargar</button>
+          </div>
+        </div>
+
+        <div className="inventory-mobile-toolbar">
+          <div className="inventory-mobile-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              type="search"
+              placeholder="Buscar nombre, código o categoría..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="inventory-mobile-scroll">
+            {statusOptions.map(([value, label]) => (
+              <button
+                key={value}
+                className={`inventory-mobile-pill ${statusFilter === value ? "active" : ""}`}
+                onClick={() => setStatusFilter(value)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <span className="inventory-mobile-label">Categoría</span>
+          <div className="inventory-mobile-scroll">
+            {categories.map((category) => (
+              <button
+                key={category}
+                className={`inventory-mobile-pill ${categoryFilter === category ? "active" : ""}`}
+                onClick={() => setCategoryFilter(category)}
+                type="button"
+              >
+                {category === "all" ? "Todas" : category}
+              </button>
+            ))}
+          </div>
+
+          <p className="inventory-mobile-counter">
+            {visibleProducts.length} de {allProducts.length} productos
+          </p>
+        </div>
+
+        {visibleProducts.length === 0 ? (
+          <div className="inventory-mobile-empty">
+            <strong>No encontramos productos con esos filtros.</strong>
+          </div>
+        ) : (
+          <div className="inventory-mobile-list">
+            {visibleProducts.map((p, index) => {
+              const status = stockMeta(p);
+              return (
+                <div className="inventory-mobile-card" key={p.id}>
+                  <div className="inventory-mobile-card-top">
+                    <div className="inventory-mobile-photo">
+                      <ProductImage src={p.image_url} alt={p.name} priority={index < 6} />
+                    </div>
+
+                    <div className="inventory-mobile-copy">
+                      <h3>{p.name}</h3>
+                      <p className="inventory-mobile-code">
+                        {p.code || "Sin código"} · {p.category || "Sin categoría"}
+                      </p>
+                      <span className={`inventory-mobile-status ${status.tone}`}>
+                        {status.label}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="inventory-mobile-price-row">
+                    <div className="inventory-mobile-metric">
+                      <span>Precio</span>
+                      <strong>{money(p.price)}</strong>
+                    </div>
+                    <div className="inventory-mobile-metric">
+                      <span>Stock</span>
+                      <strong>{Number(p.stock || 0)}</strong>
+                    </div>
+                    <div className="inventory-mobile-metric">
+                      <span>Costo</span>
+                      <strong>{money(p.cost)}</strong>
+                    </div>
+                    <div className="inventory-mobile-metric">
+                      <span>Margen</span>
+                      <strong>{margin(p.price, p.cost).toFixed(1)}%</strong>
+                    </div>
+                  </div>
+
+                  <div className="inventory-mobile-card-actions">
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setEditingId(editingId === p.id ? null : p.id)}
+                      type="button"
+                    >
+                      {editingId === p.id ? "Cerrar edición" : "✎ Editar"}
+                    </button>
+                    <button className="inventory-danger-link" onClick={() => deleteProduct(p)} type="button">
+                      Eliminar
+                    </button>
+                  </div>
+
+                  {editingId === p.id && (
+                    <div className="inventory-mobile-edit">
+                      <EditProduct
+                        product={p}
+                        onSaved={async () => {
+                          setEditingId(null);
+                          await loadProducts();
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  return (
+    <section className="inventory-section inventory-modern">
       <div className="inventory-heading-row">
         <div>
           <span className="eyebrow">Catálogo operativo</span>
