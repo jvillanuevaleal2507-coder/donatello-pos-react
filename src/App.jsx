@@ -2410,6 +2410,11 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   const [salesSearch, setSalesSearch] = useState("");
   const [salesStatus, setSalesStatus] = useState("all");
   const [expandedSaleId, setExpandedSaleId] = useState(null);
+  const [expandedSalesPeriods, setExpandedSalesPeriods] = useState(() => {
+    const now = new Date();
+    const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    return { [key]: true };
+  });
 
   const completedSales = sales.filter(
     (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
@@ -2448,6 +2453,50 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
 
     return matchesStatus && matchesSearch;
   });
+
+
+  const salesByYear = Object.entries(
+    visibleSales
+      .slice()
+      .sort((a, b) => new Date(b.sale_date) - new Date(a.sale_date))
+      .reduce((years, sale) => {
+        const date = new Date(sale.sale_date);
+        const year = String(date.getFullYear());
+        const monthNumber = String(date.getMonth() + 1).padStart(2, "0");
+        const monthKey = `${year}-${monthNumber}`;
+        const monthLabel = date.toLocaleDateString("es-MX", {
+          month: "long",
+        });
+
+        if (!years[year]) years[year] = {};
+        if (!years[year][monthKey]) {
+          years[year][monthKey] = {
+            key: monthKey,
+            label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+            sales: [],
+            total: 0,
+          };
+        }
+
+        years[year][monthKey].sales.push(sale);
+        if (String(sale.status || "completed").toLowerCase() !== "voided") {
+          years[year][monthKey].total += Number(sale.total || 0);
+        }
+        return years;
+      }, {})
+  )
+    .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
+    .map(([year, months]) => ({
+      year,
+      months: Object.values(months).sort((a, b) => b.key.localeCompare(a.key)),
+    }));
+
+  function toggleSalesPeriod(key) {
+    setExpandedSalesPeriods((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }
 
   function openEditSale(sale) {
     if (String(sale.status || "completed").toLowerCase() === "voided") {
@@ -2576,6 +2625,119 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
     }
   }
 
+
+  function renderSaleCard(sale) {
+    const isVoided =
+      String(sale.status || "completed").toLowerCase() === "voided";
+
+    return (
+      <Card
+        key={sale.id}
+        className={`sales-history-card ${isVoided ? "sale-card-voided" : ""}`}
+      >
+        <div className="sale-card-header">
+          <div>
+            <div className="sale-title-row">
+              <h3>Venta #{sale.id}</h3>
+              <span
+                className={
+                  isVoided
+                    ? "sale-status sale-status-voided"
+                    : "sale-status sale-status-completed"
+                }
+              >
+                {isVoided ? "ANULADA" : "COMPLETADA"}
+              </span>
+            </div>
+            <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
+            {isVoided && (
+              <p className="void-reason">
+                Motivo: {sale.void_reason || "Sin motivo registrado"}
+              </p>
+            )}
+          </div>
+          <div className="sale-total-box">
+            <span>Total</span>
+            <strong>{money(sale.total)}</strong>
+            <button
+              className="text-btn"
+              onClick={() => setSelectedReceipt(sale)}
+            >
+              Ticket
+            </button>
+          </div>
+        </div>
+
+        <button
+          className="sales-mobile-detail-toggle"
+          type="button"
+          aria-expanded={Number(expandedSaleId) === Number(sale.id)}
+          onClick={() =>
+            setExpandedSaleId((current) =>
+              Number(current) === Number(sale.id) ? null : sale.id
+            )
+          }
+        >
+          <span>Ver detalles</span>
+          <span aria-hidden="true">
+            {Number(expandedSaleId) === Number(sale.id) ? "⌃" : "⌄"}
+          </span>
+        </button>
+
+        <div
+          className={`sales-mobile-detail-panel ${
+            Number(expandedSaleId) === Number(sale.id) ? "is-open" : ""
+          }`}
+        >
+          <div className="sale-summary-grid">
+            <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
+            <div><span>Recibido</span><b>{money(sale.received)}</b></div>
+            <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
+            <div><span>Piezas</span><b>{sale.items_count}</b></div>
+          </div>
+
+          {sale.sale_items?.length > 0 && (
+            <div className="sale-items-list">
+              {sale.sale_items.map((item, index) => (
+                <div
+                  className="sale-item-row"
+                  key={`${sale.id}-${item.code}-${index}`}
+                >
+                  <div>
+                    <strong>{item.name}</strong>
+                    <span>Cantidad: {item.qty}</span>
+                  </div>
+                  <b>{money(item.subtotal)}</b>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!isVoided && (
+            <div className="sale-admin-actions">
+              <Button
+                variant="secondary"
+                onClick={() => openEditSale(sale)}
+              >
+                ✏️ Corregir venta
+              </Button>
+
+              <Button
+                variant="danger"
+                disabled={Number(voidingSaleId) === Number(sale.id)}
+                onClick={() => voidSale(sale)}
+              >
+                {Number(voidingSaleId) === Number(sale.id)
+                  ? "Anulando..."
+                  : "❌ Anular venta"}
+              </Button>
+            </div>
+          )}
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <section className="inventory-section sales-modern">
       <div className="sales-header sales-heading-modern">
@@ -2638,118 +2800,47 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
       ) : sales.length === 0 ? (
         <Card><p className="muted">Todavía no hay ventas registradas.</p></Card>
       ) : (
-        <div className="sales-list sales-list-modern">
-          {visibleSales.map((sale) => {
-            const isVoided =
-              String(sale.status || "completed").toLowerCase() === "voided";
+        <div className="sales-periods">
+          {salesByYear.map(({ year, months }) => (
+            <section className="sales-year-group" key={year}>
+              <div className="sales-year-heading">
+                <strong>{year}</strong>
+                <span>{months.reduce((sum, month) => sum + month.sales.length, 0)} ventas</span>
+              </div>
 
-            return (
-              <Card
-                key={sale.id}
-                className={`sales-history-card ${isVoided ? "sale-card-voided" : ""}`}
-              >
-                <div className="sale-card-header">
-                  <div>
-                    <div className="sale-title-row">
-                      <h3>Venta #{sale.id}</h3>
-                      <span
-                        className={
-                          isVoided
-                            ? "sale-status sale-status-voided"
-                            : "sale-status sale-status-completed"
-                        }
+              <div className="sales-months-list">
+                {months.map((month) => {
+                  const isOpen =
+                    Boolean(expandedSalesPeriods[month.key]) ||
+                    Boolean(salesSearch.trim());
+
+                  return (
+                    <div className="sales-month-group" key={month.key}>
+                      <button
+                        className="sales-month-toggle"
+                        type="button"
+                        aria-expanded={isOpen}
+                        onClick={() => toggleSalesPeriod(month.key)}
                       >
-                        {isVoided ? "ANULADA" : "COMPLETADA"}
-                      </span>
-                    </div>
-                    <p>{new Date(sale.sale_date).toLocaleString("es-MX")}</p>
-                    {isVoided && (
-                      <p className="void-reason">
-                        Motivo: {sale.void_reason || "Sin motivo registrado"}
-                      </p>
-                    )}
-                  </div>
-                  <div className="sale-total-box">
-                    <span>Total</span>
-                    <strong>{money(sale.total)}</strong>
-                    <button
-                      className="text-btn"
-                      onClick={() => setSelectedReceipt(sale)}
-                    >
-                      Ticket
-                    </button>
-                  </div>
-                </div>
+                        <span className="sales-month-copy">
+                          <strong>{month.label}</strong>
+                          <small>{month.sales.length} {month.sales.length === 1 ? "venta" : "ventas"}</small>
+                        </span>
+                        <span className="sales-month-total">{money(month.total)}</span>
+                        <span className="sales-month-chevron" aria-hidden="true">{isOpen ? "⌃" : "⌄"}</span>
+                      </button>
 
-                <button
-                  className="sales-mobile-detail-toggle"
-                  type="button"
-                  aria-expanded={Number(expandedSaleId) === Number(sale.id)}
-                  onClick={() =>
-                    setExpandedSaleId((current) =>
-                      Number(current) === Number(sale.id) ? null : sale.id
-                    )
-                  }
-                >
-                  <span>Ver detalles</span>
-                  <span aria-hidden="true">
-                    {Number(expandedSaleId) === Number(sale.id) ? "⌃" : "⌄"}
-                  </span>
-                </button>
-
-                <div
-                  className={`sales-mobile-detail-panel ${
-                    Number(expandedSaleId) === Number(sale.id) ? "is-open" : ""
-                  }`}
-                >
-                  <div className="sale-summary-grid">
-                    <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
-                    <div><span>Recibido</span><b>{money(sale.received)}</b></div>
-                    <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
-                    <div><span>Piezas</span><b>{sale.items_count}</b></div>
-                  </div>
-
-                  {sale.sale_items?.length > 0 && (
-                    <div className="sale-items-list">
-                      {sale.sale_items.map((item, index) => (
-                        <div
-                          className="sale-item-row"
-                          key={`${sale.id}-${item.code}-${index}`}
-                        >
-                          <div>
-                            <strong>{item.name}</strong>
-                            <span>Cantidad: {item.qty}</span>
-                          </div>
-                          <b>{money(item.subtotal)}</b>
+                      <div className={`sales-month-content ${isOpen ? "is-open" : ""}`}>
+                        <div className="sales-list sales-list-modern">
+                          {month.sales.map(renderSaleCard)}
                         </div>
-                      ))}
+                      </div>
                     </div>
-                  )}
-
-                  {!isVoided && (
-                    <div className="sale-admin-actions">
-                      <Button
-                        variant="secondary"
-                        onClick={() => openEditSale(sale)}
-                      >
-                        ✏️ Corregir venta
-                      </Button>
-
-                      <Button
-                        variant="danger"
-                        disabled={Number(voidingSaleId) === Number(sale.id)}
-                        onClick={() => voidSale(sale)}
-                      >
-                        {Number(voidingSaleId) === Number(sale.id)
-                          ? "Anulando..."
-                          : "❌ Anular venta"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
