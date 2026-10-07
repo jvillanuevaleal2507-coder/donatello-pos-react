@@ -147,7 +147,17 @@ export default function DashboardPage({ sales = [], products = [] }) {
     });
   });
 
+  const productByCode = Object.fromEntries(
+    products
+      .filter((product) => product.code)
+      .map((product) => [String(product.code), product])
+  );
+
   const topProducts = Object.values(productStats)
+    .map((item) => ({
+      ...item,
+      image_url: productByCode[String(item.code || "")]?.image_url || "",
+    }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 6);
 
@@ -277,7 +287,14 @@ export default function DashboardPage({ sales = [], products = [] }) {
               {topProducts.map((product, index) => (
                 <div className="dashboard-ranked-row" key={`${product.code}-${index}`}>
                   <span className="rank-number">{index + 1}</span>
-                  <div>
+                  <div className="dashboard-product-thumb">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} loading="lazy" decoding="async" />
+                    ) : (
+                      <span aria-hidden="true">▦</span>
+                    )}
+                  </div>
+                  <div className="dashboard-ranked-copy">
                     <strong>{product.name}</strong>
                     <span>{product.code || "Sin código"} · {product.qty} pzas</span>
                   </div>
@@ -303,7 +320,14 @@ export default function DashboardPage({ sales = [], products = [] }) {
             <div className="dashboard-low-list">
               {lowStock.map((product) => (
                 <div className="dashboard-low-row" key={product.id}>
-                  <div>
+                  <div className="dashboard-product-thumb">
+                    {product.image_url ? (
+                      <img src={product.image_url} alt={product.name} loading="lazy" decoding="async" />
+                    ) : (
+                      <span aria-hidden="true">▦</span>
+                    )}
+                  </div>
+                  <div className="dashboard-low-copy">
                     <strong>{product.name}</strong>
                     <span>{product.code || "Sin código"}</span>
                   </div>
