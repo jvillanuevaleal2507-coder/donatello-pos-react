@@ -902,3 +902,229 @@ span.rank-number {
     height: 64px !important;
   }
 }
+
+
+/* ===== Inventario: paridad responsive con producción =====
+   Mantiene el rediseño visual general, pero la geometría/layout de Inventario
+   replica exactamente el comportamiento probado de main. */
+.inventory-modern.inventory-section {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.inventory-modern .inventory-heading-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: end !important;
+  gap: 16px !important;
+  min-height: 0 !important;
+  padding: 4px 2px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.inventory-modern .inventory-heading-row h2 {
+  margin-top: 4px !important;
+  font-size: clamp(2rem, 3.6vw, 3rem) !important;
+  line-height: 1 !important;
+}
+
+.inventory-modern .inventory-heading-row .muted {
+  margin-top: 8px !important;
+  font-size: .94rem !important;
+}
+
+.inventory-modern .inventory-heading-actions {
+  display: flex !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  width: auto !important;
+}
+
+.inventory-modern .inventory-toolbar-card {
+  padding: 14px !important;
+  display: grid !important;
+  gap: 12px !important;
+  overflow: hidden !important;
+}
+
+.inventory-modern .inventory-filter-row {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.inventory-modern .inventory-status-pills,
+.inventory-modern .category-pills {
+  display: flex !important;
+  gap: 7px !important;
+  flex-wrap: wrap !important;
+  overflow: visible !important;
+}
+
+.inventory-modern .inventory-category-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.inventory-modern .inventory-products-grid {
+  grid-template-columns: repeat(3, minmax(0,1fr)) !important;
+  gap: 13px !important;
+}
+
+.inventory-modern .inventory-product-card {
+  display: block !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.inventory-modern .inventory-product-card-main {
+  display: block !important;
+  min-width: 0 !important;
+}
+
+.inventory-modern .inventory-image-wrap {
+  position: relative !important;
+  width: auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  aspect-ratio: 4 / 3 !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
+}
+
+.inventory-modern .inventory-product-image {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  object-fit: cover !important;
+}
+
+.inventory-modern .inventory-product-content {
+  width: auto !important;
+  padding: 13px !important;
+  display: grid !important;
+  gap: 11px !important;
+}
+
+.inventory-modern .inventory-product-topline {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: start !important;
+  gap: 10px !important;
+}
+
+.inventory-modern .inventory-price-row {
+  display: grid !important;
+  grid-template-columns: 1fr auto !important;
+  gap: 12px !important;
+  align-items: end !important;
+}
+
+.inventory-modern .inventory-detail-strip {
+  display: flex !important;
+  gap: 14px !important;
+  flex-wrap: nowrap !important;
+  padding-top: 9px !important;
+}
+
+.inventory-modern .inventory-card-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.inventory-modern .inventory-products-grid.list-mode {
+  grid-template-columns: 1fr !important;
+}
+
+.inventory-modern .inventory-products-grid.list-mode .inventory-product-card-main {
+  display: grid !important;
+  grid-template-columns: 210px 1fr !important;
+}
+
+.inventory-modern .inventory-products-grid.list-mode .inventory-image-wrap {
+  aspect-ratio: auto !important;
+  min-height: 165px !important;
+}
+
+@media (max-width: 1180px) {
+  .inventory-modern .inventory-products-grid {
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .inventory-modern .inventory-heading-row {
+    align-items: start !important;
+    flex-direction: column !important;
+  }
+
+  .inventory-modern .inventory-heading-actions {
+    width: 100% !important;
+  }
+
+  .inventory-modern .inventory-heading-actions .btn {
+    flex: 1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .inventory-modern .inventory-filter-row {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .inventory-modern .inventory-view-toggle {
+    align-self: flex-start !important;
+    width: auto !important;
+    margin-top: 0 !important;
+  }
+
+  .inventory-modern .inventory-category-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .inventory-modern .inventory-status-pills,
+  .inventory-modern .category-pills {
+    flex-wrap: wrap !important;
+    overflow: visible !important;
+  }
+
+  .inventory-modern .inventory-products-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-modern .inventory-products-grid.list-mode .inventory-product-card-main {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-modern .inventory-heading-actions {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-modern .inventory-product-topline {
+    gap: 6px !important;
+  }
+
+  .inventory-modern .inventory-image-wrap {
+    width: auto !important;
+    aspect-ratio: 16 / 10 !important;
+    min-height: 0 !important;
+  }
+
+  .inventory-modern .inventory-product-card-main {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+
+  .inventory-modern .inventory-product-content {
+    padding: 13px !important;
+  }
+}
