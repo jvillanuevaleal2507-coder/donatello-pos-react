@@ -2409,6 +2409,7 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   const [voidingSaleId, setVoidingSaleId] = useState(null);
   const [salesSearch, setSalesSearch] = useState("");
   const [salesStatus, setSalesStatus] = useState("all");
+  const [expandedSaleId, setExpandedSaleId] = useState(null);
 
   const completedSales = sales.filter(
     (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
@@ -2680,50 +2681,72 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
                   </div>
                 </div>
 
-                <div className="sale-summary-grid">
-                  <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
-                  <div><span>Recibido</span><b>{money(sale.received)}</b></div>
-                  <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
-                  <div><span>Piezas</span><b>{sale.items_count}</b></div>
-                </div>
+                <button
+                  className="sales-mobile-detail-toggle"
+                  type="button"
+                  aria-expanded={Number(expandedSaleId) === Number(sale.id)}
+                  onClick={() =>
+                    setExpandedSaleId((current) =>
+                      Number(current) === Number(sale.id) ? null : sale.id
+                    )
+                  }
+                >
+                  <span>Ver detalles</span>
+                  <span aria-hidden="true">
+                    {Number(expandedSaleId) === Number(sale.id) ? "⌃" : "⌄"}
+                  </span>
+                </button>
 
-                {sale.sale_items?.length > 0 && (
-                  <div className="sale-items-list">
-                    {sale.sale_items.map((item, index) => (
-                      <div
-                        className="sale-item-row"
-                        key={`${sale.id}-${item.code}-${index}`}
-                      >
-                        <div>
-                          <strong>{item.name}</strong>
-                          <span>Cantidad: {item.qty}</span>
+                <div
+                  className={`sales-mobile-detail-panel ${
+                    Number(expandedSaleId) === Number(sale.id) ? "is-open" : ""
+                  }`}
+                >
+                  <div className="sale-summary-grid">
+                    <div><span>Utilidad</span><b>{money(sale.profit)}</b></div>
+                    <div><span>Recibido</span><b>{money(sale.received)}</b></div>
+                    <div><span>Cambio</span><b>{money(sale.change_amount)}</b></div>
+                    <div><span>Piezas</span><b>{sale.items_count}</b></div>
+                  </div>
+
+                  {sale.sale_items?.length > 0 && (
+                    <div className="sale-items-list">
+                      {sale.sale_items.map((item, index) => (
+                        <div
+                          className="sale-item-row"
+                          key={`${sale.id}-${item.code}-${index}`}
+                        >
+                          <div>
+                            <strong>{item.name}</strong>
+                            <span>Cantidad: {item.qty}</span>
+                          </div>
+                          <b>{money(item.subtotal)}</b>
                         </div>
-                        <b>{money(item.subtotal)}</b>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
 
-                {!isVoided && (
-                  <div className="sale-admin-actions">
-                    <Button
-                      variant="secondary"
-                      onClick={() => openEditSale(sale)}
-                    >
-                      ✏️ Corregir venta
-                    </Button>
+                  {!isVoided && (
+                    <div className="sale-admin-actions">
+                      <Button
+                        variant="secondary"
+                        onClick={() => openEditSale(sale)}
+                      >
+                        ✏️ Corregir venta
+                      </Button>
 
-                    <Button
-                      variant="danger"
-                      disabled={Number(voidingSaleId) === Number(sale.id)}
-                      onClick={() => voidSale(sale)}
-                    >
-                      {Number(voidingSaleId) === Number(sale.id)
-                        ? "Anulando..."
-                        : "❌ Anular venta"}
-                    </Button>
-                  </div>
-                )}
+                      <Button
+                        variant="danger"
+                        disabled={Number(voidingSaleId) === Number(sale.id)}
+                        onClick={() => voidSale(sale)}
+                      >
+                        {Number(voidingSaleId) === Number(sale.id)
+                          ? "Anulando..."
+                          : "❌ Anular venta"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </Card>
             );
           })}
