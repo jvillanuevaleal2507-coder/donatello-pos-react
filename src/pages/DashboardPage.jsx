@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -43,6 +44,11 @@ function Kpi({ label, value, note, tone = "" }) {
 }
 
 export default function DashboardPage({ sales = [], products = [] }) {
+  const [mobileSections, setMobileSections] = useState({ top: false, stock: false, recent: false });
+
+  function toggleMobileSection(section) {
+    setMobileSections((prev) => ({ ...prev, [section]: !prev[section] }));
+  }
   const activeSales = sales.filter(
     (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
   );
@@ -301,13 +307,17 @@ export default function DashboardPage({ sales = [], products = [] }) {
 
       <div className="dashboard-lists-grid">
         <Card>
-          <div className="dashboard-section-heading compact">
+          <div className="dashboard-section-heading compact dashboard-collapsible-heading">
             <div>
               <span className="eyebrow">Productos</span>
               <h3>Los que más venden</h3>
             </div>
+            <button className="dashboard-mobile-toggle" type="button" onClick={() => toggleMobileSection("top")} aria-expanded={mobileSections.top}>
+              {mobileSections.top ? "Ocultar" : "Ver"} <span aria-hidden="true">{mobileSections.top ? "⌃" : "⌄"}</span>
+            </button>
           </div>
 
+          <div className={`dashboard-collapsible-content ${mobileSections.top ? "is-open" : ""}`}>
           {topProducts.length === 0 ? (
             <div className="dashboard-empty">Aún no hay suficiente historial de productos vendidos.</div>
           ) : (
@@ -350,17 +360,24 @@ export default function DashboardPage({ sales = [], products = [] }) {
               ))}
             </div>
           )}
+          </div>
         </Card>
 
         <Card>
-          <div className="dashboard-section-heading compact">
+          <div className="dashboard-section-heading compact dashboard-collapsible-heading">
             <div>
               <span className="eyebrow">Atención</span>
               <h3>Stock bajo o agotado</h3>
             </div>
-            <span className="dashboard-count-badge">{lowStock.length}</span>
+            <div className="dashboard-heading-actions">
+              <span className="dashboard-count-badge">{lowStock.length}</span>
+              <button className="dashboard-mobile-toggle" type="button" onClick={() => toggleMobileSection("stock")} aria-expanded={mobileSections.stock}>
+                {mobileSections.stock ? "Ocultar" : "Ver"} <span aria-hidden="true">{mobileSections.stock ? "⌃" : "⌄"}</span>
+              </button>
+            </div>
           </div>
 
+          <div className={`dashboard-collapsible-content ${mobileSections.stock ? "is-open" : ""}`}>
           {lowStock.length === 0 ? (
             <div className="dashboard-empty">No hay productos con stock crítico.</div>
           ) : (
@@ -385,17 +402,22 @@ export default function DashboardPage({ sales = [], products = [] }) {
               ))}
             </div>
           )}
+          </div>
         </Card>
       </div>
 
       <Card>
-        <div className="dashboard-section-heading compact">
+        <div className="dashboard-section-heading compact dashboard-collapsible-heading">
           <div>
             <span className="eyebrow">Actividad</span>
             <h3>Ventas recientes</h3>
           </div>
+          <button className="dashboard-mobile-toggle" type="button" onClick={() => toggleMobileSection("recent")} aria-expanded={mobileSections.recent}>
+            {mobileSections.recent ? "Ocultar" : "Ver"} <span aria-hidden="true">{mobileSections.recent ? "⌃" : "⌄"}</span>
+          </button>
         </div>
 
+        <div className={`dashboard-collapsible-content ${mobileSections.recent ? "is-open" : ""}`}>
         {recentSales.length === 0 ? (
           <div className="dashboard-empty">Todavía no hay ventas registradas.</div>
         ) : (
@@ -413,6 +435,7 @@ export default function DashboardPage({ sales = [], products = [] }) {
             ))}
           </div>
         )}
+        </div>
       </Card>
     </section>
   );
