@@ -748,3 +748,51 @@
     font-size: .5rem !important;
   }
 }
+
+
+/* ===== Detalles secundarios desplegables · Resumen móvil ===== */
+.dashboard-mobile-toggle {
+  display: none;
+}
+
+.dashboard-collapsible-content {
+  display: block;
+}
+
+.dashboard-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@container donatello-content (max-width: 430px) {
+  .dashboard-mobile-toggle {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    min-height: 26px !important;
+    padding: 3px 7px !important;
+    border: 1px solid #e1d6cc !important;
+    border-radius: 8px !important;
+    background: #fffaf5 !important;
+    color: #65564b !important;
+    font-size: .55rem !important;
+    font-weight: 800 !important;
+  }
+
+  .dashboard-collapsible-content {
+    display: none !important;
+  }
+
+  .dashboard-collapsible-content.is-open {
+    display: block !important;
+  }
+
+  .dashboard-collapsible-heading {
+    margin-bottom: 0 !important;
+  }
+
+  .dashboard-collapsible-content.is-open {
+    margin-top: 5px !important;
+  }
+}
