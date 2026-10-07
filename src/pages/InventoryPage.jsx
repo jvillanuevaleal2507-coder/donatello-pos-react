@@ -264,7 +264,112 @@ export default function InventoryPage({
   ];
 
   return (
-    <section className="inventory-section inventory-modern">
+    <section className="inventory-section inventory-modern demo-inventory-v2">
+      <style>{`
+        @media (max-width: 760px) {
+          .demo-inventory-v2 .inventory-product-card {
+            display: block !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .demo-inventory-v2 .inventory-product-card-main {
+            display: grid !important;
+            grid-template-columns: 96px minmax(0, 1fr) !important;
+            align-items: stretch !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .demo-inventory-v2 .inventory-image-wrap {
+            width: 96px !important;
+            height: 100% !important;
+            min-height: 138px !important;
+            aspect-ratio: auto !important;
+            border-radius: 0 !important;
+            overflow: hidden !important;
+          }
+
+          .demo-inventory-v2 .inventory-product-image {
+            width: 96px !important;
+            height: 100% !important;
+            min-height: 138px !important;
+            object-fit: cover !important;
+          }
+
+          .demo-inventory-v2 .inventory-photo-count {
+            display: none !important;
+          }
+
+          .demo-inventory-v2 .inventory-product-content {
+            width: auto !important;
+            min-width: 0 !important;
+            padding: 10px 11px !important;
+            gap: 7px !important;
+          }
+
+          .demo-inventory-v2 .inventory-product-topline {
+            display: block !important;
+          }
+
+          .demo-inventory-v2 .inventory-product-topline h3 {
+            margin: 0 !important;
+            font-size: .96rem !important;
+            line-height: 1.14 !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+          }
+
+          .demo-inventory-v2 .inventory-product-topline p {
+            margin-top: 3px !important;
+            font-size: .68rem !important;
+          }
+
+          .demo-inventory-v2 .stock-status {
+            display: inline-flex !important;
+            margin-top: 6px !important;
+            padding: 3px 7px !important;
+            font-size: .6rem !important;
+          }
+
+          .demo-inventory-v2 .inventory-price-row {
+            grid-template-columns: 1fr auto !important;
+            gap: 7px !important;
+            align-items: end !important;
+          }
+
+          .demo-inventory-v2 .inventory-price-row span,
+          .demo-inventory-v2 .inventory-detail-strip {
+            font-size: .66rem !important;
+          }
+
+          .demo-inventory-v2 .inventory-price-row strong {
+            font-size: .98rem !important;
+          }
+
+          .demo-inventory-v2 .inventory-detail-strip {
+            display: flex !important;
+            gap: 8px !important;
+            padding-top: 6px !important;
+            flex-wrap: wrap !important;
+          }
+
+          .demo-inventory-v2 .inventory-card-actions {
+            display: flex !important;
+            gap: 6px !important;
+            align-items: center !important;
+          }
+
+          .demo-inventory-v2 .inventory-card-actions .btn,
+          .demo-inventory-v2 .inventory-danger-link {
+            min-height: 32px !important;
+            padding: 5px 8px !important;
+            font-size: .68rem !important;
+          }
+        }
+      `}</style>
       <div className="inventory-heading-row">
         <div>
           <span className="eyebrow">Catálogo operativo</span>
