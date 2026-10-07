@@ -1,0 +1,483 @@
+/* Donatello Responsive System
+   Single responsive layer loaded last.
+   Desktop (> 900px) keeps the approved design.
+   Tablet/mobile use fluid sizing and container-aware layouts. */
+
+.workspace-content {
+  min-width: 0;
+  container-type: inline-size;
+  container-name: donatello-content;
+}
+
+:root {
+  --rsp-gap: clamp(8px, 2vw, 16px);
+  --rsp-pad: clamp(10px, 2.6vw, 18px);
+  --rsp-radius: clamp(12px, 2vw, 20px);
+  --rsp-title: clamp(1.8rem, 7vw, 3rem);
+  --rsp-body: clamp(.78rem, 2.8vw, .98rem);
+}
+
+@media (max-width: 900px) {
+  .app {
+    padding: clamp(6px, 2vw, 10px) !important;
+  }
+
+  .shell {
+    width: 100% !important;
+    max-width: 100% !important;
+    gap: var(--rsp-gap) !important;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr !important;
+    gap: var(--rsp-gap) !important;
+  }
+
+  .workspace-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  .brand-header-modern {
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    padding: clamp(10px, 2.4vw, 14px) !important;
+    min-height: 0 !important;
+  }
+
+  .brand-logo-modern {
+    width: clamp(48px, 13vw, 58px) !important;
+    height: clamp(48px, 13vw, 58px) !important;
+  }
+
+  .brand-copy-modern h1 {
+    font-size: clamp(1.35rem, 5.5vw, 1.8rem) !important;
+  }
+
+  .brand-copy-modern p,
+  .brand-session-modern {
+    display: none !important;
+  }
+
+  .sidebar-shell {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 6px !important;
+    overflow-x: auto !important;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .sidebar-shell::-webkit-scrollbar {
+    display: none;
+  }
+
+  .donatello-nav {
+    display: flex !important;
+    min-width: max-content !important;
+    gap: 5px !important;
+  }
+
+  .nav-section-label,
+  .nav-tools-label,
+  .sidebar-signout {
+    display: none !important;
+  }
+
+  .donatello-nav-link {
+    width: auto !important;
+    min-width: 68px !important;
+    min-height: 42px !important;
+    grid-template-columns: 1fr !important;
+    justify-items: center !important;
+    gap: 3px !important;
+    padding: 6px 8px !important;
+    font-size: .68rem !important;
+    white-space: nowrap !important;
+  }
+
+  .donatello-nav-icon {
+    width: 25px !important;
+    height: 25px !important;
+  }
+
+  /* Neutralize legacy mobile rules that make every button/input oversized. */
+  .workspace-content .btn {
+    min-height: 38px !important;
+    padding: 8px 11px !important;
+    font-size: clamp(.72rem, 2.8vw, .9rem) !important;
+    line-height: 1.1 !important;
+    border-radius: 10px !important;
+  }
+
+  .workspace-content input,
+  .workspace-content select,
+  .workspace-content textarea {
+    min-height: 42px !important;
+    font-size: 16px !important;
+  }
+
+  .workspace-content .card {
+    padding: var(--rsp-pad);
+    border-radius: var(--rsp-radius) !important;
+  }
+
+  /* Shared module headings */
+  .dashboard-heading,
+  .sale-page-heading,
+  .inventory-heading-row,
+  .sales-heading-modern,
+  .add-product-heading,
+  .layaways-heading,
+  .qr-heading-modern,
+  .import-heading {
+    min-height: 0 !important;
+    padding: var(--rsp-pad) !important;
+    gap: 10px !important;
+  }
+
+  .dashboard-heading h2,
+  .sale-page-heading h2,
+  .inventory-heading-row h2,
+  .sales-heading-modern h2,
+  .add-product-heading h2,
+  .layaways-heading h2,
+  .qr-heading-modern h2,
+  .import-heading h2 {
+    font-size: var(--rsp-title) !important;
+    line-height: .98 !important;
+  }
+}
+
+/* INVENTARIO: fluid card based on available module width, not device model. */
+@container donatello-content (max-width: 760px) {
+  .inventory-heading-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  .inventory-heading-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .inventory-heading-actions .btn,
+  .inventory-add-link {
+    width: 100% !important;
+    min-width: 0 !important;
+    white-space: normal !important;
+  }
+
+  .inventory-toolbar-card {
+    padding: clamp(9px, 2.4vw, 12px) !important;
+    gap: 9px !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-search-wrap {
+    min-width: 0 !important;
+    width: 100% !important;
+    min-height: 44px !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    padding: 0 10px !important;
+  }
+
+  .inventory-search-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 42px !important;
+  }
+
+  .inventory-filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .inventory-status-pills,
+  .category-pills {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+    overscroll-behavior-inline: contain;
+  }
+
+  .inventory-status-pills::-webkit-scrollbar,
+  .category-pills::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .category-pill {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+    min-height: 31px !important;
+    padding: 6px 9px !important;
+    font-size: .69rem !important;
+  }
+
+  .inventory-category-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+    gap: 6px !important;
+  }
+
+  .inventory-view-toggle {
+    width: max-content !important;
+    max-width: 100% !important;
+  }
+
+  .inventory-products-grid,
+  .inventory-products-grid.list-mode {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: clamp(8px, 2vw, 11px) !important;
+  }
+
+  .inventory-product-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-card-main,
+  .inventory-products-grid.list-mode .inventory-product-card-main {
+    width: 100% !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(84px, 26%) minmax(0, 1fr) !important;
+    align-items: stretch !important;
+  }
+
+  .inventory-image-wrap,
+  .inventory-products-grid.list-mode .inventory-image-wrap {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: clamp(116px, 31vw, 148px) !important;
+    aspect-ratio: auto !important;
+    border-radius: 0 !important;
+  }
+
+  .inventory-product-image {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: clamp(116px, 31vw, 148px) !important;
+    object-fit: cover !important;
+  }
+
+  .inventory-photo-count {
+    right: 5px !important;
+    bottom: 5px !important;
+    padding: 4px 6px !important;
+    font-size: .58rem !important;
+  }
+
+  .inventory-product-content {
+    min-width: 0 !important;
+    padding: clamp(8px, 2.3vw, 11px) !important;
+    gap: clamp(5px, 1.7vw, 8px) !important;
+  }
+
+  .inventory-product-topline {
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 5px !important;
+  }
+
+  .inventory-product-topline > div {
+    min-width: 0 !important;
+  }
+
+  .inventory-product-topline h3 {
+    font-size: clamp(.87rem, 3.5vw, 1rem) !important;
+    line-height: 1.08 !important;
+    overflow-wrap: anywhere;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-topline p {
+    margin-top: 2px !important;
+    font-size: clamp(.62rem, 2.4vw, .72rem) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .stock-status {
+    justify-self: start !important;
+    padding: 3px 6px !important;
+    font-size: clamp(.55rem, 2.1vw, .62rem) !important;
+  }
+
+  .inventory-price-row {
+    width: 100% !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 6px !important;
+  }
+
+  .inventory-price-row span,
+  .inventory-detail-strip {
+    font-size: clamp(.58rem, 2.2vw, .68rem) !important;
+  }
+
+  .inventory-price-row strong {
+    font-size: clamp(.86rem, 3.2vw, 1rem) !important;
+  }
+
+  .inventory-detail-strip {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 5px 8px !important;
+    padding-top: 5px !important;
+  }
+
+  .inventory-card-actions {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 5px !important;
+  }
+
+  .inventory-card-actions .btn,
+  .inventory-danger-link {
+    min-height: 30px !important;
+    padding: 5px 7px !important;
+    font-size: clamp(.62rem, 2.3vw, .7rem) !important;
+  }
+}
+
+/* Fallback for browsers without container-query support. */
+@media (max-width: 760px) {
+  .inventory-product-card-main,
+  .inventory-products-grid.list-mode .inventory-product-card-main {
+    grid-template-columns: minmax(84px, 26%) minmax(0, 1fr) !important;
+  }
+}
+
+/* RESUMEN */
+@container donatello-content (max-width: 760px) {
+  .dashboard-heading {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  .dashboard-today-pill {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  .dashboard-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-kpi {
+    min-width: 0 !important;
+    min-height: 96px !important;
+  }
+
+  .dashboard-main-grid,
+  .dashboard-lists-grid,
+  .dashboard-side-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  .dashboard-ranked-row {
+    grid-template-columns: 24px clamp(52px, 16vw, 68px) minmax(0, 1fr) auto !important;
+    gap: 7px !important;
+  }
+
+  .dashboard-low-row {
+    grid-template-columns: clamp(52px, 16vw, 68px) minmax(0, 1fr) auto !important;
+    gap: 7px !important;
+  }
+
+  .dashboard-product-thumb {
+    width: clamp(52px, 16vw, 68px) !important;
+    height: clamp(52px, 16vw, 68px) !important;
+  }
+}
+
+/* VENTA */
+@container donatello-content (max-width: 760px) {
+  .sale-page-heading {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+  }
+
+  .sale-heading-badge {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    text-align: left !important;
+  }
+
+  .sale-layout-modern {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .sale-product-column,
+  .sale-checkout-column {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .sale-search-card {
+    min-height: 0 !important;
+  }
+
+  .sale-cart-card,
+  .sale-checkout-column {
+    position: static !important;
+  }
+
+  .sale-scanner-compact {
+    display: none !important;
+  }
+
+  .sale-result-btn {
+    min-width: 0 !important;
+  }
+
+  .sale-cart-item {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-heading-actions {
+    grid-template-columns: 1fr !important;
+  }
+
+  .inventory-product-card-main,
+  .inventory-products-grid.list-mode .inventory-product-card-main {
+    grid-template-columns: minmax(78px, 25%) minmax(0, 1fr) !important;
+  }
+}
