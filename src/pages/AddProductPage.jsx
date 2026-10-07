@@ -551,18 +551,6 @@ export default function AddProductPage({ products, loadProducts }) {
             </div>
           </Card>
 
-          <Card className="add-product-save-card">
-            <span className="eyebrow">Finalizar</span>
-            <h3>Guardar producto</h3>
-            <p>El código Donatello se genera automáticamente.</p>
-            <Button
-              onClick={saveProduct}
-              disabled={savingProduct}
-              style={{ width: "100%", minHeight: 54, marginTop: 12 }}
-            >
-              {savingProduct ? "Guardando..." : "Guardar producto"}
-            </Button>
-          </Card>
         </div>
       </div>
 
@@ -636,6 +624,19 @@ export default function AddProductPage({ products, loadProducts }) {
           </div>
         )}
         </div>
+      </Card>
+
+      <Card className="add-product-save-card add-product-save-final">
+        <span className="eyebrow">Finalizar</span>
+        <h3>Guardar producto</h3>
+        <p>El código Donatello se genera automáticamente.</p>
+        <Button
+          onClick={saveProduct}
+          disabled={savingProduct}
+          style={{ width: "100%", minHeight: 54, marginTop: 12 }}
+        >
+          {savingProduct ? "Guardando..." : "Guardar producto"}
+        </Button>
       </Card>
     </section>
   );
