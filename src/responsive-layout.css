@@ -2264,3 +2264,150 @@
     font-size: 4rem !important;
   }
 }
+
+
+/* ===== Escala visual desktop · 2026-10-07 =====
+   El ancho ya es fluido; esta capa evita que el POS se vea diminuto
+   en laptops de alta resolución y monitores de 23"+. */
+@media (min-width: 1051px) {
+  .brand-header-modern {
+    min-height: clamp(96px, 7vw, 126px) !important;
+  }
+
+  .brand-logo-modern {
+    width: clamp(58px, 4vw, 78px) !important;
+    height: clamp(58px, 4vw, 78px) !important;
+  }
+
+  .brand-copy-modern h1 {
+    font-size: clamp(2rem, 2vw, 2.65rem) !important;
+  }
+
+  .brand-copy-modern p,
+  .brand-session-modern {
+    font-size: clamp(.72rem, .72vw, .9rem) !important;
+  }
+
+  .sidebar-shell {
+    padding: clamp(10px, .8vw, 14px) !important;
+  }
+
+  .nav-section-label {
+    font-size: clamp(.58rem, .52vw, .7rem) !important;
+  }
+
+  .donatello-nav-link {
+    min-height: clamp(44px, 3.2vw, 54px) !important;
+    padding: clamp(7px, .55vw, 10px) clamp(9px, .75vw, 13px) !important;
+    font-size: clamp(.76rem, .66vw, .9rem) !important;
+  }
+
+  .donatello-nav-icon {
+    width: clamp(28px, 1.8vw, 34px) !important;
+    height: clamp(28px, 1.8vw, 34px) !important;
+  }
+
+  .sale-page-heading {
+    min-height: clamp(132px, 9vw, 172px) !important;
+    padding: clamp(22px, 1.6vw, 30px) !important;
+  }
+
+  .sale-page-heading h2 {
+    font-size: clamp(3rem, 3.4vw, 4.35rem) !important;
+  }
+
+  .sale-page-heading .eyebrow,
+  .sale-page-heading .muted {
+    font-size: clamp(.68rem, .62vw, .82rem) !important;
+  }
+
+  .sale-heading-badge {
+    min-width: clamp(112px, 8vw, 148px) !important;
+    padding: clamp(10px, .8vw, 14px) !important;
+  }
+
+  .sale-heading-badge span {
+    font-size: clamp(.68rem, .58vw, .8rem) !important;
+  }
+
+  .sale-heading-badge strong {
+    font-size: clamp(1.05rem, 1.05vw, 1.35rem) !important;
+  }
+
+  .sale-search-card,
+  .sale-cart-card,
+  .sale-checkout-card {
+    padding: clamp(16px, 1.2vw, 22px) !important;
+  }
+
+  .sale-search-card {
+    min-height: clamp(390px, 28vw, 510px) !important;
+  }
+
+  .sale-card-heading h2 {
+    font-size: clamp(1.18rem, 1.05vw, 1.45rem) !important;
+  }
+
+  .sale-card-heading .eyebrow,
+  .sale-search-hint p,
+  .sale-cart-empty p {
+    font-size: clamp(.68rem, .58vw, .82rem) !important;
+  }
+
+  .sale-step {
+    width: clamp(30px, 2vw, 36px) !important;
+    min-width: clamp(30px, 2vw, 36px) !important;
+    height: clamp(30px, 2vw, 36px) !important;
+    font-size: clamp(.72rem, .62vw, .86rem) !important;
+  }
+
+  .sale-search-wrap {
+    min-height: clamp(46px, 3.2vw, 56px) !important;
+  }
+
+  .sale-search-wrap input,
+  .sale-checkout-card input,
+  .sale-checkout-card select {
+    min-height: clamp(44px, 3vw, 52px) !important;
+    font-size: clamp(.88rem, .78vw, 1rem) !important;
+  }
+
+  .sale-search-hint {
+    min-height: clamp(72px, 5.5vw, 96px) !important;
+  }
+
+  .sale-search-hint strong,
+  .sale-cart-empty strong {
+    font-size: clamp(.82rem, .75vw, 1rem) !important;
+  }
+
+  .sale-mode-toggle button,
+  .sale-discount-pills button {
+    min-height: clamp(34px, 2.4vw, 42px) !important;
+    font-size: clamp(.72rem, .62vw, .84rem) !important;
+  }
+
+  .sale-total-summary > div {
+    min-height: clamp(30px, 2.2vw, 38px) !important;
+    font-size: clamp(.72rem, .62vw, .84rem) !important;
+  }
+
+  .sale-total-final-row strong {
+    font-size: clamp(1.15rem, 1.15vw, 1.5rem) !important;
+  }
+
+  .sale-checkout-card > .btn {
+    min-height: clamp(46px, 3.2vw, 56px) !important;
+    font-size: clamp(.86rem, .78vw, 1rem) !important;
+  }
+}
+
+@media (min-width: 1800px) {
+  .workspace {
+    grid-template-columns: 250px minmax(0, 1fr) !important;
+  }
+
+  .sale-layout-modern {
+    grid-template-columns: minmax(0, 1fr) 500px !important;
+  }
+}
