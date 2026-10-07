@@ -631,3 +631,134 @@ input:focus, select:focus, textarea:focus {
     min-height: 100%;
   }
 }
+
+
+/* ===== Correcciones responsive 2026-10-06 ===== */
+.dashboard-ranked-row {
+  display: grid !important;
+  grid-template-columns: 34px 64px minmax(0,1fr) auto !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+.dashboard-low-row {
+  display: grid !important;
+  grid-template-columns: 64px minmax(0,1fr) auto !important;
+  gap: 10px !important;
+  align-items: center !important;
+}
+
+.dashboard-product-thumb {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f1e7dd;
+  border: 1px solid #eadfd4;
+  display: grid;
+  place-items: center;
+}
+
+.dashboard-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.dashboard-product-thumb > span {
+  color: #a28f80;
+  font-size: 1.1rem;
+}
+
+.dashboard-ranked-copy,
+.dashboard-low-copy {
+  min-width: 0;
+}
+
+.dashboard-ranked-copy strong,
+.dashboard-low-copy strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 760px) {
+  /* El scanner deja de ocupar pantalla en móvil; QR sigue disponible como módulo propio. */
+  .sale-scanner-compact {
+    display: none !important;
+  }
+
+  /* Inventario móvil: tarjeta vertical, sin huecos laterales. */
+  .inventory-product-card {
+    display: block !important;
+  }
+
+  .inventory-product-card-main {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .inventory-image-wrap {
+    width: 100% !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 10 !important;
+    border-radius: 14px 14px 0 0 !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-image {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .inventory-product-content {
+    width: 100% !important;
+    padding: 14px !important;
+  }
+
+  .inventory-product-topline {
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .inventory-price-row,
+  .inventory-detail-strip {
+    width: 100% !important;
+  }
+
+  .inventory-card-actions {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  .dashboard-ranked-row {
+    grid-template-columns: 28px 72px minmax(0,1fr) auto !important;
+    gap: 9px !important;
+  }
+
+  .dashboard-low-row {
+    grid-template-columns: 72px minmax(0,1fr) auto !important;
+    gap: 9px !important;
+  }
+
+  .dashboard-product-thumb {
+    width: 72px;
+    height: 72px;
+    border-radius: 13px;
+  }
+
+  .dashboard-ranked-copy strong,
+  .dashboard-low-copy strong {
+    font-size: .98rem !important;
+  }
+
+  .dashboard-ranked-copy span,
+  .dashboard-low-copy span {
+    font-size: .74rem !important;
+  }
+}
