@@ -243,3 +243,272 @@
     grid-template-columns: 1fr !important;
   }
 }
+
+
+/* ===== Venta móvil compacta · 2026-10-07 ===== */
+@container donatello-content (max-width: 430px) {
+  .sale-screen {
+    gap: 6px !important;
+  }
+
+  .sale-page-heading {
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: center !important;
+    padding: 8px 9px !important;
+    gap: 7px !important;
+    border-radius: 12px !important;
+  }
+
+  .sale-page-heading .eyebrow,
+  .sale-page-heading .muted {
+    display: none !important;
+  }
+
+  .sale-page-heading h2 {
+    margin: 0 !important;
+    font-size: 1.22rem !important;
+    line-height: 1 !important;
+  }
+
+  .sale-heading-badge {
+    width: auto !important;
+    min-width: 86px !important;
+    margin: 0 !important;
+    padding: 5px 7px !important;
+    border-radius: 9px !important;
+    text-align: right !important;
+  }
+
+  .sale-heading-badge span {
+    font-size: .54rem !important;
+  }
+
+  .sale-heading-badge strong {
+    display: block !important;
+    font-size: .9rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .sale-layout-modern {
+    gap: 6px !important;
+  }
+
+  .sale-search-card,
+  .sale-cart-card,
+  .sale-checkout-card {
+    padding: 8px !important;
+    border-radius: 12px !important;
+  }
+
+  .sale-card-heading {
+    margin-bottom: 6px !important;
+    align-items: center !important;
+  }
+
+  .sale-card-heading .eyebrow {
+    display: none !important;
+  }
+
+  .sale-card-heading h2 {
+    font-size: .95rem !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+  }
+
+  .sale-step {
+    min-width: 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 7px !important;
+    font-size: .62rem !important;
+  }
+
+  .sale-search-wrap {
+    min-height: 36px !important;
+    padding: 0 8px !important;
+    border-radius: 9px !important;
+  }
+
+  .sale-search-wrap input {
+    min-height: 36px !important;
+    padding: 6px 4px !important;
+    font-size: 16px !important;
+  }
+
+  .sale-search-hint {
+    min-height: 44px !important;
+    padding: 7px 8px !important;
+    gap: 7px !important;
+    border-radius: 9px !important;
+  }
+
+  .sale-search-hint > span {
+    font-size: 1rem !important;
+  }
+
+  .sale-search-hint strong {
+    font-size: .66rem !important;
+  }
+
+  .sale-search-hint p {
+    display: none !important;
+  }
+
+  .sale-quick-results {
+    gap: 5px !important;
+    margin-top: 6px !important;
+  }
+
+  .sale-result-btn {
+    grid-template-columns: 44px minmax(0,1fr) auto !important;
+    gap: 7px !important;
+    min-height: 54px !important;
+    padding: 5px 6px !important;
+    border-radius: 9px !important;
+  }
+
+  .sale-result-btn .product-img,
+  .sale-result-btn .product-img.small {
+    width: 44px !important;
+    height: 44px !important;
+    min-width: 44px !important;
+    border-radius: 8px !important;
+  }
+
+  .sale-result-copy strong {
+    font-size: .69rem !important;
+    line-height: 1.05 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .sale-result-copy span,
+  .sale-result-meta span {
+    font-size: .52rem !important;
+  }
+
+  .sale-result-meta strong {
+    font-size: .7rem !important;
+  }
+
+  .sale-cart-empty {
+    min-height: 54px !important;
+    padding: 7px !important;
+  }
+
+  .sale-cart-empty > span {
+    display: none !important;
+  }
+
+  .sale-cart-empty strong {
+    font-size: .68rem !important;
+  }
+
+  .sale-cart-empty p {
+    margin: 2px 0 0 !important;
+    font-size: .56rem !important;
+  }
+
+  .sale-cart-list {
+    gap: 4px !important;
+  }
+
+  .sale-cart-item {
+    grid-template-columns: 38px minmax(0,1fr) auto !important;
+    gap: 6px !important;
+    padding: 5px 0 !important;
+  }
+
+  .sale-cart-item .product-img,
+  .sale-cart-item .product-img.small {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    border-radius: 7px !important;
+  }
+
+  .sale-cart-item .cart-info strong {
+    font-size: .66rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .sale-cart-item .cart-info span {
+    font-size: .52rem !important;
+  }
+
+  .sale-cart-item .cart-price strong {
+    font-size: .68rem !important;
+  }
+
+  .sale-cart-item .cart-price button {
+    font-size: .52rem !important;
+    padding: 2px 0 !important;
+  }
+
+  .sale-mode-toggle {
+    gap: 4px !important;
+    margin-bottom: 6px !important;
+  }
+
+  .sale-mode-toggle button {
+    min-height: 29px !important;
+    padding: 4px 6px !important;
+    font-size: .61rem !important;
+  }
+
+  .sale-discount-section {
+    gap: 5px !important;
+  }
+
+  .sale-discount-section > label,
+  .sale-received-field > label {
+    font-size: .58rem !important;
+  }
+
+  .sale-discount-pills {
+    gap: 4px !important;
+  }
+
+  .sale-discount-pills button {
+    min-height: 27px !important;
+    padding: 3px 6px !important;
+    font-size: .58rem !important;
+  }
+
+  .sale-checkout-card input {
+    min-height: 36px !important;
+    padding: 6px 8px !important;
+    font-size: 16px !important;
+  }
+
+  .sale-total-summary {
+    gap: 4px !important;
+    margin-top: 6px !important;
+  }
+
+  .sale-total-summary > div {
+    min-height: 24px !important;
+    padding: 4px 6px !important;
+    font-size: .6rem !important;
+  }
+
+  .sale-total-final-row {
+    padding: 6px 7px !important;
+  }
+
+  .sale-total-final-row strong {
+    font-size: 1rem !important;
+  }
+
+  .sale-change-row strong {
+    font-size: .78rem !important;
+  }
+
+  .sale-checkout-card > .btn {
+    min-height: 38px !important;
+    padding: 7px 9px !important;
+    font-size: .75rem !important;
+  }
+}
