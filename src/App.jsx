@@ -2410,11 +2410,8 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
   const [salesSearch, setSalesSearch] = useState("");
   const [salesStatus, setSalesStatus] = useState("all");
   const [expandedSaleId, setExpandedSaleId] = useState(null);
-  const [expandedSalesPeriods, setExpandedSalesPeriods] = useState(() => {
-    const now = new Date();
-    const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    return { [key]: true };
-  });
+  const [selectedSalesYear, setSelectedSalesYear] = useState("");
+  const [selectedSalesMonth, setSelectedSalesMonth] = useState("");
 
   const completedSales = sales.filter(
     (sale) => String(sale.status || "completed").toLowerCase() !== "voided"
@@ -2491,11 +2488,36 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
       months: Object.values(months).sort((a, b) => b.key.localeCompare(a.key)),
     }));
 
-  function toggleSalesPeriod(key) {
-    setExpandedSalesPeriods((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
+  const effectiveSalesYear =
+    selectedSalesYear && salesByYear.some(({ year }) => year === selectedSalesYear)
+      ? selectedSalesYear
+      : salesByYear[0]?.year || "";
+
+  const selectedYearGroup =
+    salesByYear.find(({ year }) => year === effectiveSalesYear) || salesByYear[0];
+
+  const availableSalesMonths = selectedYearGroup?.months || [];
+
+  const effectiveSalesMonth =
+    selectedSalesMonth &&
+    availableSalesMonths.some((month) => month.key === selectedSalesMonth)
+      ? selectedSalesMonth
+      : availableSalesMonths[0]?.key || "";
+
+  const selectedMonthGroup =
+    availableSalesMonths.find((month) => month.key === effectiveSalesMonth) ||
+    availableSalesMonths[0];
+
+  function changeSalesYear(year) {
+    setSelectedSalesYear(year);
+    const firstMonth = salesByYear.find((group) => group.year === year)?.months?.[0]?.key || "";
+    setSelectedSalesMonth(firstMonth);
+    setExpandedSaleId(null);
+  }
+
+  function changeSalesMonth(monthKey) {
+    setSelectedSalesMonth(monthKey);
+    setExpandedSaleId(null);
   }
 
   function openEditSale(sale) {
@@ -2800,47 +2822,66 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
       ) : sales.length === 0 ? (
         <Card><p className="muted">Todavía no hay ventas registradas.</p></Card>
       ) : (
-        <div className="sales-periods">
-          {salesByYear.map(({ year, months }) => (
-            <section className="sales-year-group" key={year}>
-              <div className="sales-year-heading">
-                <strong>{year}</strong>
-                <span>{months.reduce((sum, month) => sum + month.sales.length, 0)} ventas</span>
+        <div className="sales-period-selector">
+          <div className="sales-period-topline">
+            {salesByYear.length > 1 ? (
+              <label className="sales-period-field">
+                <span>Año</span>
+                <select
+                  value={effectiveSalesYear}
+                  onChange={(e) => changeSalesYear(e.target.value)}
+                >
+                  {salesByYear.map(({ year }) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <div className="sales-single-year">
+                <span>Año</span>
+                <strong>{effectiveSalesYear}</strong>
+              </div>
+            )}
+
+            <label className="sales-period-field sales-period-month">
+              <span>Mes</span>
+              <select
+                value={effectiveSalesMonth}
+                onChange={(e) => changeSalesMonth(e.target.value)}
+              >
+                {availableSalesMonths.map((month) => (
+                  <option key={month.key} value={month.key}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {selectedMonthGroup ? (
+            <>
+              <div className="sales-period-summary">
+                <div>
+                  <span>Periodo</span>
+                  <strong>{selectedMonthGroup.label} {effectiveSalesYear}</strong>
+                </div>
+                <div>
+                  <span>Ventas</span>
+                  <strong>{selectedMonthGroup.sales.length}</strong>
+                </div>
+                <div>
+                  <span>Total</span>
+                  <strong>{money(selectedMonthGroup.total)}</strong>
+                </div>
               </div>
 
-              <div className="sales-months-list">
-                {months.map((month) => {
-                  const isOpen =
-                    Boolean(expandedSalesPeriods[month.key]) ||
-                    Boolean(salesSearch.trim());
-
-                  return (
-                    <div className="sales-month-group" key={month.key}>
-                      <button
-                        className="sales-month-toggle"
-                        type="button"
-                        aria-expanded={isOpen}
-                        onClick={() => toggleSalesPeriod(month.key)}
-                      >
-                        <span className="sales-month-copy">
-                          <strong>{month.label}</strong>
-                          <small>{month.sales.length} {month.sales.length === 1 ? "venta" : "ventas"}</small>
-                        </span>
-                        <span className="sales-month-total">{money(month.total)}</span>
-                        <span className="sales-month-chevron" aria-hidden="true">{isOpen ? "⌃" : "⌄"}</span>
-                      </button>
-
-                      <div className={`sales-month-content ${isOpen ? "is-open" : ""}`}>
-                        <div className="sales-list sales-list-modern">
-                          {month.sales.map(renderSaleCard)}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="sales-list sales-list-modern">
+                {selectedMonthGroup.sales.map(renderSaleCard)}
               </div>
-            </section>
-          ))}
+            </>
+          ) : (
+            <Card><p className="muted">No hay ventas para el periodo seleccionado.</p></Card>
+          )}
         </div>
       )}
 
