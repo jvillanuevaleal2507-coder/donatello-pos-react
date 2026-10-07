@@ -195,6 +195,8 @@ export default function InventoryPage({
   const [editingId, setEditingId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState("cards");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
 
   const visibleProducts = useMemo(() => {
     const query = normalizeSearchText(searchTerm);
@@ -217,6 +219,25 @@ export default function InventoryPage({
       return matchesCategory && matchesSearch && matchesStatus;
     });
   }, [allProducts, searchTerm, categoryFilter, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(visibleProducts.length / pageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  const pageStart = (safePage - 1) * pageSize;
+  const paginatedProducts = visibleProducts.slice(pageStart, pageStart + pageSize);
+
+  function changePage(nextPage) {
+    const page = Math.max(1, Math.min(nextPage, totalPages));
+    setCurrentPage(page);
+    window.requestAnimationFrame(() => {
+      document.querySelector(".inventory-toolbar-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function pageNumbers() {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+    const pages = new Set([1, totalPages, safePage - 1, safePage, safePage + 1]);
+    return [...pages].filter((p) => p >= 1 && p <= totalPages).sort((a, b) => a - b);
+  }
 
   async function deleteProduct(product) {
     const confirmed = window.confirm(`¿Eliminar "${product.name}" del inventario?`);
@@ -327,7 +348,7 @@ export default function InventoryPage({
         </div>
 
         <p className="catalog-counter">
-          {visibleProducts.length} de {allProducts.length} productos
+          Mostrando {visibleProducts.length ? pageStart + 1 : 0}–{Math.min(pageStart + pageSize, visibleProducts.length)} de {visibleProducts.length} productos
         </p>
       </Card>
 
@@ -338,7 +359,7 @@ export default function InventoryPage({
         </Card>
       ) : (
         <div className={`products-grid inventory-products-grid ${viewMode === "list" ? "list-mode" : ""}`}>
-          {visibleProducts.map((p, index) => {
+          {paginatedProducts.map((p, index) => {
             const status = stockMeta(p);
             const extraPhotos = [p.image_url_2, p.image_url_3, p.image_url_4].filter(Boolean).length;
 
@@ -402,6 +423,47 @@ export default function InventoryPage({
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {visibleProducts.length > 0 && (
+        <div className="inventory-pagination" aria-label="Paginación de inventario">
+          <div className="inventory-pagination-summary">
+            <strong>Mostrando {pageStart + 1}–{Math.min(pageStart + pageSize, visibleProducts.length)}</strong>
+            <span>de {visibleProducts.length} productos</span>
+          </div>
+
+          <div className="inventory-page-buttons">
+            <button type="button" onClick={() => changePage(safePage - 1)} disabled={safePage === 1}>‹</button>
+            {pageNumbers().map((page, index, pages) => (
+              <span key={page} className="inventory-page-slot">
+                {index > 0 && page - pages[index - 1] > 1 && <span className="inventory-page-ellipsis">…</span>}
+                <button
+                  type="button"
+                  className={page === safePage ? "active" : ""}
+                  onClick={() => changePage(page)}
+                >
+                  {page}
+                </button>
+              </span>
+            ))}
+            <button type="button" onClick={() => changePage(safePage + 1)} disabled={safePage === totalPages}>›</button>
+          </div>
+
+          <label className="inventory-page-size">
+            <span>Productos por página</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+            >
+              <option value={12}>12</option>
+              <option value={24}>24</option>
+              <option value={48}>48</option>
+            </select>
+          </label>
         </div>
       )}
     </section>
