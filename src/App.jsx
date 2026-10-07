@@ -1574,6 +1574,7 @@ function QRSection({ products }) {
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+  const [mobileBulkOpen, setMobileBulkOpen] = useState(false);
 
   const selectedProduct =
     products.find((p) => String(p.id) === String(selectedId)) || products[0];
@@ -1807,7 +1808,17 @@ function QRSection({ products }) {
               </div>
             )}
 
-            <div className="qr-bulk-actions">
+            <button
+              className="qr-mobile-bulk-toggle"
+              type="button"
+              aria-expanded={mobileBulkOpen}
+              onClick={() => setMobileBulkOpen((value) => !value)}
+            >
+              <span>Acciones masivas</span>
+              <span aria-hidden="true">{mobileBulkOpen ? "⌃" : "⌄"}</span>
+            </button>
+
+            <div className={`qr-bulk-actions qr-mobile-bulk-panel ${mobileBulkOpen ? "is-open" : ""}`}>
               <button className="qr-action-card" onClick={downloadAllQRCodes} disabled={downloadingAll} type="button">
                 <span className="qr-action-icon">ZIP</span>
                 <div>
@@ -3727,6 +3738,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
 function ImportCSV({ products, loadProducts }) {
   const [message, setMessage] = useState("Sube tu archivo productos_exportados.csv para cargar inventario.");
   const [preview, setPreview] = useState([]);
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
   async function handleFile(event) {
     const file = event.target.files?.[0];
@@ -3788,6 +3800,7 @@ function ImportCSV({ products, loadProducts }) {
       }
 
       setPreview(imported.slice(0, 10));
+      setMobilePreviewOpen(false);
       setMessage(`Importación lista. Productos importados: ${imported.length}. Omitidos: ${skipped}.`);
       await loadProducts();
     };
@@ -3830,14 +3843,24 @@ function ImportCSV({ products, loadProducts }) {
 
       {preview.length > 0 && (
         <Card className="import-preview-card">
-          <div className="import-step-heading">
+          <div className="import-step-heading import-preview-heading">
             <div>
               <span className="eyebrow">Resultado</span>
               <h3>Productos importados</h3>
             </div>
             <span className="sale-step">02</span>
+            <button
+              className="import-mobile-preview-toggle"
+              type="button"
+              aria-expanded={mobilePreviewOpen}
+              onClick={() => setMobilePreviewOpen((value) => !value)}
+            >
+              <span>{mobilePreviewOpen ? "Ocultar" : "Ver"}</span>
+              <span aria-hidden="true">{mobilePreviewOpen ? "⌃" : "⌄"}</span>
+            </button>
           </div>
 
+          <div className={`import-mobile-preview-panel ${mobilePreviewOpen ? "is-open" : ""}`}>
           <p className="import-preview-note">Mostrando hasta 10 productos del último archivo procesado.</p>
 
           <div className="import-preview-grid">
@@ -3854,6 +3877,7 @@ function ImportCSV({ products, loadProducts }) {
                 </div>
               </div>
             ))}
+          </div>
           </div>
         </Card>
       )}
