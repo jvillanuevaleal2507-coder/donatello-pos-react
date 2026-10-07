@@ -8949,6 +8949,283 @@ select {
 }
 
 
+
+/* ===== Inventario móvil realmente compacto ===== */
+@media (max-width: 760px) {
+  .inventory-totals-section {
+    margin-bottom: 8px;
+  }
+
+  .inventory-totals-header {
+    margin-bottom: 6px;
+  }
+
+  .inventory-totals-header h2 {
+    font-size: 1.15rem !important;
+    margin: 1px 0 0 !important;
+  }
+
+  .inventory-totals-header p {
+    display: none !important;
+  }
+
+  .inventory-kpis-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    overflow: visible !important;
+  }
+
+  .inventory-kpi-card {
+    min-width: 0 !important;
+    min-height: 66px !important;
+    padding: 8px 9px !important;
+    border-radius: 11px !important;
+  }
+
+  .inventory-kpi-card .metric-label {
+    font-size: .62rem !important;
+  }
+
+  .inventory-kpi-card .metric-value {
+    font-size: 1.02rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .inventory-kpi-card small {
+    display: none !important;
+  }
+
+  .inventory-heading-row {
+    gap: 6px !important;
+    margin-bottom: 7px !important;
+  }
+
+  .inventory-heading-row h2 {
+    font-size: 1.3rem !important;
+    line-height: 1 !important;
+  }
+
+  .inventory-heading-row .muted {
+    font-size: .68rem !important;
+    line-height: 1.25 !important;
+  }
+
+  .inventory-heading-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .inventory-heading-actions .btn {
+    min-height: 34px !important;
+    padding: 6px 7px !important;
+    font-size: .68rem !important;
+  }
+
+  .inventory-toolbar-card {
+    padding: 8px !important;
+    gap: 7px !important;
+    border-radius: 12px !important;
+  }
+
+  .inventory-search-wrap {
+    min-height: 38px !important;
+  }
+
+  .inventory-search-input {
+    min-height: 38px !important;
+    font-size: 16px !important;
+  }
+
+  .inventory-filter-row,
+  .inventory-category-row {
+    gap: 6px !important;
+  }
+
+  .inventory-status-pills,
+  .category-pills {
+    gap: 5px !important;
+  }
+
+  .category-pill,
+  .inventory-view-toggle button {
+    min-height: 30px !important;
+    padding: 5px 8px !important;
+    font-size: .64rem !important;
+  }
+
+  .catalog-counter {
+    margin: 0 !important;
+    font-size: .64rem !important;
+  }
+
+  .inventory-products-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 7px !important;
+  }
+
+  .inventory-product-card {
+    padding: 0 !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+  }
+
+  .inventory-product-card-main {
+    display: grid !important;
+    grid-template-columns: 96px minmax(0, 1fr) !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .inventory-image-wrap {
+    width: 96px !important;
+    height: 100% !important;
+    min-height: 132px !important;
+    aspect-ratio: auto !important;
+    border-radius: 0 !important;
+  }
+
+  .inventory-product-image {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 132px !important;
+    object-fit: cover !important;
+  }
+
+  .inventory-photo-count {
+    left: 5px !important;
+    bottom: 5px !important;
+    padding: 3px 5px !important;
+    font-size: .56rem !important;
+  }
+
+  .inventory-product-content {
+    min-width: 0 !important;
+    padding: 8px 9px !important;
+    gap: 5px !important;
+  }
+
+  .inventory-product-topline {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 5px !important;
+    align-items: start !important;
+  }
+
+  .inventory-product-topline h3 {
+    margin: 0 !important;
+    font-size: .82rem !important;
+    line-height: 1.1 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-topline p {
+    margin: 2px 0 0 !important;
+    font-size: .58rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .stock-status {
+    padding: 3px 5px !important;
+    font-size: .54rem !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+  }
+
+  .inventory-price-row {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+
+  .inventory-price-row span {
+    font-size: .56rem !important;
+  }
+
+  .inventory-price-row strong {
+    font-size: .86rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .inventory-detail-strip {
+    display: flex !important;
+    gap: 8px !important;
+    padding-top: 4px !important;
+    font-size: .57rem !important;
+  }
+
+  .inventory-card-actions {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 5px !important;
+    margin-top: 1px !important;
+  }
+
+  .inventory-card-actions .btn,
+  .inventory-danger-link {
+    min-height: 28px !important;
+    padding: 4px 7px !important;
+    font-size: .6rem !important;
+    border-radius: 8px !important;
+  }
+
+  .inventory-pagination {
+    gap: 7px !important;
+    padding: 8px !important;
+    border-radius: 11px !important;
+  }
+
+  .inventory-page-size {
+    display: none !important;
+  }
+
+  .inventory-pagination-summary {
+    font-size: .66rem !important;
+  }
+
+  .inventory-page-buttons button {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: .68rem !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .inventory-product-card-main {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+  }
+
+  .inventory-image-wrap {
+    width: 88px !important;
+    min-height: 124px !important;
+  }
+
+  .inventory-product-image {
+    min-height: 124px !important;
+  }
+
+  .inventory-product-content {
+    padding: 7px 8px !important;
+  }
+
+  .inventory-product-topline h3 {
+    font-size: .78rem !important;
+  }
+
+  .inventory-detail-strip {
+    gap: 6px !important;
+  }
+}
+
+
 /* ===== Carga visual de imágenes ===== */
 .inventory-image-wrap {
   background: #eee5dc;
