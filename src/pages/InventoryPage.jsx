@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 
@@ -195,6 +195,18 @@ export default function InventoryPage({
   const [editingId, setEditingId] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState("cards");
+  const [isMobileInventory, setIsMobileInventory] = useState(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 760px)").matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const media = window.matchMedia("(max-width: 760px)");
+    const sync = () => setIsMobileInventory(media.matches);
+    sync();
+    media.addEventListener?.("change", sync);
+    return () => media.removeEventListener?.("change", sync);
+  }, []);
 
   const visibleProducts = useMemo(() => {
     const query = normalizeSearchText(searchTerm);
@@ -341,6 +353,69 @@ export default function InventoryPage({
           {visibleProducts.map((p, index) => {
             const status = stockMeta(p);
             const extraPhotos = [p.image_url_2, p.image_url_3, p.image_url_4].filter(Boolean).length;
+
+            if (isMobileInventory) {
+              return (
+                <article key={p.id} className="inventory-mobile-card-v4">
+                  <div className="inventory-mobile-media-v4">
+                    <ProductImage src={p.image_url} alt={p.name} priority={index < 8} />
+                    {extraPhotos > 0 && <span className="inventory-mobile-photo-count-v4">+{extraPhotos} fotos</span>}
+                  </div>
+
+                  <div className="inventory-mobile-body-v4">
+                    <div className="inventory-mobile-title-row-v4">
+                      <div className="inventory-mobile-title-copy-v4">
+                        <h3>{p.name}</h3>
+                        <p>{p.code || "Sin código"} · {p.category || "Sin categoría"}</p>
+                      </div>
+                      <span className={`inventory-mobile-status-v4 ${status.tone}`}>{status.label}</span>
+                    </div>
+
+                    <div className="inventory-mobile-metrics-v4">
+                      <div>
+                        <span>Precio</span>
+                        <strong>{money(p.price)}</strong>
+                      </div>
+                      <div>
+                        <span>Stock</span>
+                        <strong>{Number(p.stock || 0)}</strong>
+                      </div>
+                      <div>
+                        <span>Costo</span>
+                        <strong>{money(p.cost)}</strong>
+                      </div>
+                      <div>
+                        <span>Margen</span>
+                        <strong>{margin(p.price, p.cost).toFixed(1)}%</strong>
+                      </div>
+                    </div>
+
+                    <div className="inventory-mobile-actions-v4">
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setEditingId(editingId === p.id ? null : p.id)}
+                        type="button"
+                      >
+                        {editingId === p.id ? "Cerrar edición" : "✎ Editar"}
+                      </button>
+                      <button className="inventory-danger-link" onClick={() => deleteProduct(p)} type="button">
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+
+                  {editingId === p.id && (
+                    <EditProduct
+                      product={p}
+                      onSaved={async () => {
+                        setEditingId(null);
+                        await loadProducts();
+                      }}
+                    />
+                  )}
+                </article>
+              );
+            }
 
             return (
               <Card key={p.id} className="inventory-product-card">
