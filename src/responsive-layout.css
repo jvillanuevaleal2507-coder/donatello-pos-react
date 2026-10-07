@@ -1492,3 +1492,238 @@
     font-size: .5rem !important;
   }
 }
+
+
+/* ===== Apartados móvil compacto · 2026-10-07 ===== */
+.layaway-mobile-detail-toggle,
+.layaway-mobile-history-toggle {
+  display: none;
+}
+
+.layaway-mobile-detail-panel,
+.layaway-mobile-history-panel {
+  display: block;
+}
+
+@container donatello-content (max-width: 430px) {
+  .layaways-modern {
+    display: grid !important;
+    gap: 6px !important;
+  }
+
+  .layaways-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: center !important;
+    padding: 8px 9px !important;
+    gap: 7px !important;
+    border-radius: 12px !important;
+  }
+
+  .layaways-heading .eyebrow,
+  .layaways-heading .muted {
+    display: none !important;
+  }
+
+  .layaways-heading h2 {
+    margin: 0 !important;
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+  }
+
+  .layaways-heading .btn {
+    min-height: 30px !important;
+    padding: 4px 7px !important;
+    font-size: .6rem !important;
+  }
+
+  .layaway-kpi-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2,minmax(0,1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .layaway-kpi {
+    min-height: 58px !important;
+    padding: 7px !important;
+    border-radius: 10px !important;
+  }
+
+  .layaway-kpi span {
+    font-size: .5rem !important;
+  }
+
+  .layaway-kpi strong {
+    font-size: .78rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .layaway-kpi small {
+    font-size: .46rem !important;
+    line-height: 1.05 !important;
+  }
+
+  .layaways-list {
+    gap: 5px !important;
+  }
+
+  .layaway-card {
+    padding: 8px !important;
+    border-radius: 12px !important;
+  }
+
+  .layaway-card .sale-card-header h3 {
+    font-size: .78rem !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+  }
+
+  .layaway-card .sale-card-header p {
+    font-size: .5rem !important;
+    margin: 2px 0 0 !important;
+  }
+
+  .layaway-card .sale-total-box {
+    min-width: 82px !important;
+  }
+
+  .layaway-essential-row {
+    display: grid !important;
+    grid-template-columns: auto minmax(0,1fr) !important;
+    align-items: end !important;
+    gap: 6px !important;
+    margin-top: 5px !important;
+  }
+
+  .layaway-essential-row > div {
+    display: grid !important;
+    gap: 1px !important;
+  }
+
+  .layaway-essential-row > div span {
+    font-size: .46rem !important;
+    color: #8a8179 !important;
+  }
+
+  .layaway-essential-row > div strong {
+    font-size: .6rem !important;
+  }
+
+  .layaway-mobile-detail-toggle,
+  .layaway-mobile-history-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 28px !important;
+    padding: 4px 7px !important;
+    border: 1px solid #e3d7cc !important;
+    border-radius: 8px !important;
+    background: #fffaf5 !important;
+    color: #65564b !important;
+    font-size: .55rem !important;
+    font-weight: 800 !important;
+  }
+
+  .layaway-mobile-detail-toggle {
+    width: 100% !important;
+  }
+
+  .layaway-mobile-detail-panel,
+  .layaway-mobile-history-panel {
+    display: none !important;
+  }
+
+  .layaway-mobile-detail-panel.is-open,
+  .layaway-mobile-history-panel.is-open {
+    display: block !important;
+    margin-top: 5px !important;
+  }
+
+  .layaway-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px !important;
+    margin-top: 6px !important;
+  }
+
+  .layaway-actions .btn {
+    min-height: 32px !important;
+    padding: 5px 6px !important;
+    font-size: .56rem !important;
+  }
+
+  .layaway-history-panel {
+    margin-top: 6px !important;
+    padding: 7px !important;
+    border-radius: 9px !important;
+  }
+
+  .layaway-history-heading {
+    gap: 5px !important;
+  }
+
+  .layaway-history-heading h3 {
+    font-size: .72rem !important;
+  }
+
+  .layaway-history-heading .muted {
+    display: none !important;
+  }
+
+  .layaway-history-heading .btn {
+    min-height: 28px !important;
+    padding: 4px 6px !important;
+    font-size: .54rem !important;
+  }
+
+  .layaway-payments-card {
+    padding: 8px !important;
+    border-radius: 12px !important;
+  }
+
+  .layaway-payments-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .layaway-payments-heading .eyebrow,
+  .layaway-payments-heading .muted {
+    display: none !important;
+  }
+
+  .layaway-payments-heading h2 {
+    font-size: .86rem !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+  }
+
+  .layaway-payments-actions {
+    display: flex !important;
+    gap: 4px !important;
+    align-items: center !important;
+  }
+
+  .layaway-payments-actions > .btn {
+    display: none !important;
+  }
+
+  .layaway-mobile-history-toggle {
+    width: auto !important;
+    min-width: 82px !important;
+  }
+
+  .layaway-payment-panel {
+    padding: 12px !important;
+  }
+
+  .layaway-payment-panel h2 {
+    font-size: 1rem !important;
+  }
+
+  .layaway-payment-panel input {
+    min-height: 38px !important;
+    font-size: 16px !important;
+  }
+}
