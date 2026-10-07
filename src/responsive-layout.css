@@ -1021,3 +1021,146 @@
     font-size: .58rem !important;
   }
 }
+
+
+/* ===== Historial agrupado por año y mes · 2026-10-07 ===== */
+.sales-periods {
+  display: grid;
+  gap: 12px;
+}
+
+.sales-year-group {
+  display: grid;
+  gap: 8px;
+}
+
+.sales-year-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.sales-year-heading strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.1rem;
+}
+
+.sales-year-heading span {
+  font-size: .72rem;
+  color: #8a8179;
+}
+
+.sales-months-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sales-month-group {
+  display: grid;
+  gap: 6px;
+}
+
+.sales-month-toggle {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e4d9cf;
+  border-radius: 12px;
+  background: rgba(255,253,249,.92);
+  color: #514941;
+  text-align: left;
+}
+
+.sales-month-copy {
+  display: grid;
+  gap: 1px;
+}
+
+.sales-month-copy strong {
+  font-size: .9rem;
+}
+
+.sales-month-copy small {
+  color: #8b8178;
+  font-size: .68rem;
+}
+
+.sales-month-total {
+  font-weight: 900;
+  font-size: .82rem;
+}
+
+.sales-month-chevron {
+  font-size: .72rem;
+  color: #8b8178;
+}
+
+.sales-month-content {
+  display: none;
+}
+
+.sales-month-content.is-open {
+  display: block;
+}
+
+@container donatello-content (max-width: 430px) {
+  .sales-periods {
+    gap: 7px !important;
+  }
+
+  .sales-year-group {
+    gap: 5px !important;
+  }
+
+  .sales-year-heading {
+    padding: 0 1px !important;
+  }
+
+  .sales-year-heading strong {
+    font-size: .9rem !important;
+  }
+
+  .sales-year-heading span {
+    font-size: .52rem !important;
+  }
+
+  .sales-months-list {
+    gap: 5px !important;
+  }
+
+  .sales-month-group {
+    gap: 4px !important;
+  }
+
+  .sales-month-toggle {
+    min-height: 42px !important;
+    grid-template-columns: minmax(0,1fr) auto auto !important;
+    gap: 6px !important;
+    padding: 6px 8px !important;
+    border-radius: 10px !important;
+  }
+
+  .sales-month-copy strong {
+    font-size: .68rem !important;
+  }
+
+  .sales-month-copy small {
+    font-size: .5rem !important;
+  }
+
+  .sales-month-total {
+    font-size: .64rem !important;
+  }
+
+  .sales-month-chevron {
+    font-size: .56rem !important;
+  }
+
+  .sales-month-content.is-open {
+    margin-top: 2px !important;
+  }
+}
