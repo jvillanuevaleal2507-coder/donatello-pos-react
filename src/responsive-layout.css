@@ -739,3 +739,201 @@
     justify-self: start !important;
   }
 }
+
+
+/* Inventario móvil v4
+   Componente móvil independiente: no hereda la geometría de la tarjeta desktop. */
+@media (max-width: 760px) {
+  .inventory-products-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: clamp(10px, 3vw, 14px) !important;
+  }
+
+  .inventory-mobile-card-v4 {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: var(--dd-card, #fffdf9);
+    border: 1px solid var(--dd-line, #eadfd4);
+    border-radius: clamp(14px, 3.5vw, 18px);
+    box-shadow: 0 10px 28px rgba(77,51,33,.06);
+  }
+
+  .inventory-mobile-media-v4 {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #eee4da;
+  }
+
+  .inventory-mobile-media-v4 .inventory-product-image,
+  .inventory-mobile-media-v4 .inventory-product-image.placeholder {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    aspect-ratio: auto !important;
+    object-fit: cover !important;
+    border-radius: 0 !important;
+  }
+
+  .inventory-mobile-media-v4 .inventory-image-skeleton {
+    position: absolute;
+    inset: 0;
+  }
+
+  .inventory-mobile-photo-count-v4 {
+    position: absolute;
+    right: clamp(7px, 2vw, 10px);
+    bottom: clamp(7px, 2vw, 10px);
+    padding: .35em .65em;
+    border-radius: 999px;
+    background: rgba(36,33,30,.8);
+    color: #fff;
+    font-size: clamp(.58rem, 2.1vw, .68rem);
+    font-weight: 900;
+  }
+
+  .inventory-mobile-body-v4 {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    display: grid;
+    gap: clamp(9px, 2.5vw, 12px);
+    padding: clamp(11px, 3vw, 14px);
+  }
+
+  .inventory-mobile-title-row-v4 {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: clamp(8px, 2vw, 12px);
+    align-items: start;
+  }
+
+  .inventory-mobile-title-copy-v4 {
+    min-width: 0;
+  }
+
+  .inventory-mobile-title-copy-v4 h3 {
+    margin: 0;
+    max-width: 100%;
+    color: #241b16;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(1rem, 4.3vw, 1.15rem);
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+  }
+
+  .inventory-mobile-title-copy-v4 p {
+    margin: .3em 0 0;
+    max-width: 100%;
+    color: #8a8078;
+    font-size: clamp(.68rem, 2.7vw, .78rem);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .inventory-mobile-status-v4 {
+    flex: 0 0 auto;
+    align-self: start;
+    white-space: nowrap;
+    border-radius: 999px;
+    padding: .45em .7em;
+    font-size: clamp(.58rem, 2.3vw, .68rem);
+    font-weight: 900;
+  }
+
+  .inventory-mobile-status-v4.ok {
+    background: #e9f1e2;
+    color: #365529;
+  }
+
+  .inventory-mobile-status-v4.low {
+    background: #fff0d8;
+    color: #9a6416;
+  }
+
+  .inventory-mobile-status-v4.out {
+    background: #fde5e2;
+    color: #a43c32;
+  }
+
+  .inventory-mobile-metrics-v4 {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(6px, 2vw, 10px);
+    padding-top: clamp(8px, 2vw, 10px);
+    border-top: 1px solid #eee5dc;
+  }
+
+  .inventory-mobile-metrics-v4 > div {
+    min-width: 0;
+  }
+
+  .inventory-mobile-metrics-v4 span,
+  .inventory-mobile-metrics-v4 strong {
+    display: block;
+    min-width: 0;
+  }
+
+  .inventory-mobile-metrics-v4 span {
+    color: #91867e;
+    font-size: clamp(.58rem, 2.2vw, .68rem);
+    font-weight: 750;
+  }
+
+  .inventory-mobile-metrics-v4 strong {
+    margin-top: .15em;
+    color: #2b211b;
+    font-size: clamp(.82rem, 3.3vw, 1rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .inventory-mobile-actions-v4 {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: clamp(7px, 2vw, 10px);
+    align-items: center;
+  }
+
+  .inventory-mobile-actions-v4 .btn,
+  .inventory-mobile-actions-v4 .inventory-danger-link {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    min-height: 38px !important;
+    padding: .65em .8em !important;
+    font-size: clamp(.7rem, 2.8vw, .82rem) !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .inventory-mobile-title-row-v4 {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-mobile-status-v4 {
+    justify-self: start;
+  }
+
+  .inventory-mobile-metrics-v4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
