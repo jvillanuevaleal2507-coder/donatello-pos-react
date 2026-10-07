@@ -197,6 +197,7 @@ export default function InventoryPage({
   const [viewMode, setViewMode] = useState("cards");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(12);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const visibleProducts = useMemo(() => {
     const query = normalizeSearchText(searchTerm);
@@ -311,39 +312,51 @@ export default function InventoryPage({
           />
         </div>
 
-        <div className="inventory-filter-row">
-          <div className="inventory-status-pills">
-            {statusOptions.map(([value, label]) => (
-              <button
-                key={value}
-                className={`category-pill ${statusFilter === value ? "active" : ""}`}
-                onClick={() => setStatusFilter(value)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+        <button
+          className="inventory-mobile-filter-toggle"
+          type="button"
+          aria-expanded={mobileFiltersOpen}
+          onClick={() => setMobileFiltersOpen((open) => !open)}
+        >
+          <span>Filtros</span>
+          <span aria-hidden="true">{mobileFiltersOpen ? "⌃" : "⌄"}</span>
+        </button>
+
+        <div className={`inventory-mobile-filter-panel ${mobileFiltersOpen ? "is-open" : ""}`}>
+          <div className="inventory-filter-row">
+            <div className="inventory-status-pills">
+              {statusOptions.map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`category-pill ${statusFilter === value ? "active" : ""}`}
+                  onClick={() => setStatusFilter(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="inventory-view-toggle" aria-label="Tipo de vista">
+              <button className={viewMode === "cards" ? "active" : ""} onClick={() => setViewMode("cards")} type="button">▦ Tarjetas</button>
+              <button className={viewMode === "list" ? "active" : ""} onClick={() => setViewMode("list")} type="button">☷ Lista</button>
+            </div>
           </div>
 
-          <div className="inventory-view-toggle" aria-label="Tipo de vista">
-            <button className={viewMode === "cards" ? "active" : ""} onClick={() => setViewMode("cards")} type="button">▦ Tarjetas</button>
-            <button className={viewMode === "list" ? "active" : ""} onClick={() => setViewMode("list")} type="button">☷ Lista</button>
-          </div>
-        </div>
-
-        <div className="inventory-category-row">
-          <span className="inventory-filter-label">Categoría</span>
-          <div className="category-pills">
-            {categories.map((category) => (
-              <button
-                key={category}
-                className={`category-pill category-secondary ${categoryFilter === category ? "active" : ""}`}
-                onClick={() => setCategoryFilter(category)}
-                type="button"
-              >
-                {category === "all" ? "Todas" : category}
-              </button>
-            ))}
+          <div className="inventory-category-row">
+            <span className="inventory-filter-label">Categoría</span>
+            <div className="category-pills">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  className={`category-pill category-secondary ${categoryFilter === category ? "active" : ""}`}
+                  onClick={() => setCategoryFilter(category)}
+                  type="button"
+                >
+                  {category === "all" ? "Todas" : category}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
