@@ -82,8 +82,7 @@ function normalizeCategory(value) {
 function stockMeta(product) {
   const stock = Number(product.stock || 0);
   if (stock <= 0) return { label: "Agotado", tone: "out" };
-  if (stock <= 3) return { label: "Stock bajo", tone: "low" };
-  return { label: "Disponible", tone: "ok" };
+  return { label: "Disponible", tone: stock <= 3 ? "low" : "ok" };
 }
 
 function EditProduct({ product, onSaved }) {
@@ -212,7 +211,7 @@ export default function InventoryPage({
       const stock = Number(product.stock || 0);
       const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "available" && stock > 3) ||
+        (statusFilter === "available" && stock > 0) ||
         (statusFilter === "low" && stock > 0 && stock <= 3) ||
         (statusFilter === "out" && stock <= 0) ||
         (statusFilter === "no-photo" && !product.image_url);
