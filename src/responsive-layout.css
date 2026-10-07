@@ -575,3 +575,167 @@
     width: clamp(82px, 27vw, 98px) !important;
   }
 }
+
+
+/* Inventario móvil v3
+   Patrón robusto: tarjeta vertical compacta.
+   Evita que contenido variable empuje el ancho del viewport. */
+@media (max-width: 760px) {
+  .inventory-section,
+  .inventory-toolbar-card,
+  .inventory-filter-row,
+  .inventory-category-row,
+  .inventory-status-pills,
+  .category-pills,
+  .inventory-products-grid,
+  .inventory-product-card,
+  .inventory-product-card-main,
+  .inventory-product-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .inventory-section,
+  .inventory-products-grid {
+    overflow-x: clip !important;
+  }
+
+  .inventory-product-card-main,
+  .inventory-products-grid.list-mode .inventory-product-card-main {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .inventory-image-wrap,
+  .inventory-products-grid.list-mode .inventory-image-wrap {
+    width: 100% !important;
+    height: clamp(108px, 29vw, 132px) !important;
+    min-height: 0 !important;
+    max-height: 132px !important;
+    aspect-ratio: auto !important;
+    border-radius: 12px 12px 0 0 !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-image {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 132px !important;
+    aspect-ratio: auto !important;
+    object-fit: cover !important;
+  }
+
+  .inventory-product-content {
+    padding: 10px 11px 11px !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-topline {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    align-items: start !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .inventory-product-topline > div {
+    min-width: 0 !important;
+  }
+
+  .inventory-product-topline h3 {
+    max-width: 100% !important;
+    font-size: clamp(.92rem, 3.6vw, 1.02rem) !important;
+    line-height: 1.12 !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-topline p {
+    max-width: 100% !important;
+    margin-top: 3px !important;
+    font-size: .68rem !important;
+    white-space: nowrap !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+  }
+
+  .stock-status {
+    max-width: 88px !important;
+    white-space: nowrap !important;
+    justify-self: end !important;
+    padding: 4px 7px !important;
+    font-size: .6rem !important;
+  }
+
+  .inventory-price-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0,1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .inventory-price-row > div {
+    min-width: 0 !important;
+  }
+
+  .inventory-price-row > div:last-child {
+    text-align: right !important;
+  }
+
+  .inventory-price-row strong {
+    font-size: 1rem !important;
+  }
+
+  .inventory-detail-strip {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+    padding-top: 7px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .inventory-card-actions {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 7px !important;
+    overflow: visible !important;
+  }
+
+  .inventory-card-actions .btn,
+  .inventory-danger-link {
+    min-width: 0 !important;
+    min-height: 34px !important;
+    padding: 6px 9px !important;
+    font-size: .7rem !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .inventory-image-wrap,
+  .inventory-products-grid.list-mode .inventory-image-wrap,
+  .inventory-product-image {
+    height: 106px !important;
+    max-height: 106px !important;
+  }
+
+  .inventory-product-topline {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+
+  .stock-status {
+    justify-self: start !important;
+  }
+}
