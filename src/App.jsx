@@ -1432,6 +1432,10 @@ const salePayload = {
         />
 
         <Route
+          path="/importar"
+          element={<ImportCSV products={products} loadProducts={loadProducts} />}
+        />
+        <Route
           path="/csv"
           element={<ImportCSV products={products} loadProducts={loadProducts} />}
         />
