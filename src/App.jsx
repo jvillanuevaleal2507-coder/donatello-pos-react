@@ -9408,6 +9408,57 @@ select {
   }
 }
 
+
+/* ===== Filtros desplegables Inventario móvil ===== */
+.inventory-mobile-filter-toggle {
+  display: none;
+}
+
+.inventory-mobile-filter-panel {
+  display: contents;
+}
+
+@media (max-width: 430px) {
+  .inventory-mobile-filter-toggle {
+    display: flex !important;
+    width: 100% !important;
+    min-height: 30px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 4px 8px !important;
+    border: 1px solid #e4d8cd !important;
+    border-radius: 9px !important;
+    background: #fffaf5 !important;
+    color: #65564b !important;
+    font-size: .62rem !important;
+    font-weight: 800 !important;
+  }
+
+  .inventory-mobile-filter-panel {
+    display: none !important;
+  }
+
+  .inventory-mobile-filter-panel.is-open {
+    display: grid !important;
+    gap: 5px !important;
+  }
+
+  .inventory-mobile-filter-panel .inventory-filter-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 5px !important;
+  }
+
+  .inventory-mobile-filter-panel .inventory-view-toggle {
+    justify-self: start !important;
+  }
+
+  .inventory-mobile-filter-panel .inventory-category-row {
+    display: grid !important;
+    gap: 4px !important;
+  }
+}
+
 /* ===== Carga visual de imágenes ===== */
 .inventory-image-wrap {
   background: #eee5dc;
