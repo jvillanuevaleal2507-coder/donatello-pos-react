@@ -1814,3 +1814,300 @@
     padding: 6px 0 !important;
   }
 }
+
+
+/* ===== QR + Importar móvil compacto · 2026-10-07 ===== */
+.qr-mobile-bulk-toggle,
+.import-mobile-preview-toggle {
+  display: none;
+}
+
+.qr-mobile-bulk-panel,
+.import-mobile-preview-panel {
+  display: block;
+}
+
+@container donatello-content (max-width: 430px) {
+  .qr-modern,
+  .import-modern {
+    display: grid !important;
+    gap: 6px !important;
+  }
+
+  .qr-heading-modern,
+  .import-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto !important;
+    align-items: center !important;
+    padding: 8px 9px !important;
+    gap: 7px !important;
+    border-radius: 12px !important;
+  }
+
+  .qr-heading-modern .eyebrow,
+  .qr-heading-modern p,
+  .import-heading .eyebrow,
+  .import-heading p {
+    display: none !important;
+  }
+
+  .qr-heading-modern h2,
+  .import-heading h2 {
+    margin: 0 !important;
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+  }
+
+  .qr-count-badge {
+    min-width: 72px !important;
+    padding: 5px 7px !important;
+    border-radius: 9px !important;
+    text-align: right !important;
+  }
+
+  .qr-count-badge span {
+    font-size: .48rem !important;
+  }
+
+  .qr-count-badge strong {
+    display: block !important;
+    font-size: .8rem !important;
+  }
+
+  .qr-layout-modern {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+    margin-top: 0 !important;
+  }
+
+  .qr-controls-modern,
+  .qr-preview-modern,
+  .import-main-card,
+  .import-preview-card {
+    padding: 8px !important;
+    border-radius: 12px !important;
+  }
+
+  .qr-section-title,
+  .import-step-heading {
+    margin-bottom: 6px !important;
+    gap: 6px !important;
+  }
+
+  .qr-section-title .eyebrow,
+  .import-step-heading .eyebrow {
+    display: none !important;
+  }
+
+  .qr-section-title h3,
+  .import-step-heading h3 {
+    font-size: .88rem !important;
+    line-height: 1.05 !important;
+    margin: 0 !important;
+  }
+
+  .qr-section-title .sale-step,
+  .import-step-heading .sale-step {
+    min-width: 23px !important;
+    width: 23px !important;
+    height: 23px !important;
+    font-size: .58rem !important;
+  }
+
+  .qr-product-select {
+    font-size: .54rem !important;
+  }
+
+  .qr-product-select select {
+    min-height: 36px !important;
+    padding: 6px 7px !important;
+    font-size: 16px !important;
+  }
+
+  .qr-product-box-modern {
+    display: grid !important;
+    grid-template-columns: 52px minmax(0,1fr) !important;
+    gap: 7px !important;
+    padding: 6px !important;
+    margin-top: 6px !important;
+    border-radius: 9px !important;
+  }
+
+  .qr-product-box-modern .product-img {
+    width: 52px !important;
+    height: 52px !important;
+    border-radius: 8px !important;
+  }
+
+  .qr-product-box-modern h3 {
+    margin: 0 !important;
+    font-size: .66rem !important;
+  }
+
+  .qr-product-box-modern p,
+  .qr-product-meta {
+    font-size: .5rem !important;
+  }
+
+  .qr-mobile-bulk-toggle,
+  .import-mobile-preview-toggle {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 28px !important;
+    padding: 4px 7px !important;
+    border: 1px solid #e3d7cc !important;
+    border-radius: 8px !important;
+    background: #fffaf5 !important;
+    color: #65564b !important;
+    font-size: .55rem !important;
+    font-weight: 800 !important;
+  }
+
+  .qr-mobile-bulk-toggle {
+    width: 100% !important;
+    margin-top: 6px !important;
+  }
+
+  .qr-mobile-bulk-panel,
+  .import-mobile-preview-panel {
+    display: none !important;
+  }
+
+  .qr-mobile-bulk-panel.is-open,
+  .import-mobile-preview-panel.is-open {
+    display: block !important;
+    margin-top: 5px !important;
+  }
+
+  .qr-bulk-actions {
+    gap: 5px !important;
+  }
+
+  .qr-action-card {
+    min-height: 52px !important;
+    padding: 6px !important;
+    border-radius: 9px !important;
+  }
+
+  .qr-action-icon {
+    min-width: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    font-size: .55rem !important;
+  }
+
+  .qr-action-card strong {
+    font-size: .62rem !important;
+  }
+
+  .qr-action-card small {
+    font-size: .48rem !important;
+  }
+
+  .qr-code-stage img {
+    width: min(190px, 72vw) !important;
+    padding: 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .qr-code-stage strong {
+    font-size: .72rem !important;
+  }
+
+  .qr-code-stage > span {
+    font-size: .54rem !important;
+    text-align: center !important;
+  }
+
+  .qr-download-single {
+    margin-top: 7px !important;
+    padding: 7px 10px !important;
+    border-radius: 9px !important;
+    font-size: .62rem !important;
+  }
+
+  .import-drop-zone {
+    min-height: 70px !important;
+    padding: 8px !important;
+    gap: 7px !important;
+    border-radius: 10px !important;
+  }
+
+  .import-file-icon {
+    min-width: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+    font-size: .55rem !important;
+  }
+
+  .import-drop-zone strong {
+    font-size: .64rem !important;
+  }
+
+  .import-drop-zone small {
+    display: none !important;
+  }
+
+  .import-status-box {
+    margin-top: 6px !important;
+    padding: 6px 7px !important;
+    border-radius: 8px !important;
+  }
+
+  .import-status-box span {
+    font-size: .48rem !important;
+  }
+
+  .import-status-box p {
+    font-size: .54rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .import-preview-heading {
+    display: grid !important;
+    grid-template-columns: minmax(0,1fr) auto auto !important;
+    align-items: center !important;
+  }
+
+  .import-mobile-preview-toggle {
+    width: auto !important;
+    min-width: 58px !important;
+  }
+
+  .import-preview-note {
+    font-size: .5rem !important;
+    margin-bottom: 5px !important;
+  }
+
+  .import-preview-grid {
+    gap: 4px !important;
+  }
+
+  .import-product-row {
+    grid-template-columns: 42px minmax(0,1fr) auto !important;
+    gap: 6px !important;
+    padding: 5px 0 !important;
+  }
+
+  .import-product-row .product-img,
+  .import-product-row .product-img.small {
+    width: 42px !important;
+    height: 42px !important;
+    border-radius: 7px !important;
+  }
+
+  .import-product-row strong {
+    font-size: .58rem !important;
+  }
+
+  .import-product-row span,
+  .import-product-price span {
+    font-size: .48rem !important;
+  }
+
+  .import-product-price strong {
+    font-size: .58rem !important;
+  }
+}
