@@ -7,7 +7,7 @@ const items = [
   { to: "/qr", icon: "⌁", label: "QR" },
   { to: "/historial", icon: "▤", label: "Ventas" },
   { to: "/apartados", icon: "◫", label: "Apartados" },
-  { to: "/csv", icon: "⇧", label: "Importar" },
+  { to: "/importar", icon: "⇧", label: "Importar" },
   { to: "/dashboard", icon: "▥", label: "Resumen" },
 ];
 
