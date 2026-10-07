@@ -3016,6 +3016,8 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [expandedLayawayHistoryId, setExpandedLayawayHistoryId] = useState(null);
   const [expandedLayawayDetailsId, setExpandedLayawayDetailsId] = useState(null);
   const [mobilePaymentsOpen, setMobilePaymentsOpen] = useState(false);
+  const [selectedPaymentsYear, setSelectedPaymentsYear] = useState("");
+  const [selectedPaymentsMonth, setSelectedPaymentsMonth] = useState("");
 
   async function loadRecentPayments() {
     setLoadingPayments(true);
@@ -3285,6 +3287,64 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     0
   );
 
+  const paymentPeriods = Object.entries(
+    recentPayments.reduce((years, payment) => {
+      const date = new Date(payment.created_at);
+      const year = String(date.getFullYear());
+      const monthNumber = String(date.getMonth() + 1).padStart(2, "0");
+      const monthKey = `${year}-${monthNumber}`;
+      const monthLabel = date.toLocaleDateString("es-MX", { month: "long" });
+
+      if (!years[year]) years[year] = {};
+      if (!years[year][monthKey]) {
+        years[year][monthKey] = {
+          key: monthKey,
+          label: monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1),
+          payments: [],
+          total: 0,
+        };
+      }
+
+      years[year][monthKey].payments.push(payment);
+      years[year][monthKey].total += Number(payment.payment_amount || 0);
+      return years;
+    }, {})
+  )
+    .sort(([yearA], [yearB]) => Number(yearB) - Number(yearA))
+    .map(([year, months]) => ({
+      year,
+      months: Object.values(months).sort((a, b) => b.key.localeCompare(a.key)),
+    }));
+
+  const effectivePaymentsYear =
+    selectedPaymentsYear &&
+    paymentPeriods.some(({ year }) => year === selectedPaymentsYear)
+      ? selectedPaymentsYear
+      : paymentPeriods[0]?.year || "";
+
+  const selectedPaymentsYearGroup =
+    paymentPeriods.find(({ year }) => year === effectivePaymentsYear) ||
+    paymentPeriods[0];
+
+  const availablePaymentsMonths = selectedPaymentsYearGroup?.months || [];
+
+  const effectivePaymentsMonth =
+    selectedPaymentsMonth &&
+    availablePaymentsMonths.some((month) => month.key === selectedPaymentsMonth)
+      ? selectedPaymentsMonth
+      : availablePaymentsMonths[0]?.key || "";
+
+  const selectedPaymentsMonthGroup =
+    availablePaymentsMonths.find((month) => month.key === effectivePaymentsMonth) ||
+    availablePaymentsMonths[0];
+
+  function changePaymentsYear(year) {
+    setSelectedPaymentsYear(year);
+    const firstMonth =
+      paymentPeriods.find((group) => group.year === year)?.months?.[0]?.key || "";
+    setSelectedPaymentsMonth(firstMonth);
+  }
+
   return (
     <section className="inventory-section layaways-modern">
       <div className="sales-header layaways-heading">
@@ -3534,24 +3594,76 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             Todavía no hay abonos registrados en historial.
           </p>
         ) : (
-          <div className="sale-items-list" style={{ marginTop: 12 }}>
-            {recentPayments.map((payment) => (
-              <div className="sale-item-row" key={payment.id}>
-                <div>
-                  <strong>{payment.customer_name || "Cliente sin nombre"}</strong>
-                  <span>
-                    {new Date(payment.created_at).toLocaleString("es-MX")} · {payment.payment_type === "liquidation" ? "Liquidación" : "Abono"} · Saldo {money(payment.new_balance)}
-                  </span>
+          <div className="layaway-payment-period">
+            <div className="layaway-payment-period-controls">
+              {paymentPeriods.length > 1 ? (
+                <label>
+                  <span>Año</span>
+                  <select
+                    value={effectivePaymentsYear}
+                    onChange={(e) => changePaymentsYear(e.target.value)}
+                  >
+                    {paymentPeriods.map(({ year }) => (
+                      <option key={year} value={year}>{year}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <div className="layaway-payment-single-year">
+                  <span>Año</span>
+                  <strong>{effectivePaymentsYear}</strong>
                 </div>
+              )}
 
-                <div style={{ textAlign: "right", display: "grid", gap: 6 }}>
-                  <b>{money(payment.payment_amount)}</b>
-                  <button className="text-btn" onClick={() => openPaymentReceiptFromHistory(payment)}>
-                    Reimprimir
-                  </button>
+              <label>
+                <span>Mes</span>
+                <select
+                  value={effectivePaymentsMonth}
+                  onChange={(e) => setSelectedPaymentsMonth(e.target.value)}
+                >
+                  {availablePaymentsMonths.map((month) => (
+                    <option key={month.key} value={month.key}>{month.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {selectedPaymentsMonthGroup && (
+              <div className="layaway-payment-period-summary">
+                <div>
+                  <span>Periodo</span>
+                  <strong>{selectedPaymentsMonthGroup.label} {effectivePaymentsYear}</strong>
+                </div>
+                <div>
+                  <span>Movimientos</span>
+                  <strong>{selectedPaymentsMonthGroup.payments.length}</strong>
+                </div>
+                <div>
+                  <span>Total abonado</span>
+                  <strong>{money(selectedPaymentsMonthGroup.total)}</strong>
                 </div>
               </div>
-            ))}
+            )}
+
+            <div className="sale-items-list layaway-payment-month-list">
+              {(selectedPaymentsMonthGroup?.payments || []).map((payment) => (
+                <div className="sale-item-row" key={payment.id}>
+                  <div>
+                    <strong>{payment.customer_name || "Cliente sin nombre"}</strong>
+                    <span>
+                      {new Date(payment.created_at).toLocaleString("es-MX")} · {payment.payment_type === "liquidation" ? "Liquidación" : "Abono"} · Saldo {money(payment.new_balance)}
+                    </span>
+                  </div>
+
+                  <div style={{ textAlign: "right", display: "grid", gap: 6 }}>
+                    <b>{money(payment.payment_amount)}</b>
+                    <button className="text-btn" onClick={() => openPaymentReceiptFromHistory(payment)}>
+                      Reimprimir
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
         </div>
