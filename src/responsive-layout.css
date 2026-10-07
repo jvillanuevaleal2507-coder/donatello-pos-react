@@ -2111,3 +2111,80 @@
     font-size: .58rem !important;
   }
 }
+
+
+/* ===== Auditoría móvil final · estabilidad transversal · 2026-10-07 ===== */
+@media (max-width: 900px) {
+  html,
+  body,
+  #root,
+  .app,
+  .shell,
+  .workspace,
+  .workspace-content {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+
+  .workspace-content > *,
+  .workspace-content .card,
+  .workspace-content section,
+  .workspace-content div {
+    min-width: 0;
+  }
+
+  .donatello-nav {
+    scroll-snap-type: x proximity;
+  }
+
+  .donatello-nav-link {
+    scroll-snap-align: start;
+    touch-action: manipulation;
+  }
+
+  .workspace-content button,
+  .workspace-content a,
+  .workspace-content input,
+  .workspace-content select {
+    touch-action: manipulation;
+  }
+
+  .workspace-content img {
+    max-width: 100%;
+  }
+
+  .workspace-content h1,
+  .workspace-content h2,
+  .workspace-content h3,
+  .workspace-content p,
+  .workspace-content span,
+  .workspace-content strong,
+  .workspace-content b {
+    overflow-wrap: anywhere;
+  }
+
+  .workspace-content select {
+    text-overflow: ellipsis;
+  }
+}
+
+@container donatello-content (max-width: 430px) {
+  .dashboard-empty,
+  .sale-cart-empty,
+  .qr-empty-card,
+  .workspace-content > .card > .muted {
+    padding: 8px !important;
+    font-size: .58rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .receipt-overlay {
+    padding: 8px !important;
+  }
+
+  .receipt-panel {
+    max-height: calc(100vh - 16px) !important;
+    overflow-y: auto !important;
+    border-radius: 12px !important;
+  }
+}
