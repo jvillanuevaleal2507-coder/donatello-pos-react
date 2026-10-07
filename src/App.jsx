@@ -9226,6 +9226,188 @@ select {
 }
 
 
+
+/* ===== Última pasada móvil Inventario · 2026-10-07 ===== */
+@media (max-width: 430px) {
+  .inventory-totals-section {
+    margin-bottom: 5px !important;
+  }
+
+  .inventory-totals-header {
+    margin-bottom: 4px !important;
+  }
+
+  .inventory-totals-header .eyebrow {
+    display: none !important;
+  }
+
+  .inventory-totals-header h2 {
+    font-size: 1rem !important;
+  }
+
+  .inventory-kpis-grid {
+    gap: 4px !important;
+  }
+
+  .inventory-kpi-card {
+    min-height: 56px !important;
+    padding: 6px 7px !important;
+  }
+
+  .inventory-kpi-card .metric-label {
+    font-size: .56rem !important;
+  }
+
+  .inventory-kpi-card .metric-value {
+    font-size: .9rem !important;
+  }
+
+  .inventory-heading-row {
+    margin-bottom: 5px !important;
+  }
+
+  .inventory-heading-row .eyebrow {
+    display: none !important;
+  }
+
+  .inventory-heading-row h2 {
+    font-size: 1.15rem !important;
+  }
+
+  .inventory-heading-row .muted {
+    display: none !important;
+  }
+
+  .inventory-heading-actions {
+    gap: 4px !important;
+  }
+
+  .inventory-heading-actions .btn {
+    min-height: 30px !important;
+    padding: 4px 6px !important;
+    font-size: .62rem !important;
+  }
+
+  .inventory-toolbar-card {
+    padding: 6px !important;
+    gap: 5px !important;
+  }
+
+  .inventory-search-wrap,
+  .inventory-search-input {
+    min-height: 34px !important;
+  }
+
+  .inventory-filter-row {
+    align-items: center !important;
+  }
+
+  .inventory-status-pills,
+  .category-pills {
+    gap: 4px !important;
+  }
+
+  .category-pill,
+  .inventory-view-toggle button {
+    min-height: 27px !important;
+    padding: 4px 7px !important;
+    font-size: .59rem !important;
+  }
+
+  .inventory-filter-label {
+    font-size: .58rem !important;
+  }
+
+  .catalog-counter {
+    font-size: .59rem !important;
+  }
+
+  .inventory-products-grid {
+    gap: 5px !important;
+  }
+
+  .inventory-product-card {
+    border-radius: 10px !important;
+  }
+
+  .inventory-product-card-main {
+    grid-template-columns: 80px minmax(0, 1fr) !important;
+    min-height: 110px !important;
+  }
+
+  .inventory-image-wrap {
+    width: 80px !important;
+    min-height: 110px !important;
+  }
+
+  .inventory-product-image {
+    min-height: 110px !important;
+  }
+
+  .inventory-photo-count {
+    left: 4px !important;
+    bottom: 4px !important;
+    padding: 2px 4px !important;
+    font-size: .5rem !important;
+  }
+
+  .inventory-product-content {
+    padding: 6px 7px !important;
+    gap: 3px !important;
+  }
+
+  .inventory-product-topline {
+    gap: 4px !important;
+  }
+
+  .inventory-product-topline h3 {
+    font-size: .72rem !important;
+    line-height: 1.04 !important;
+  }
+
+  .inventory-product-topline p {
+    margin-top: 1px !important;
+    font-size: .52rem !important;
+  }
+
+  .stock-status {
+    padding: 2px 4px !important;
+    font-size: .48rem !important;
+  }
+
+  .inventory-price-row {
+    gap: 5px !important;
+  }
+
+  .inventory-price-row span {
+    font-size: .5rem !important;
+  }
+
+  .inventory-price-row strong {
+    font-size: .77rem !important;
+  }
+
+  .inventory-detail-strip {
+    gap: 5px !important;
+    padding-top: 2px !important;
+    font-size: .51rem !important;
+  }
+
+  .inventory-card-actions {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 4px !important;
+    margin-top: 0 !important;
+  }
+
+  .inventory-card-actions .btn,
+  .inventory-danger-link {
+    min-height: 24px !important;
+    padding: 3px 6px !important;
+    font-size: .54rem !important;
+    border-radius: 7px !important;
+  }
+}
+
 /* ===== Carga visual de imágenes ===== */
 .inventory-image-wrap {
   background: #eee5dc;
