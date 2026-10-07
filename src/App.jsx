@@ -1161,58 +1161,6 @@ const salePayload = {
                     )}
                   </Card>
 
-                  <Card className="sale-scanner-compact">
-                    <div className="sale-card-heading scanner-heading-modern">
-                      <div>
-                        <span className="eyebrow">Alternativa rápida</span>
-                        <h2>Escanear QR o capturar código</h2>
-                      </div>
-                      <span className="sale-step">02</span>
-                    </div>
-
-                    <div className={`scanner-box scanner-box-modern ${scannerOn ? "active" : ""}`}>
-                      {!scannerOn && (
-                        <div className="scanner-idle">
-                          <span>⌁</span>
-                          <strong>Cámara apagada</strong>
-                          <small>Úsala cuando quieras leer una etiqueta QR.</small>
-                        </div>
-                      )}
-                      <video ref={videoRef} className="scanner-video" muted playsInline />
-                      <canvas ref={canvasRef} style={{ display: "none" }} />
-                    </div>
-
-                    <div className="scanner-actions scanner-actions-modern">
-                      {!scannerOn ? (
-                        <Button onClick={startScanner}>Abrir cámara</Button>
-                      ) : (
-                        <Button variant="secondary" onClick={stopScanner}>Cerrar cámara</Button>
-                      )}
-                      <div className="status-box status-box-modern">{scanStatus}</div>
-                    </div>
-
-                    <div className="manual-row manual-row-modern">
-                      <input
-                        value={manualCode}
-                        onChange={(e) => setManualCode(e.target.value)}
-                        placeholder="Ej. DON-000001"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            addToCartByCode(manualCode);
-                            setManualCode("");
-                          }
-                        }}
-                      />
-                      <Button
-                        onClick={() => {
-                          addToCartByCode(manualCode);
-                          setManualCode("");
-                        }}
-                      >
-                        Agregar
-                      </Button>
-                    </div>
-                  </Card>
                 </div>
 
                 <div className="right-panel sale-checkout-column">
