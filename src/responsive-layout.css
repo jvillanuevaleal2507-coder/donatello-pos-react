@@ -2188,3 +2188,79 @@
     border-radius: 12px !important;
   }
 }
+
+
+/* ===== Escritorio fluido · 2026-10-07 =====
+   Aprovecha mejor monitores de 15", 23" y resoluciones mayores
+   sin alterar la experiencia móvil aprobada. */
+@media (min-width: 1051px) {
+  .app {
+    padding-inline: clamp(14px, 2vw, 32px) !important;
+  }
+
+  .shell {
+    width: min(94vw, 2200px) !important;
+    max-width: 2200px !important;
+    margin-inline: auto !important;
+  }
+
+  .workspace {
+    grid-template-columns: clamp(190px, 11vw, 230px) minmax(0, 1fr) !important;
+    gap: clamp(14px, 1.1vw, 22px) !important;
+  }
+
+  .workspace-content {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .brand-header-modern {
+    padding-inline: clamp(18px, 1.6vw, 30px) !important;
+  }
+
+  .sale-layout-modern {
+    grid-template-columns: minmax(0, 1fr) clamp(360px, 27vw, 460px) !important;
+    gap: clamp(14px, 1vw, 22px) !important;
+  }
+
+  .sale-search-card {
+    min-height: 390px !important;
+  }
+
+  .sale-product-column,
+  .sale-checkout-column {
+    min-width: 0 !important;
+  }
+
+  .dashboard-main-grid {
+    grid-template-columns: minmax(0, 2.15fr) minmax(320px, .85fr) !important;
+  }
+
+  .dashboard-lists-grid {
+    gap: clamp(12px, 1vw, 20px) !important;
+  }
+}
+
+@media (min-width: 1800px) {
+  .shell {
+    width: min(95vw, 2400px) !important;
+    max-width: 2400px !important;
+  }
+
+  .workspace {
+    grid-template-columns: 235px minmax(0, 1fr) !important;
+  }
+
+  .sale-layout-modern {
+    grid-template-columns: minmax(0, 1fr) 460px !important;
+  }
+
+  .brand-copy-modern h1 {
+    font-size: 2.55rem !important;
+  }
+
+  .sale-page-heading h2,
+  .dashboard-heading h2 {
+    font-size: 4rem !important;
+  }
+}
