@@ -3014,6 +3014,8 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [recentPayments, setRecentPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [expandedLayawayHistoryId, setExpandedLayawayHistoryId] = useState(null);
+  const [expandedLayawayDetailsId, setExpandedLayawayDetailsId] = useState(null);
+  const [mobilePaymentsOpen, setMobilePaymentsOpen] = useState(false);
 
   async function loadRecentPayments() {
     setLoadingPayments(true);
@@ -3346,46 +3348,78 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                 </div>
               </div>
 
-              <div className="sale-summary-grid">
-                <div>
-                  <span>Total</span>
-                  <b>{money(item.total)}</b>
-                </div>
-
-                <div>
-                  <span>Anticipo</span>
-                  <b>{money(item.deposit)}</b>
-                </div>
-
-                <div>
-                  <span>Saldo</span>
-                  <b>{money(item.balance)}</b>
-                </div>
-
+              <div className="layaway-essential-row">
                 <div>
                   <span>Vence</span>
-                  <b>
+                  <strong>
                     {item.due_date
                       ? new Date(item.due_date + "T00:00:00").toLocaleDateString("es-MX")
                       : "Sin fecha"}
-                  </b>
+                  </strong>
                 </div>
+                <button
+                  className="layaway-mobile-detail-toggle"
+                  type="button"
+                  aria-expanded={Number(expandedLayawayDetailsId) === Number(item.id)}
+                  onClick={() =>
+                    setExpandedLayawayDetailsId((current) =>
+                      Number(current) === Number(item.id) ? null : item.id
+                    )
+                  }
+                >
+                  <span>Ver detalles</span>
+                  <span aria-hidden="true">
+                    {Number(expandedLayawayDetailsId) === Number(item.id) ? "⌃" : "⌄"}
+                  </span>
+                </button>
               </div>
 
-              {Array.isArray(item.items) && item.items.length > 0 && (
-                <div className="sale-items-list">
-                  {item.items.map((product, index) => (
-                    <div className="sale-item-row" key={`${item.id}-${product.code}-${index}`}>
-                      <div>
-                        <strong>{product.name}</strong>
-                        <span>{product.code} · x{product.qty}</span>
-                      </div>
+              <div
+                className={`layaway-mobile-detail-panel ${
+                  Number(expandedLayawayDetailsId) === Number(item.id) ? "is-open" : ""
+                }`}
+              >
+                <div className="sale-summary-grid">
+                  <div>
+                    <span>Total</span>
+                    <b>{money(item.total)}</b>
+                  </div>
 
-                      <b>{money(product.subtotal)}</b>
-                    </div>
-                  ))}
+                  <div>
+                    <span>Anticipo</span>
+                    <b>{money(item.deposit)}</b>
+                  </div>
+
+                  <div>
+                    <span>Saldo</span>
+                    <b>{money(item.balance)}</b>
+                  </div>
+
+                  <div>
+                    <span>Vence</span>
+                    <b>
+                      {item.due_date
+                        ? new Date(item.due_date + "T00:00:00").toLocaleDateString("es-MX")
+                        : "Sin fecha"}
+                    </b>
+                  </div>
                 </div>
-              )}
+
+                {Array.isArray(item.items) && item.items.length > 0 && (
+                  <div className="sale-items-list">
+                    {item.items.map((product, index) => (
+                      <div className="sale-item-row" key={`${item.id}-${product.code}-${index}`}>
+                        <div>
+                          <strong>{product.name}</strong>
+                          <span>{product.code} · x{product.qty}</span>
+                        </div>
+
+                        <b>{money(product.subtotal)}</b>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="layaway-actions">
                 <Button
@@ -3478,11 +3512,23 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             <p className="muted">Últimos 30 abonos registrados para reimprimir recibos.</p>
           </div>
 
-          <Button onClick={loadRecentPayments} disabled={loadingPayments}>
-            {loadingPayments ? "Cargando..." : "Actualizar historial"}
-          </Button>
+          <div className="layaway-payments-actions">
+            <Button onClick={loadRecentPayments} disabled={loadingPayments}>
+              {loadingPayments ? "Cargando..." : "Actualizar historial"}
+            </Button>
+            <button
+              className="layaway-mobile-history-toggle"
+              type="button"
+              aria-expanded={mobilePaymentsOpen}
+              onClick={() => setMobilePaymentsOpen((value) => !value)}
+            >
+              <span>{mobilePaymentsOpen ? "Ocultar" : "Ver historial"}</span>
+              <span aria-hidden="true">{mobilePaymentsOpen ? "⌃" : "⌄"}</span>
+            </button>
+          </div>
         </div>
 
+        <div className={`layaway-mobile-history-panel ${mobilePaymentsOpen ? "is-open" : ""}`}>
         {recentPayments.length === 0 ? (
           <p className="muted" style={{ marginTop: 12 }}>
             Todavía no hay abonos registrados en historial.
@@ -3508,6 +3554,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
             ))}
           </div>
         )}
+        </div>
       </Card>
 
       {selected && (
