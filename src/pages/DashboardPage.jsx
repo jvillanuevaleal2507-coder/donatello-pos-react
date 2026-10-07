@@ -168,7 +168,35 @@ export default function DashboardPage({ sales = [], products = [] }) {
   const potentialProfit = inventoryRetail - inventoryCost;
 
   return (
-    <section className="dashboard-modern">
+    <section className="dashboard-modern demo-dashboard-v2">
+      <style>{`
+        .demo-dashboard-v2 .demo-rank-number {
+          width: 24px !important;
+          height: 24px !important;
+          min-width: 24px !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          border-radius: 999px !important;
+          background: #b9532f !important;
+          color: #fff !important;
+          font-size: .7rem !important;
+          line-height: 1 !important;
+          box-shadow: none !important;
+        }
+
+        @media (max-width: 760px) {
+          .demo-dashboard-v2 .dashboard-ranked-row {
+            grid-template-columns: 24px 64px minmax(0, 1fr) auto !important;
+            gap: 8px !important;
+            align-items: center !important;
+          }
+
+          .demo-dashboard-v2 .dashboard-product-thumb {
+            width: 64px !important;
+            height: 64px !important;
+          }
+        }
+      `}</style>
       <div className="dashboard-heading">
         <div>
           <span className="eyebrow">Resumen ejecutivo</span>
@@ -286,7 +314,26 @@ export default function DashboardPage({ sales = [], products = [] }) {
             <div className="dashboard-ranked-list">
               {topProducts.map((product, index) => (
                 <div className="dashboard-ranked-row" key={`${product.code}-${index}`}>
-                  <span className="rank-number">{index + 1}</span>
+                  <span
+                    className="rank-number demo-rank-number"
+                    style={{
+                      width: 24,
+                      height: 24,
+                      minWidth: 24,
+                      margin: 0,
+                      borderRadius: "999px",
+                      display: "grid",
+                      placeItems: "center",
+                      background: "#b9532f",
+                      color: "#fff",
+                      fontSize: "0.7rem",
+                      lineHeight: 1,
+                      fontWeight: 900,
+                      boxShadow: "none",
+                    }}
+                  >
+                    {index + 1}
+                  </span>
                   <div className="dashboard-product-thumb">
                     {product.image_url ? (
                       <img src={product.image_url} alt={product.name} loading="lazy" decoding="async" />
