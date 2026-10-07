@@ -1117,10 +1117,17 @@ const salePayload = {
                         {products
                           .filter((p) => Number(p.stock || 0) > 0)
                           .filter((p) => {
-                            const text = `${p.name || ""} ${p.code || ""} ${p.category || ""}`.toLowerCase();
-                            return text.includes(quickSearch.toLowerCase());
+                            const text = `${p.name || ""} ${p.code || ""} ${p.category || ""}`
+                              .normalize("NFD")
+                              .replace(/[\u0300-\u036f]/g, "")
+                              .toLowerCase();
+                            const query = String(quickSearch || "")
+                              .normalize("NFD")
+                              .replace(/[\u0300-\u036f]/g, "")
+                              .toLowerCase()
+                              .trim();
+                            return text.includes(query);
                           })
-                          .slice(0, 8)
                           .map((p) => (
                             <button
                               key={p.id}
