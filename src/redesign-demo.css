@@ -902,3 +902,161 @@ span.rank-number {
     height: 64px !important;
   }
 }
+
+
+/* Inventario móvil · ajuste compacto final */
+@media (max-width: 760px) {
+  .inventory-product-card {
+    display: block !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-card-main {
+    display: grid !important;
+    grid-template-columns: 96px minmax(0,1fr) !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .inventory-image-wrap {
+    width: 96px !important;
+    min-height: 128px !important;
+    height: 100% !important;
+    aspect-ratio: auto !important;
+    border-radius: 0 !important;
+  }
+
+  .inventory-product-image {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 128px !important;
+    object-fit: cover !important;
+  }
+
+  .inventory-product-content {
+    min-width: 0 !important;
+    padding: 10px !important;
+    gap: 6px !important;
+  }
+
+  .inventory-product-topline {
+    display: grid !important;
+    gap: 5px !important;
+  }
+
+  .inventory-product-topline h3 {
+    font-size: .94rem !important;
+    line-height: 1.08 !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+  }
+
+  .inventory-product-topline p {
+    margin-top: 2px !important;
+    font-size: .68rem !important;
+  }
+
+  .stock-status {
+    justify-self: start !important;
+    padding: 3px 6px !important;
+    font-size: .58rem !important;
+  }
+
+  .inventory-price-row {
+    grid-template-columns: 1fr auto !important;
+    gap: 6px !important;
+  }
+
+  .inventory-price-row span,
+  .inventory-detail-strip {
+    font-size: .64rem !important;
+  }
+
+  .inventory-price-row strong {
+    font-size: .92rem !important;
+  }
+
+  .inventory-detail-strip {
+    gap: 6px !important;
+    padding-top: 5px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .inventory-card-actions {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 6px !important;
+  }
+
+  .inventory-card-actions .btn,
+  .inventory-danger-link {
+    min-height: 30px !important;
+    padding: 5px 7px !important;
+    font-size: .66rem !important;
+  }
+
+  .inventory-heading-row {
+    min-height: 0 !important;
+    padding: 14px !important;
+  }
+
+  .inventory-heading-row h2 {
+    font-size: 1.9rem !important;
+  }
+
+  .inventory-heading-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 7px !important;
+    width: 100% !important;
+  }
+
+  .inventory-heading-actions .btn,
+  .inventory-add-link {
+    min-height: 38px !important;
+    padding: 8px 9px !important;
+    font-size: .72rem !important;
+  }
+
+  .inventory-toolbar-card {
+    padding: 10px !important;
+  }
+
+  .inventory-status-pills,
+  .category-pills {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 7px !important;
+    overflow-x: auto !important;
+    scrollbar-width: none !important;
+  }
+
+  .inventory-status-pills::-webkit-scrollbar,
+  .category-pills::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .category-pill {
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .inventory-product-card-main {
+    grid-template-columns: 88px minmax(0,1fr) !important;
+  }
+
+  .inventory-image-wrap {
+    width: 88px !important;
+    min-height: 118px !important;
+  }
+
+  .inventory-product-image {
+    min-height: 118px !important;
+  }
+}
