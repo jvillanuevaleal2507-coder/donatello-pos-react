@@ -218,6 +218,11 @@ export default function AddProductPage({ products, loadProducts }) {
   const [atlasDraft, setAtlasDraft] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [mobileSections, setMobileSections] = useState({
+    cost: false,
+    summary: false,
+    images: false,
+  });
 
   const costUsd = Number(form.costUsd || 0);
   const exchangeRate = Number(form.exchangeRate || 0);
@@ -236,6 +241,13 @@ export default function AddProductPage({ products, loadProducts }) {
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function toggleMobileSection(section) {
+    setMobileSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
   }
 
   function applyAtlasResult(product) {
@@ -442,9 +454,20 @@ export default function AddProductPage({ products, loadProducts }) {
             </label>
           </div>
 
-          <div className="add-product-divider"><span>Costeo</span></div>
+          <button
+            className="add-mobile-section-toggle"
+            type="button"
+            aria-expanded={mobileSections.cost}
+            onClick={() => toggleMobileSection("cost")}
+          >
+            <span>Costeo</span>
+            <span aria-hidden="true">{mobileSections.cost ? "⌃" : "⌄"}</span>
+          </button>
 
-          <div className="add-product-form-grid cost-grid">
+          <div className={`add-mobile-section-content add-cost-fields ${mobileSections.cost ? "is-open" : ""}`}>
+            <div className="add-product-divider add-desktop-divider"><span>Costeo</span></div>
+
+            <div className="add-product-form-grid cost-grid">
             <label>
               Costo USD
               <input
@@ -494,25 +517,37 @@ export default function AddProductPage({ products, loadProducts }) {
                 placeholder="Flete, cruce, envío, etc."
               />
             </label>
+            </div>
           </div>
         </Card>
 
         <div className="add-product-side">
           <Card className="add-product-cost-card">
-            <div className="add-product-section-title">
+            <div className="add-product-section-title add-collapsible-title">
               <div>
                 <span className="eyebrow">Costo real</span>
                 <h3>Resumen</h3>
               </div>
               <span className="sale-step">02</span>
+              <button
+                className="add-mobile-section-toggle add-title-toggle"
+                type="button"
+                aria-expanded={mobileSections.summary}
+                onClick={() => toggleMobileSection("summary")}
+              >
+                <span>{mobileSections.summary ? "Ocultar" : "Ver"}</span>
+                <span aria-hidden="true">{mobileSections.summary ? "⌃" : "⌄"}</span>
+              </button>
             </div>
 
+            <div className={`add-mobile-section-content add-summary-content ${mobileSections.summary ? "is-open" : ""}`}>
             <div className="add-cost-summary">
               <div><span>Costo base MXN</span><b>{money(baseCostMxn)}</b></div>
               <div><span>Comisión</span><b>{money(commissionMxn)}</b></div>
               <div><span>Taxes</span><b>{money(taxMxn)}</b></div>
               <div className="total"><span>Costo total</span><strong>{money(totalCostMxn)}</strong></div>
               <div className="profit"><span>Utilidad estimada</span><strong>{money(profit)}</strong></div>
+            </div>
             </div>
           </Card>
 
@@ -532,14 +567,24 @@ export default function AddProductPage({ products, loadProducts }) {
       </div>
 
       <Card className="add-product-images-card">
-        <div className="add-product-section-title">
+        <div className="add-product-section-title add-collapsible-title">
           <div>
             <span className="eyebrow">Contenido visual</span>
             <h3>Imágenes del producto</h3>
           </div>
           <span className="sale-step">03</span>
+          <button
+            className="add-mobile-section-toggle add-title-toggle"
+            type="button"
+            aria-expanded={mobileSections.images}
+            onClick={() => toggleMobileSection("images")}
+          >
+            <span>{mobileSections.images ? "Ocultar" : "Ver"}</span>
+            <span aria-hidden="true">{mobileSections.images ? "⌃" : "⌄"}</span>
+          </button>
         </div>
 
+        <div className={`add-mobile-section-content add-images-content ${mobileSections.images ? "is-open" : ""}`}>
         <div className="add-image-url-grid">
           {[
             ["image_url", "Imagen principal"],
@@ -590,6 +635,7 @@ export default function AddProductPage({ products, loadProducts }) {
               ))}
           </div>
         )}
+        </div>
       </Card>
     </section>
   );
