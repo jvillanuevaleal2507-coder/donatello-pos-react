@@ -8987,6 +8987,210 @@ select {
   }
 }
 
+
+
+/* ===== Inventario móvil · layout proporcional estable ===== */
+@media (max-width: 640px) {
+  .inventory-section,
+  .inventory-toolbar-card,
+  .inventory-products-grid,
+  .inventory-product-card,
+  .inventory-product-card-main,
+  .inventory-product-content {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  .inventory-toolbar-card {
+    overflow: hidden;
+  }
+
+  .inventory-status-pills,
+  .category-pills {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 7px;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .inventory-status-pills::-webkit-scrollbar,
+  .category-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-pill {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .inventory-products-grid,
+  .inventory-products-grid.list-mode {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 8px;
+  }
+
+  .inventory-product-card {
+    padding: 0 !important;
+    overflow: hidden;
+  }
+
+  .inventory-product-card-main,
+  .inventory-products-grid.list-mode .inventory-product-card-main {
+    display: grid !important;
+    grid-template-columns: minmax(0, 34fr) minmax(0, 66fr) !important;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-image-wrap,
+  .inventory-products-grid.list-mode .inventory-image-wrap {
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1 / 1 !important;
+    align-self: start;
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .inventory-product-image {
+    display: block;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    object-fit: cover;
+  }
+
+  .inventory-product-content {
+    min-width: 0;
+    overflow: hidden;
+    padding: 9px 10px !important;
+    gap: 7px;
+  }
+
+  .inventory-product-topline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .inventory-product-topline > div {
+    min-width: 0;
+  }
+
+  .inventory-product-topline h3 {
+    max-width: 100%;
+    font-size: .94rem;
+    line-height: 1.12;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .inventory-product-topline p {
+    max-width: 100%;
+    font-size: .68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stock-status {
+    justify-self: start;
+    max-width: 100%;
+    padding: 3px 6px;
+    font-size: .58rem;
+    white-space: nowrap;
+  }
+
+  .inventory-price-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-price-row > div {
+    min-width: 0;
+  }
+
+  .inventory-price-row span,
+  .inventory-detail-strip {
+    font-size: .64rem;
+  }
+
+  .inventory-price-row strong {
+    font-size: .96rem;
+  }
+
+  .inventory-detail-strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 8px;
+    width: 100%;
+    min-width: 0;
+    padding-top: 5px;
+  }
+
+  .inventory-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-card-actions .btn,
+  .inventory-danger-link {
+    min-width: 0;
+    max-width: 100%;
+    min-height: 32px;
+    padding: 5px 7px;
+    font-size: .68rem;
+  }
+
+  .inventory-heading-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 7px;
+  }
+
+  .inventory-heading-actions .btn,
+  .inventory-add-link {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .inventory-pagination {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 9px 10px;
+  }
+
+  .inventory-pagination-summary,
+  .inventory-page-size {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .inventory-page-buttons {
+    justify-content: center;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
 `;
   export default function VentasDonatelloPOS() {
   return (
