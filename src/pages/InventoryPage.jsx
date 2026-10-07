@@ -267,6 +267,85 @@ export default function InventoryPage({
     <section className="inventory-section inventory-modern demo-inventory-v2">
       <style>{`
         @media (max-width: 760px) {
+          .demo-inventory-v2 .inventory-heading-row {
+            display: block !important;
+            min-height: 0 !important;
+            padding: 16px !important;
+          }
+
+          .demo-inventory-v2 .inventory-heading-row h2 {
+            font-size: 2rem !important;
+            line-height: 1 !important;
+          }
+
+          .demo-inventory-v2 .inventory-heading-row .muted {
+            margin-top: 8px !important;
+            font-size: .8rem !important;
+          }
+
+          .demo-inventory-v2 .inventory-heading-actions {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 8px !important;
+            width: 100% !important;
+            margin-top: 14px !important;
+          }
+
+          .demo-inventory-v2 .inventory-heading-actions .btn,
+          .demo-inventory-v2 .inventory-add-link {
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 40px !important;
+            height: auto !important;
+            padding: 9px 10px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            white-space: nowrap !important;
+            font-size: .74rem !important;
+            border-radius: 10px !important;
+          }
+
+          .demo-inventory-v2 .inventory-toolbar-card {
+            padding: 10px !important;
+            overflow: hidden !important;
+          }
+
+          .demo-inventory-v2 .inventory-filter-row,
+          .demo-inventory-v2 .inventory-category-row {
+            display: block !important;
+          }
+
+          .demo-inventory-v2 .inventory-status-pills,
+          .demo-inventory-v2 .category-pills {
+            display: flex !important;
+            gap: 7px !important;
+            overflow-x: auto !important;
+            overscroll-behavior-inline: contain !important;
+            scrollbar-width: none !important;
+            padding-bottom: 3px !important;
+          }
+
+          .demo-inventory-v2 .inventory-status-pills::-webkit-scrollbar,
+          .demo-inventory-v2 .category-pills::-webkit-scrollbar {
+            display: none !important;
+          }
+
+          .demo-inventory-v2 .category-pill {
+            flex: 0 0 auto !important;
+            white-space: nowrap !important;
+          }
+
+          .demo-inventory-v2 .inventory-view-toggle {
+            width: max-content !important;
+            margin-top: 9px !important;
+          }
+
+          .demo-inventory-v2 .inventory-filter-label {
+            display: block !important;
+            margin: 12px 0 7px !important;
+          }
+
           .demo-inventory-v2 .inventory-product-card {
             display: block !important;
             padding: 0 !important;
