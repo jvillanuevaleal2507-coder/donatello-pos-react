@@ -659,23 +659,28 @@ function VentasDonatelloPOSApp() {
         p_due_date: saleMode === "layaway" ? dueDate : null,
       });
       if (error || !receipt?.id) {
-        setScanStatus(`No se registró la operación: ${error?.message || "respuesta inválida"}`);
-        await loadProducts();
+        setScanStatus(
+          `No se pudo confirmar el registro: ${error?.message || "respuesta inválida"}. Antes de intentarlo otra vez, revisa el historial para evitar duplicados.`
+        );
         return;
       }
       setLastReceipt(receipt);
-      if (saleMode === "layaway") {
-        setScanStatus(`Apartado registrado: ${money(receipt.deposit)} | Saldo: ${money(receipt.balance)}`);
-      } else {
-        setScanStatus(`Venta cobrada: ${money(receipt.total)} | Cambio: ${money(receipt.change_amount)}`);
-      }
+      const confirmation = saleMode === "layaway"
+        ? `Apartado registrado: ${money(receipt.deposit)} | Saldo: ${money(receipt.balance)}`
+        : `Venta cobrada: ${money(receipt.total)} | Cambio: ${money(receipt.change_amount)}`;
       clearCart();
-      await loadProducts();
-      await loadSales();
-      if (saleMode === "layaway") await loadLayaways();
+      setScanStatus(confirmation);
+      const refreshResults = await Promise.allSettled([
+        loadProducts(),
+        loadSales(),
+        ...(saleMode === "layaway" ? [loadLayaways()] : []),
+      ]);
+      if (refreshResults.some((result) => result.status === "rejected")) {
+        setScanStatus(`${confirmation}. Algunos datos no se actualizaron; vuelve a cargar la pantalla.`);
+      }
     } catch (error) {
-      setScanStatus(`No se registró la operación: ${error?.message || "error inesperado"}`);
-      await loadProducts();
+      console.error("Checkout confirmation error:", error);
+      setScanStatus("No se pudo confirmar el registro. Revisa el historial de ventas y apartados antes de reintentar, para evitar duplicados.");
     } finally {
       checkoutRunningRef.current = false;
     }
