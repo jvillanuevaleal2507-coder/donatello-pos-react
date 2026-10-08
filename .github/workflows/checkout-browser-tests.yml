@@ -1,0 +1,29 @@
+name: POS browser test with fake database
+on:
+  pull_request:
+    paths:
+      - 'src/App.jsx'
+      - 'tests/checkout.browser.test.cjs'
+      - '.github/workflows/checkout-browser-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install project dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install pinned Playwright browser driver
+        run: npm install --no-save --package-lock=false playwright-core@1.56.1
+      - name: Confirm Chrome browser is available
+        run: command -v google-chrome
+      - name: Test checkout interface with fake database
+        run: node --test tests/checkout.browser.test.cjs
