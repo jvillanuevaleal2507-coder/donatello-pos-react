@@ -101,10 +101,11 @@ test('Real Chromium image upload buttons open the correct file picker and upload
           try {
             const response = await page.goto(URL_BASE + '/agregar',{waitUntil:'domcontentloaded',timeout:25000});
             assert.equal(response.status(),200);
-            await page.locator('.add-image-field').first().waitFor({timeout:20000});
+            await page.locator('.add-product-images-card').waitFor({timeout:20000});
             if (viewport.width < 600) {
               await page.locator('.add-product-images-card .add-mobile-section-toggle').click();
             }
+            await page.locator('.add-image-field').first().waitFor({timeout:20000});
             const fields=['image_url','image_url_2','image_url_3','image_url_4'];
             assert.equal(await page.locator('.add-image-field').count(),4);
             for (const field of fields) {
