@@ -1,0 +1,40 @@
+{
+  "format": "Donatello encrypted database backup manifest v1",
+  "snapshot_at_utc": "2026-10-08T18:51:32.892714+00:00",
+  "source_project_id": "lotgmhfqzthhhadavwlu",
+  "file": "DONATELLO_BASE_DATOS_2026-10-08.pgp.asc",
+  "crypto": "OpenPGP public key RSA 3072 with AES-256 session encryption",
+  "fingerprint": "890A9611A8506054066C71F79BA8F2A36B30012B",
+  "plaintext_sha256": "807816cd62fc65b520e7574a3958a271c993e6d0d838f83af2a400bcd92d3e04",
+  "plaintext_characters": 410843,
+  "encrypted_characters": 98974,
+  "records": {
+    "public.products": 149,
+    "public.sales": 37,
+    "public.sale_items": 42,
+    "public.layaways": 3,
+    "public.layaway_payments": 7,
+    "public.atlas_product_intelligence": 21,
+    "public.pos_authorized_users": 1,
+    "auth.users": 1,
+    "auth.identities": 1,
+    "storage.objects": 272,
+    "storage.buckets": 1,
+    "supabase_migrations.schema_migrations": 7
+  },
+  "contains": [
+    "logical_table_rows",
+    "public_schema_metadata",
+    "RLS_policies",
+    "functions",
+    "indexes",
+    "migrations"
+  ],
+  "excludes": [
+    "storage_file_bytes",
+    "automatic_restoration",
+    "full_native_pg_dump",
+    "managed_auth_sessions_and_tokens"
+  ],
+  "warning": "Do not publish or upload the private recovery key to this repository. Snapshot is an encrypted logical export, not a native pg_dump. Recovery requires compatible schema and supervised restoration."
+}
