@@ -28,7 +28,10 @@ jobs:
           test -s "$MANIFEST"
           head -n 1 "$FILE" | grep -F -- '-----BEGIN PGP MESSAGE-----'
           tail -n 1 "$FILE" | grep -F -- '-----END PGP MESSAGE-----'
-          gpg --batch --list-packets "$FILE" >/dev/null 2>&1
+          packet_report="$(gpg --batch --list-packets "$FILE" 2>&1 || true)"
+          if ! printf '%s\n' "$packet_report" | grep -q ':pubkey enc packet:'; then
+            echo 'No valid PGP public-key encrypted packet found'; exit 1
+          fi
           sha256sum "$FILE" > DONATELLO_BASE_DATOS_2026-10-08_ARCHIVO_SHA256.txt
           printf 'CIFRADO_PGP_VERIFICADO=SI\n'
       - name: Upload only encrypted content (never the private key)
