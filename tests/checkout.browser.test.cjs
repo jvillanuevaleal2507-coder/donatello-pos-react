@@ -22,6 +22,7 @@ async function serverStart() {
   const child = spawn('npm', ['run', 'dev', '--', '--host', '127.0.0.1', '--port', '5179', '--strictPort'], {
     env: { ...process.env, VITE_SUPABASE_URL: MOCK_BACKEND,
       VITE_SUPABASE_ANON_KEY: 'e2e-public-test-only' },
+    detached: true,
     stdio: ['ignore', 'pipe', 'pipe']
   });
   let output = '';
@@ -151,6 +152,6 @@ test('Real-browser POS checkout with mocked Supabase: sale, layaway and ticket',
     });
   } finally {
     if (browser) await browser.close();
-    server.kill();
+    try { process.kill(-server.pid, 'SIGKILL'); } catch { server.kill('SIGKILL'); }
   }
 });

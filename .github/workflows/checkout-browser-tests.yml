@@ -26,4 +26,4 @@ jobs:
       - name: Confirm Chrome browser is available
         run: command -v google-chrome
       - name: Test checkout interface with fake database
-        run: node --test tests/checkout.browser.test.cjs
+        run: timeout --kill-after=5s 110s node --test tests/checkout.browser.test.cjs
