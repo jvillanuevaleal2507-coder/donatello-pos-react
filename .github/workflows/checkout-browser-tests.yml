@@ -20,7 +20,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Install project dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Install pinned Playwright browser driver
         run: npm install --no-save --package-lock=false playwright-core@1.56.1
       - name: Confirm Chrome browser is available
