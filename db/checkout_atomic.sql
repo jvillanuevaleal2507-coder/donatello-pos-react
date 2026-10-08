@@ -41,7 +41,7 @@ BEGIN
     RAISE EXCEPTION 'Usuario sin autorización POS' USING ERRCODE = '42501';
   END IF;
 
-  IF p_mode NOT IN ('sale', 'layaway') THEN
+  IF p_mode IS NULL OR p_mode NOT IN ('sale', 'layaway') THEN
     RAISE EXCEPTION 'Tipo de operación inválido';
   END IF;
   IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array'
