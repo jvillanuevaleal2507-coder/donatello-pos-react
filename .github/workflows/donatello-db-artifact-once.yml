@@ -1,0 +1,42 @@
+name: Donatello encrypted DB backup artifact 2026-10-08
+on:
+  push:
+    branches:
+      - encrypted-backup-2026-10-08
+    paths:
+      - '.github/workflows/donatello-db-artifact-once.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  verify-and-publish-encrypted-archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout encrypted backup
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify encrypted snapshot and metadata are present
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="respaldo-cifrado/2026-10-08/DONATELLO_BASE_DATOS_2026-10-08.pgp.asc"
+          MANIFEST="respaldo-cifrado/2026-10-08/MANIFIESTO_BASE_DATOS.json"
+          test -s "$FILE"
+          test -s "$MANIFEST"
+          head -n 1 "$FILE" | grep -F -- '-----BEGIN PGP MESSAGE-----'
+          tail -n 1 "$FILE" | grep -F -- '-----END PGP MESSAGE-----'
+          gpg --batch --list-packets "$FILE" >/dev/null 2>&1
+          sha256sum "$FILE" > DONATELLO_BASE_DATOS_2026-10-08_ARCHIVO_SHA256.txt
+          printf 'CIFRADO_PGP_VERIFICADO=SI\n'
+      - name: Upload only encrypted content (never the private key)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: DONATELLO_BASE_DATOS_CIFRADA_2026-10-08
+          path: |
+            respaldo-cifrado/2026-10-08/DONATELLO_BASE_DATOS_2026-10-08.pgp.asc
+            respaldo-cifrado/2026-10-08/MANIFIESTO_BASE_DATOS.json
+            DONATELLO_BASE_DATOS_2026-10-08_ARCHIVO_SHA256.txt
+          retention-days: 30
