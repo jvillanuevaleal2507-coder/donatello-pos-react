@@ -1,0 +1,29 @@
+name: Temporary isolated PostgreSQL WASM runtime
+on:
+  push:
+    branches:
+      - encrypted-backup-2026-10-08
+    paths:
+      - '.github/workflows/pglite-runtime-once.yml'
+permissions:
+  contents: read
+jobs:
+  fetch-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Package public PGlite PostgreSQL runtime only
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p runtime
+          cd runtime
+          npm pack @electric-sql/pglite --ignore-scripts --pack-destination .
+          sha256sum *.tgz > SHA256SUMS.txt
+          ls -lh *.tgz
+      - name: Upload runtime package for local isolated restore testing
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: DONATELLO_PGLITE_RUNTIME_TEMP
+          path: runtime/
+          retention-days: 1
