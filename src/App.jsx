@@ -155,6 +155,7 @@ function VentasDonatelloPOSApp() {
   const [products, setProducts] = useState(initialProducts);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState([]);
+  const checkoutRunningRef = useRef(false);
   const [tab, setTab] = useState("sale");
   const [manualCode, setManualCode] = useState("");
   const [received, setReceived] = useState("");
@@ -640,158 +641,49 @@ function VentasDonatelloPOSApp() {
       }
     }
 
-    const saleItems = cart.map((item) => ({
-      product_id: item.id,
-      code: item.code,
-      name: item.name,
-      qty: item.qty,
-      cost: Number(item.cost || 0),
-      price: Number(item.price || 0),
-      subtotal: Number(item.price || 0) * item.qty,
-      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
-    }));
-
-    if (saleMode === "layaway") {
-      const deposit = Number(depositAmount || 0);
-      const balance = totalFinal - deposit;
-
-      const layawayPayload = {
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        total: totalFinal,
-        deposit,
-        balance,
-        due_date: dueDate,
-        status: "active",
-        items: saleItems,
-        notes:
-          "El apartado se mantiene vigente hasta la fecha acordada. Posterior a ese plazo, el anticipo podrá utilizarse como saldo a favor en otra compra.",
-      };
-
-      const { data: layawayData, error: layawayError } = await supabase
-        .from("layaways")
-        .insert([layawayPayload])
-        .select("id")
-        .single();
-
-      if (layawayError) {
-        setScanStatus(`Error guardando apartado: ${layawayError.message}`);
+    if (checkoutRunningRef.current) return;
+    checkoutRunningRef.current = true;
+    try {
+      const { data: receipt, error } = await supabase.rpc("donatello_checkout", {
+        p_mode: saleMode,
+        p_items: cart.map((item) => ({
+          id: item.id,
+          qty: item.qty,
+          expected_price: Number(item.price || 0),
+        })),
+        p_discount_percent: Number(discountPercent || 0),
+        p_received: saleMode === "sale" ? Number(received || 0) : 0,
+        p_customer_name: saleMode === "layaway" ? customerName.trim() : null,
+        p_customer_phone: saleMode === "layaway" ? customerPhone.trim() : null,
+        p_deposit: saleMode === "layaway" ? Number(depositAmount || 0) : 0,
+        p_due_date: saleMode === "layaway" ? dueDate : null,
+      });
+      if (error || !receipt?.id) {
+        setScanStatus(
+          `No se pudo confirmar el registro: ${error?.message || "respuesta inválida"}. Antes de intentarlo otra vez, revisa el historial para evitar duplicados.`
+        );
         return;
       }
-
-      for (const item of cart) {
-        const current = products.find((p) => p.id === item.id);
-        const newStock = Number(current.stock || 0) - Number(item.qty || 0);
-        const { error } = await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.id);
-
-        if (error) {
-          setScanStatus(`Error actualizando stock: ${error.message}`);
-          return;
-        }
-      }
-
-      const receipt = {
-        id: layawayData.id,
-        type: "layaway",
-        sale_date: new Date().toISOString(),
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        subtotal_original: subtotal,
-        discount_percent: Number(discountPercent || 0),
-        discount_amount: discountAmount,
-        total: totalFinal,
-        profit: adjustedProfit,
-        received: deposit,
-        change_amount: 0,
-        deposit,
-        balance,
-        due_date: dueDate,
-        items_count: itemsCount,
-        sale_items: saleItems,
-      };
-
       setLastReceipt(receipt);
-      setScanStatus(`Apartado registrado: ${money(deposit)} | Saldo: ${money(balance)}`);
+      const confirmation = saleMode === "layaway"
+        ? `Apartado registrado: ${money(receipt.deposit)} | Saldo: ${money(receipt.balance)}`
+        : `Venta cobrada: ${money(receipt.total)} | Cambio: ${money(receipt.change_amount)}`;
       clearCart();
-      await loadLayaways();
-      await loadProducts();
-      await loadSales();
-      return;
-    }
-
-const salePayload = {
-      total: totalFinal,
-      profit: adjustedProfit,
-      subtotal_original: subtotal,
-      discount_percent: Number(discountPercent || 0),
-      discount_amount: discountAmount,
-      received: Number(received || 0),
-      change_amount: change,
-      items_count: itemsCount,
-      status: "completed",
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data: saleData, error: saleError } = await supabase
-      .from("sales")
-      .insert([salePayload])
-      .select("id")
-      .single();
-
-    if (saleError) {
-      setScanStatus(`Error guardando venta: ${saleError.message}`);
-      return;
-    }
-
-    const saleItemsPayload = saleItems.map((item) => ({
-      ...item,
-      sale_id: saleData.id,
-    }));
-
-    const { error: itemsError } = await supabase.from("sale_items").insert(saleItemsPayload);
-
-    if (itemsError) {
-      setScanStatus(`Venta creada, pero falló el detalle: ${itemsError.message}`);
-      return;
-    }
-
-    for (const item of cart) {
-      const current = products.find((p) => p.id === item.id);
-      const newStock = Number(current.stock || 0) - Number(item.qty || 0);
-      const { error } = await supabase
-        .from("products")
-        .update({ stock: newStock })
-        .eq("id", item.id);
-
-      if (error) {
-        setScanStatus(`Error actualizando stock: ${error.message}`);
-        return;
+      setScanStatus(confirmation);
+      const refreshResults = await Promise.allSettled([
+        loadProducts(),
+        loadSales(),
+        ...(saleMode === "layaway" ? [loadLayaways()] : []),
+      ]);
+      if (refreshResults.some((result) => result.status === "rejected")) {
+        setScanStatus(`${confirmation}. Algunos datos no se actualizaron; vuelve a cargar la pantalla.`);
       }
+    } catch (error) {
+      console.error("Checkout confirmation error:", error);
+      setScanStatus("No se pudo confirmar el registro. Revisa el historial de ventas y apartados antes de reintentar, para evitar duplicados.");
+    } finally {
+      checkoutRunningRef.current = false;
     }
-
-    const receipt = {
-      id: saleData.id,
-      type: "sale",
-      sale_date: new Date().toISOString(),
-      subtotal_original: subtotal,
-      discount_percent: Number(discountPercent || 0),
-      discount_amount: discountAmount,
-      total: totalFinal,
-      profit: adjustedProfit,
-      received: Number(received || 0),
-      change_amount: change,
-      items_count: itemsCount,
-      sale_items: saleItemsPayload,
-    };
-
-    setLastReceipt(receipt);
-    setScanStatus(`Venta cobrada: ${money(totalFinal)} | Cambio: ${money(change)}`);
-    clearCart();
-    await loadProducts();
-    await loadSales();
   }
 
   async function startScanner() {

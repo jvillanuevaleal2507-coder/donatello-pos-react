@@ -1,0 +1,23 @@
+name: POS checkout regression tests
+on:
+  pull_request:
+    paths:
+      - 'src/App.jsx'
+      - 'db/checkout_atomic.sql'
+      - 'tests/checkout.test.cjs'
+      - '.github/workflows/checkout-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  checkout-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Execute isolated checkout regression tests
+        run: node --test tests/checkout.test.cjs
