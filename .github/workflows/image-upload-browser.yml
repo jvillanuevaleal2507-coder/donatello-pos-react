@@ -1,0 +1,30 @@
+name: Donatello image file picker browser test
+on:
+  push:
+    branches:
+      - fix-product-image-file-picker-2026-10-08
+    paths:
+      - 'src/pages/AddProductPage.jsx'
+      - 'src/App.jsx'
+      - 'tests/image-upload.browser.test.cjs'
+      - '.github/workflows/image-upload-browser.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload-picker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install pinned dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Install Chrome test driver
+        run: npm install --no-save --package-lock=false --ignore-scripts --no-audit playwright-core@1.56.1
+      - name: Run desktop and mobile upload picker tests with fake Supabase
+        run: timeout --kill-after=5s 130s node --test tests/image-upload.browser.test.cjs

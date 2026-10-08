@@ -7169,7 +7169,7 @@ body {
 }
 
 .add-product-form-grid label,
-.add-image-url-grid label {
+.add-image-url-grid .add-image-field {
   display: grid;
   gap: 7px;
   color: #6d645d;
@@ -7262,6 +7262,9 @@ body {
 }
 
 .add-image-upload {
+  width: 100%;
+  font-family: inherit;
+  line-height: 1.2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -8546,7 +8549,7 @@ select {
 }
 
 .add-product-form-grid label,
-.add-image-url-grid label {
+.add-image-url-grid .add-image-field {
   gap: 5px;
   font-size: .73rem;
 }

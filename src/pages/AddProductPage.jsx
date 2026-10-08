@@ -580,24 +580,31 @@ export default function AddProductPage({ products, loadProducts }) {
             ["image_url_3", "Imagen 3"],
             ["image_url_4", "Imagen 4"],
           ].map(([field, label]) => (
-            <label key={field}>
-              {label}
+            <div className="add-image-field" key={field}>
+              <label htmlFor={`donatello-${field}-url`}>{label}</label>
               <input
+                id={`donatello-${field}-url`}
                 value={form[field]}
                 onChange={(e) => updateField(field, e.target.value)}
                 placeholder="URL opcional"
               />
-              <span className="add-image-upload">
+              <button
+                className="add-image-upload"
+                type="button"
+                disabled={uploadingImage}
+                onClick={() => document.getElementById(`donatello-${field}-file`)?.click()}
+              >
                 {uploadingImage ? "Subiendo..." : "Subir archivo"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageFile(field, e)}
-                  hidden
-                  disabled={uploadingImage}
-                />
-              </span>
-            </label>
+              </button>
+              <input
+                id={`donatello-${field}-file`}
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageFile(field, e)}
+                hidden
+                disabled={uploadingImage}
+              />
+            </div>
           ))}
         </div>
 
