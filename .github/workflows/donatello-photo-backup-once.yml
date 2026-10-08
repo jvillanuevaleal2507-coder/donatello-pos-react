@@ -1,0 +1,157 @@
+name: Donatello photography backup 2026-10-08
+on:
+  push:
+    branches:
+      - encrypted-backup-2026-10-08
+    paths:
+      - '.github/workflows/donatello-photo-backup-once.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  download-and-verify-public-photo-bucket:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Backup current public product-images objects and verify hashes
+        env:
+          SUPABASE_URL: 'https://lotgmhfqzthhhadavwlu.supabase.co'
+          SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_sBkHcv70pthOQHI0DRuYhQ_gz1kZeP3'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, os, pathlib, time, urllib.parse, urllib.request, zipfile
+          from datetime import datetime, timezone
+          
+          BASE = os.environ['SUPABASE_URL'].rstrip('/')
+          KEY = os.environ['SUPABASE_PUBLISHABLE_KEY']
+          BUCKET = 'product-images'
+          EXPECTED_COUNT = 272
+          EXPECTED_BYTES = 170684712
+          ROOT = pathlib.Path('donatello_photos')
+          ROOT.mkdir(exist_ok=True)
+          objects = []
+          started = datetime.now(timezone.utc).isoformat()
+          
+          def request_json(path, payload):
+              req = urllib.request.Request(
+                  BASE + path,
+                  data=json.dumps(payload).encode(),
+                  headers={'apikey': KEY, 'Content-Type': 'application/json'},
+                  method='POST',
+              )
+              with urllib.request.urlopen(req, timeout=45) as reply:
+                  return json.load(reply)
+          
+          def list_recursive(prefix='', depth=0):
+              if depth > 20:
+                  raise ValueError('Unexpected nested Storage hierarchy')
+              offset = 0
+              while True:
+                  batch = request_json('/storage/v1/object/list/' + BUCKET,
+                                       {'prefix': prefix, 'limit': 1000, 'offset': offset,
+                                        'sortBy': {'column': 'name', 'order': 'asc'}})
+                  if not isinstance(batch, list):
+                      raise TypeError('Unexpected Storage list response')
+                  for record in batch:
+                      name = record['name']
+                      path = (prefix + '/' + name).strip('/')
+                      components = pathlib.PurePosixPath(path).parts
+                      if (path.startswith('/') or '..' in components or
+                          not components or any(p in ('', '.') for p in components)):
+                          raise ValueError('Unsafe Storage path')
+                      if record.get('id'):
+                          objects.append({'path': path, 'size_reported': int((record.get('metadata') or {}).get('size') or 0)})
+                      else:
+                          list_recursive(path, depth+1)
+                  if len(batch) < 1000:
+                      return
+                  offset += len(batch)
+          
+          list_recursive()
+          paths = [x['path'] for x in objects]
+          if len(paths) != len(set(paths)):
+              raise RuntimeError('Duplicate object detected')
+          print('Objects reported by Supabase Storage:', len(objects), flush=True)
+          if len(objects) != EXPECTED_COUNT:
+              raise RuntimeError(f'Storage object count mismatch: {len(objects)} expected {EXPECTED_COUNT}; review live database before retry')
+          
+          manifest_files = []
+          total_bytes = 0
+          for index, item in enumerate(objects, 1):
+              relpath = item['path']
+              dest = ROOT.joinpath(*pathlib.PurePosixPath(relpath).parts)
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              url = BASE + '/storage/v1/object/public/' + BUCKET + '/' + urllib.parse.quote(relpath, safe='/')
+              last = None
+              for attempt in range(4):
+                  try:
+                      hashval = hashlib.sha256()
+                      size = 0
+                      req = urllib.request.Request(url, headers={'User-Agent': 'Donatello-Authorized-Backup/1.0'})
+                      with urllib.request.urlopen(req, timeout=90) as reply, open(dest, 'wb') as out:
+                          while True:
+                              chunk = reply.read(1024 * 1024)
+                              if not chunk:
+                                  break
+                              out.write(chunk)
+                              hashval.update(chunk)
+                              size += len(chunk)
+                      if item['size_reported'] and size != item['size_reported']:
+                          raise IOError(f'Unexpected file size in {relpath}: {size}/{item["size_reported"]}')
+                      last = None
+                      break
+                  except Exception as exc:
+                      last = exc
+                      time.sleep(2 * (attempt+1))
+              if last is not None:
+                  raise RuntimeError(f'Could not back up {relpath}: {last}')
+              manifest_files.append({'path':relpath,'size':size,'sha256':hashval.hexdigest()})
+              total_bytes += size
+              if index%25==0:
+                  print('Downloaded', index, '/', len(objects), 'objects', flush=True)
+          
+          if total_bytes != EXPECTED_BYTES:
+              raise RuntimeError(f'Storage size mismatch: downloaded {total_bytes} expected {EXPECTED_BYTES}')
+          
+          manifest = {
+              'type':'Donatello Supabase public product-images storage backup',
+              'project':'lotgmhfqzthhhadavwlu',
+              'bucket':BUCKET,'started_utc':started,
+              'completed_utc':datetime.now(timezone.utc).isoformat(),
+              'count':len(manifest_files),'total_bytes':total_bytes,
+              'files':manifest_files,
+          }
+          manifest_path=pathlib.Path('DONATELLO_FOTOGRAFIAS_2026-10-08_MANIFIESTO.json')
+          manifest_path.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          zip_path=pathlib.Path('DONATELLO_FOTOGRAFIAS_2026-10-08.zip')
+          with zipfile.ZipFile(zip_path,'w',compression=zipfile.ZIP_STORED,allowZip64=True) as archive:
+              for item in manifest_files:
+                  archive.write(ROOT.joinpath(*pathlib.PurePosixPath(item['path']).parts),item['path'])
+              archive.write(manifest_path,manifest_path.name)
+          with zipfile.ZipFile(zip_path) as archive:
+              corrupted=archive.testzip()
+              if corrupted:
+                  raise RuntimeError(f'ZIP corruption: {corrupted}')
+              if len(archive.namelist())!=len(manifest_files)+1:
+                  raise RuntimeError('Archive entry count mismatch')
+          ziphash=hashlib.sha256()
+          with open(zip_path,'rb') as infile:
+              while chunk:=infile.read(1024*1024):
+                  ziphash.update(chunk)
+          pathlib.Path('DONATELLO_FOTOGRAFIAS_2026-10-08_SHA256.txt').write_text(
+              ziphash.hexdigest()+'  '+str(zip_path)+'\n',encoding='utf-8')
+          print('BACKUP_PHOTOS_VERIFIED count=',len(manifest_files),
+                'total_bytes=',total_bytes,'zip_sha256=',ziphash.hexdigest(),flush=True)
+          
+          PY
+      - name: Upload verified photos archive and manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: DONATELLO_FOTOGRAFIAS_2026-10-08
+          path: |
+            DONATELLO_FOTOGRAFIAS_2026-10-08.zip
+            DONATELLO_FOTOGRAFIAS_2026-10-08_MANIFIESTO.json
+            DONATELLO_FOTOGRAFIAS_2026-10-08_SHA256.txt
+          retention-days: 30
