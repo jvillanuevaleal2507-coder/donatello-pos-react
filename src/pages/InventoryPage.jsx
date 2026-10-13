@@ -376,6 +376,11 @@ export default function InventoryPage({
                     </div>
 
                     <div className="inventory-card-actions">
+                      {Number(p.stock || 0) > 0 && p.image_url && (
+                        <Link to={"/atlas-creativo?producto=" + encodeURIComponent(p.id)} className="btn btn-primary">
+                          ✦ Crear Reel con Atlas
+                        </Link>
+                      )}
                       <button
                         className="btn btn-secondary"
                         onClick={() => setEditingId(editingId === p.id ? null : p.id)}
