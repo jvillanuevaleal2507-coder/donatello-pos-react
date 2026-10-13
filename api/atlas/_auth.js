@@ -59,7 +59,7 @@ export async function requirePosUser(req, res) {
       return null;
     }
 
-    return { user, authorization };
+    return { user, authorization, role: String(allowed[0]?.role || '').toLowerCase() };
   } catch (error) {
     console.error("Atlas auth error", error);
     res.status(500).json({ error: "No se pudo validar la sesión." });
