@@ -1,4 +1,5 @@
 import { requirePosUser } from "./_auth.js";
+import creativeHandler from "../../lib/atlas/creative.js";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 
 function sendJson(res, status, payload) {
@@ -32,6 +33,7 @@ function safeImageUrl(value) {
 }
 
 export default async function handler(req, res) {
+  if (req.query?.mode === "creative") return creativeHandler(req, res);
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return sendJson(res, 405, { error: "Método no permitido." });
