@@ -110,7 +110,7 @@ export default function AtlasCreativePage({products=[]}){
   if(!product)return;
   setBusy(true);setVideo("");message("Atlas está preparando una propuesta original con las fotos y datos del POS...");
   try {
-    const r=await authorizedAtlasFetch("/api/atlas/creative",{method:"POST",headers:{"Content-Type":"application/json"},
+    const r=await authorizedAtlasFetch("/api/atlas/enrich?mode=creative",{method:"POST",headers:{"Content-Type":"application/json"},
      body:JSON.stringify({productId:product.id,instruction,variation:iteration+1,pastTitles})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.creative)throw Error(d.error||"Atlas no devolvió una propuesta.");
