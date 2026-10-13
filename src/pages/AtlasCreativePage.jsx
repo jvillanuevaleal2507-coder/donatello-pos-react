@@ -116,6 +116,8 @@ export default function AtlasCreativePage({products=[]}){
  const [busy,setBusy]=useState(false),[rendering,setRendering]=useState(false);
  const [status,setStatus]=useState("Selecciona un producto y pide una propuesta a Atlas.");
  const [failed,setFailed]=useState(false),[video,setVideo]=useState("");
+ const [projectId,setProjectId]=useState(""),[previewUrl,setPreviewUrl]=useState("");
+ const [previewing,setPreviewing]=useState(false);
  const alive=useRef(true);
  useEffect(()=>{try{localStorage.setItem(CAMPAIGN_KEY,JSON.stringify(campaign))}catch{}},[campaign]);
  function track(pid,patch){
@@ -146,7 +148,7 @@ export default function AtlasCreativePage({products=[]}){
   const saved=campaign.drafts[String(id)]||{};
   setPlan(saved.plan||{...empty,details:product?.name||"",image2:photos.length>1?1:0});
   setPostCopy(saved.postCopy||"");
-  setFile1(null);setFile2(null);setVideo(saved.video||"");
+  setFile1(null);setFile2(null);setVideo(saved.video||"");setProjectId("");setPreviewUrl("");
   setPastTitles([]);setPastLayouts([]);setIteration(0);
  },[id,product?.name,photos.length]);
  useEffect(()=>{
@@ -154,6 +156,7 @@ export default function AtlasCreativePage({products=[]}){
   setLocalUrls(urls);
   return()=>urls.forEach(u=>u&&URL.revokeObjectURL(u));
  },[file1,file2]);
+ useEffect(()=>{setProjectId("");setPreviewUrl("")},[plan,file1,file2,id]);
  const results=useMemo(()=>{
   const q=filter.toLocaleLowerCase("es-MX").trim();
   return stock.filter(p=>!q||(String(p.name)+" "+String(p.code)+" "+String(p.category)).toLocaleLowerCase("es-MX").includes(q)).slice(0,40);
@@ -178,43 +181,64 @@ export default function AtlasCreativePage({products=[]}){
     message("✓ Propuesta preparada. Revisa y modifica los textos antes de generar.");
   }catch(e){message(e.message||String(e),true)}finally{setBusy(false)}
  }
+ async function createLocalProject(){
+  if(!product)throw Error("Selecciona un producto.");
+  if(!connected)throw Error("Inicia el motor V6 de Windows y recarga el POS.");
+  const {data:p,error:e}=await supabase.from("products")
+    .select("id,price,stock,image_url,image_url_2,image_url_3,image_url_4")
+    .eq("id",product.id).single();
+  if(e||!p)throw Error("No pude verificar el inventario actual.");
+  if(Number(p.stock)<=0)throw Error("Producto agotado: no se generará Reel.");
+  if(Number(p.price)!==Number(product.price))throw Error("El precio cambió. Actualiza el POS antes de generar.");
+  const scenes=plan.storyboard?.scenes;
+  if(!Array.isArray(scenes)||scenes.length<2||scenes.length>4)
+    throw Error("Primero pide a Atlas un storyboard nuevo de dos a cuatro escenas.");
+  message("Preparando fotografías originales y animaciones...");
+  const images=[];
+  for(let i=0;i<photos.length&&i<4;i++){
+    const replaceFile=i===Number(plan.image1)&&file1?file1:i===Number(plan.image2)&&file2?file2:null;
+    images.push(await photoBytes(photos[i],replaceFile));
+  }
+  const payload={
+    product:product.name,price:product.price,images,palette:plan.palette,
+    title1:plan.title1,title2:plan.title2,sub1:plan.sub1,sub2:plan.sub2,
+    details:plan.details,cta:plan.cta,storyboard:plan.storyboard
+  };
+  const job=await motorJson("/api/project",{
+    method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)
+  });
+  setProjectId(job.id);setPreviewUrl(ENGINE+job.preview);
+  track(product.id,{plan,postCopy,state:"borrador"});
+  return job.id;
+ }
+ async function preparePreview(){
+  setPreviewing(true);setVideo("");message("Preparando vista animada sin renderizar MP4...");
+  try {await createLocalProject();message("✓ Vista animada lista. Revísala; si te gusta, genera el MP4.")}
+  catch(e){message(e.message||String(e),true)}
+  finally{setPreviewing(false)}
+ }
  async function generate(){
   if(!product)return;
-  if(!connected){message("Actualiza el motor de Windows a V6. Luego reinicia CMD y recarga la página.",true);return}
-  setRendering(true);setVideo("");message("Verificando el precio y stock actuales...");
-  try{
-   const {data:p,error:e}=await supabase.from("products").select("id,price,stock,image_url,image_url_2,image_url_3,image_url_4").eq("id",product.id).single();
-   if(e||!p)throw Error("No pude verificar el inventario actual.");
-   if(Number(p.stock)<=0)throw Error("Producto agotado: no se generará el Reel.");
-   if(Number(p.price)!==Number(product.price))throw Error("El precio cambió. Actualiza el POS antes de generar.");
-   const scenes=plan.storyboard?.scenes;
-   if(!Array.isArray(scenes)||scenes.length<2||scenes.length>4)throw Error("Pide a Atlas un storyboard nuevo con el motor V6 para poder renderizar.");
-   message("Preparando las fotografías originales...");
-   const images=[];
-   for(let i=0;i<photos.length&&i<4;i++){
-     const replaceFile=i===Number(plan.image1)&&file1?file1:i===Number(plan.image2)&&file2?file2:null;
-     images.push(await photoBytes(photos[i],replaceFile));
-   }
-   const payload={product:product.name,price:product.price,images,template:plan.template,motion:plan.motion,palette:plan.palette,layout:plan.layout,transition:plan.transition,
-     title1:plan.title1,title2:plan.title2,sub1:plan.sub1,sub2:plan.sub2,details:plan.details,cta:plan.cta,tag1:plan.tag1,tag2:plan.tag2,
-     storyboard:plan.storyboard};
-   const job=await motorJson("/api/project",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-   message("HyperFrames está convirtiendo HTML a MP4 en tu computadora...");
-   await motorJson("/api/render/"+job.id+"/high",{method:"POST"});
+  setRendering(true);setVideo("");
+  try {
+   const id=projectId||await createLocalProject();
+   message("HyperFrames está renderizando el MP4 local...");
+   await motorJson("/api/render/"+id+"/high",{method:"POST"});
    for(let attempt=0;attempt<250;attempt++){
      await new Promise(r=>setTimeout(r,1600));
      if(!alive.current)return;
-     const state=await motorJson("/api/status/"+job.id);
+     const state=await motorJson("/api/status/"+id);
      if(state.state==="done"){
        const url=ENGINE+state.output;setVideo(url);
        track(product.id,{video:url,state:"renderizado",postCopy,plan});
-       message("✓ MP4 generado. Revísalo, apruébalo y sigue con el próximo producto.");return
+       message("✓ MP4 generado. Reprodúcelo, apruébalo y continúa con el siguiente producto.");return;
      }
      if(state.state==="error")throw Error(state.message||"Error de HyperFrames.");
-     message("Generando MP4: "+String(state.message||"Procesando").slice(0,145));
+     message(state.state==="queued"?"En cola local: "+String(state.message):"Renderizando: "+String(state.message||"Procesando").slice(0,145));
    }
-   throw Error("La página agotó el tiempo de seguimiento. Revisa CMD.");
-  }catch(e){message(e.message||String(e),true)}finally{setRendering(false)}
+   throw Error("El seguimiento tardó demasiado. Revisa CMD y el proyecto guardado.");
+  }catch(e){message(e.message||String(e),true)}
+  finally{setRendering(false)}
  }
  return <section className="atlas-creative"><style>{css}</style>
   <div className="ac-hero"><small>POS DONATELLO · HERRAMIENTA PRIVADA</small><h2>✦ Atlas Creativo</h2>
@@ -307,7 +331,14 @@ export default function AtlasCreativePage({products=[]}){
      <div className="ac-two">{props.map(([key,label,max])=><div key={key}>
        <label htmlFor={"field"+key}>{label}</label><input id={"field"+key} maxLength={max} value={plan[key]||""} onChange={e=>change(key,e.target.value)}/>
       </div>)}</div>
-     <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering||!connected} onClick={generate}>{rendering?"HyperFrames está creando el MP4...":"▶ Generar MP4 gratis con HyperFrames"}</button>
+     <button type="button" className="ac-btn" style={{background:"#d2e0ca",color:"#1a4630"}} disabled={!product||!photos.length||busy||rendering||previewing||!connected} onClick={preparePreview}>
+      {previewing?"Preparando storyboard...":"◉ Previsualizar animaciones sin renderizar"}
+     </button>
+     {previewUrl&&<div style={{padding:"14px 0"}}>
+       <p className="ac-muted">Vista animada en tiempo real. No consume render MP4.</p>
+       <iframe src={previewUrl} title="Vista animada HyperFrames" style={{width:"100%",maxWidth:365,height:655,border:"1px solid #bfad88",borderRadius:12,background:"#182419"}}/>
+     </div>}
+     <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering||previewing||!connected} onClick={generate}>{rendering?"HyperFrames está creando el MP4...":"▶ Generar MP4 gratis con HyperFrames"}</button>
      <p role="status" className={"ac-status"+(failed?" ac-error":"")}>{status}</p>
      <p className="ac-muted">Motor Windows: {connected?"V6 conectado":motorVersion?"versión "+motorVersion+" (se requiere V6)":"no conectado"}. Ninguna publicación es automática.</p>
     </article>
