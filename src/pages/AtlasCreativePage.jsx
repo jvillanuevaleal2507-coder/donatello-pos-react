@@ -130,11 +130,18 @@ export default function AtlasCreativePage({products=[]}){
  const [pastLayouts,setPastLayouts]=useState([]);
  const [concepts,setConcepts]=useState([]);
  const [conceptPreviews,setConceptPreviews]=useState({});
+ const [conceptReplay,setConceptReplay]=useState({});
  const [selectedConcept,setSelectedConcept]=useState("");
  const preserveChosenPreview=useRef(false);
  const [campaign,setCampaign]=useState(loadCampaign);
  const queue=campaign.queue.filter(q=>stock.some(p=>String(p.id)===String(q)));
  const statusFor=pid=>campaign.drafts[String(pid)]?.state||"pendiente";
+ const lastSelected=Object.values(campaign.drafts)
+   .filter(d=>d.selectedConcept&&d.updatedAt)
+   .sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)))
+   .slice(0,6).map(d=>d.selectedConcept);
+ const preferredDirection=CONCEPT_DIRECTIONS.slice().sort((a,b)=>
+   lastSelected.filter(v=>v===a).length-lastSelected.filter(v=>v===b).length)[0];
  const [postCopy,setPostCopy]=useState("");
  const [file1,setFile1]=useState(null),[file2,setFile2]=useState(null);
  const [localUrls,setLocalUrls]=useState(["",""]);
@@ -174,7 +181,7 @@ export default function AtlasCreativePage({products=[]}){
   const saved=campaign.drafts[String(id)]||{};
   setPlan({...empty,details:product?.name||"",image2:photos.length>1?1:0,...(saved.plan||{})});
   setConcepts(Array.isArray(saved.concepts)?saved.concepts:[]);
-  setConceptPreviews({});
+  setConceptPreviews({});setConceptReplay({});
   setSelectedConcept(saved.selectedConcept||"");
   setPostCopy(saved.postCopy||"");
   setFile1(null);setFile2(null);setVideo(saved.video||"");setProjectId("");setPreviewUrl("");
@@ -199,7 +206,7 @@ export default function AtlasCreativePage({products=[]}){
  async function proposeThree(){
   if(!product)return;
   setBusy(true);setVideo("");
-  setConcepts([]);setConceptPreviews({});setSelectedConcept("");
+  setConcepts([]);setConceptPreviews({});setConceptReplay({});setSelectedConcept("");
   message("Atlas está preparando tres conceptos realmente diferentes para "+product.name+"...");
   const proposals=[];
   const previews={};
@@ -373,13 +380,15 @@ export default function AtlasCreativePage({products=[]}){
          const animation=conceptPreviews[direction];
          return <div className={"ac-concept-item"+(selectedConcept===direction?" selected":"")} key={direction}>
            <h4>{i+1} · {artDirections[direction]}</h4>
-           {animation?<iframe src={animation.url} title={"Animación "+direction} loading="lazy"/>:
+           {direction===preferredDirection&&<p style={{fontWeight:800,color:"#24673f"}}>✦ Recomendado para no repetir estilo</p>}
+           {animation?<iframe key={direction+"-"+(conceptReplay[direction]||0)} src={animation.url+"&r="+(conceptReplay[direction]||0)} title={"Animación "+direction} loading="lazy"/>:
               <div style={{padding:12,background:"#e8e4d8",borderRadius:8,minHeight:95}}>
                 <p>Storyboard listo, sin previsualización animada. Para verla, inicia el motor V8 y vuelve a generar las opciones.</p>
               </div>}
            <p><strong>{proposal.concept||proposal.title1}</strong></p>
            <p>{conceptCaptions[direction]}</p>
            <p>{proposal.storyboard?.scenes?.length||0} escenas · {Math.round((proposal.storyboard?.scenes||[]).reduce((n,x)=>n+Number(x.duration||0),0)*10)/10}s</p>
+           {animation&&<button type="button" style={{background:"#e0ecdf",color:"#204b35",marginBottom:8}} onClick={()=>setConceptReplay(x=>({...x,[direction]:(x[direction]||0)+1}))}>↻ Repetir animación</button>}
            <button type="button" onClick={()=>chooseConcept(direction)}>{selectedConcept===direction?"✓ Elegido":"Elegir este concepto"}</button>
          </div>;
        })}
