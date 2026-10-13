@@ -8,6 +8,18 @@ const ENGINE="http://127.0.0.1:4477";
 const templates={editorial:"Editorial cálido",detalles:"Detalles que enamoran",imagina:"Imagina tu espacio"};
 const motions={suave:"Suave",lateral:"Desplazamiento lateral",revelado:"Revelado",estatico:"Estático"};
 const palettes={calido:"Cálido",verde:"Verde Donatello",arena:"Arena"};
+const artDirections={
+ cinema:"Cine · fotografía a pantalla completa",
+ revista:"Revista · papel claro, composición asimétrica",
+ impacto:"Cartel · titular y precio grandes",
+ galeria:"Galería · mosaico de fotografías"
+};
+const directionDescriptions={
+ cinema:"Sin marcos: fotografía protagonista, textos directamente sobre el ambiente y precio integrado.",
+ revista:"Diseño de revista: tipografía editorial, espacios claros, fotografía sin bordes y precio sin tarjeta.",
+ impacto:"Anuncio gráfico: titulares grandes, colores sólidos, cortes marcados y otra presentación del precio.",
+ galeria:"Varias fotografías reales protagonistas en composiciones de galería, sin recuadros comerciales."
+};
 const layouts={escaparate:"Escaparate · imagen central",dividida:"Revista · foto y texto lateral",galeria:"Galería · dos fotografías",portada:"Portada · foto protagonista"};
 const transitions={fundido:"Fundido elegante",cortina:"Cortina editorial",lateral:"Desplazamiento lateral",vertical:"Aparición vertical"};
 const sceneLayouts={hero:"Fotografía protagonista",magazine:"Editorial de revista",duo:"Galería de dos fotos",detail:"Título superior",offer:"Cierre con precio"};
@@ -24,7 +36,7 @@ const props=[
   ["details","Detalle final",100],["cta","Pregunta final",75],
   ["tag1","Etiqueta inicial",32],["tag2","Etiqueta final",32]
 ];
-const empty={concept:"",why:"",template:"editorial",motion:"suave",palette:"calido",layout:"escaparate",transition:"fundido",
+const empty={concept:"",why:"",template:"editorial",motion:"suave",palette:"calido",artDirection:"cinema",layout:"escaparate",transition:"fundido",
  image1:0,image2:1,title1:"Un detalle para tu hogar.",title2:"Dale personalidad a tu espacio.",
  sub1:"Conoce este producto en Donatello.",sub2:"Un complemento especial.",
  details:"",cta:"¿Dónde lo pondrías?",tag1:"Donatello",tag2:"Pregunta sin compromiso"};
@@ -141,12 +153,12 @@ export default function AtlasCreativePage({products=[]}){
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  useEffect(()=>{
   let running=true;
-  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=6)}}).catch(()=>{if(running)setConnected(false)});
+  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=7)}}).catch(()=>{if(running)setConnected(false)});
   return()=>{running=false};
  },[]);
  useEffect(()=>{
   const saved=campaign.drafts[String(id)]||{};
-  setPlan(saved.plan||{...empty,details:product?.name||"",image2:photos.length>1?1:0});
+  setPlan({...empty,details:product?.name||"",image2:photos.length>1?1:0,...(saved.plan||{})});
   setPostCopy(saved.postCopy||"");
   setFile1(null);setFile2(null);setVideo(saved.video||"");setProjectId("");setPreviewUrl("");
   setPastTitles([]);setPastLayouts([]);setIteration(0);
@@ -169,7 +181,10 @@ export default function AtlasCreativePage({products=[]}){
   setBusy(true);setVideo("");message("Atlas está preparando una propuesta original con las fotos y datos del POS...");
   try {
     const r=await authorizedAtlasFetch("/api/atlas/enrich?mode=creative",{method:"POST",headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({productId:product.id,instruction,variation:iteration+1,pastTitles,pastLayouts})});
+     body:JSON.stringify({
+       productId:product.id,instruction,variation:iteration+1,pastTitles,pastLayouts,
+       pastDirections:Object.values(campaign.drafts).sort((a,b)=>String(a.updatedAt||"").localeCompare(String(b.updatedAt||""))).slice(-8).map(d=>d.plan?.artDirection).filter(Boolean)
+     })});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.creative)throw Error(d.error||"Atlas no devolvió una propuesta.");
     setPlan(prev=>({...prev,...d.creative}));setFile1(null);setFile2(null);
@@ -183,7 +198,7 @@ export default function AtlasCreativePage({products=[]}){
  }
  async function createLocalProject(){
   if(!product)throw Error("Selecciona un producto.");
-  if(!connected)throw Error("Inicia el motor V6 de Windows y recarga el POS.");
+  if(!connected)throw Error("Inicia el motor V7 de Windows y recarga el POS.");
   const {data:p,error:e}=await supabase.from("products")
     .select("id,price,stock,image_url,image_url_2,image_url_3,image_url_4")
     .eq("id",product.id).single();
@@ -200,7 +215,7 @@ export default function AtlasCreativePage({products=[]}){
     images.push(await photoBytes(photos[i],replaceFile));
   }
   const payload={
-    product:product.name,price:product.price,images,palette:plan.palette,
+    product:product.name,price:product.price,images,palette:plan.palette,artDirection:plan.artDirection||"cinema",
     title1:plan.title1,title2:plan.title2,sub1:plan.sub1,sub2:plan.sub2,
     details:plan.details,cta:plan.cta,storyboard:plan.storyboard
   };
@@ -278,7 +293,14 @@ export default function AtlasCreativePage({products=[]}){
      <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering} onClick={propose}>{busy?"Atlas está creando...":"✦ Atlas, propón un Reel diferente"}</button>
      {plan.concept&&<div className="ac-concept"><strong>{plan.concept}</strong><p>{plan.why}</p></div>}
     </article>
-    <article className="ac-card"><h3>3 · Guion de escenas de Atlas</h3>
+    <article className="ac-card"><h3>3 · Dirección de arte del Reel</h3>
+     <label htmlFor="acArtDirection">Estilo completo del video (no solo colores)</label>
+     <select id="acArtDirection" value={plan.artDirection||"cinema"} onChange={e=>change("artDirection",e.target.value)}>
+       {Object.entries(artDirections).filter(([k])=>photos.length>1||k!=="galeria").map(([k,v])=><option key={k} value={k}>{v}</option>)}
+     </select>
+     <p className="ac-muted">{directionDescriptions[plan.artDirection||"cinema"]}</p>
+     <p className="ac-help">Atlas puede elegir esta dirección automáticamente. Si quieres otra, cámbiala aquí y previsualiza el resultado sin generar un MP4.</p>
+     <h3 style={{marginTop:22}}>Storyboard por escenas</h3>
      {Array.isArray(plan.storyboard?.scenes)&&<div className="ac-scenes">{plan.storyboard.scenes.map((scene,i)=><div className="ac-scene" key={i}>
        <strong>{i+1}. {sceneLayouts[scene.layout]||scene.layout} · {scene.duration}s</strong>
        <p className="ac-help">{sceneTransitions[scene.transition]||scene.transition} · Texto: {sceneEffects[scene.animation]||scene.animation} · Foto {scene.image+1}</p>
@@ -322,13 +344,13 @@ export default function AtlasCreativePage({products=[]}){
      </div>}
      <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering||previewing||!connected} onClick={generate}>{rendering?"HyperFrames está creando el MP4...":"▶ Generar MP4 gratis con HyperFrames"}</button>
      <p role="status" className={"ac-status"+(failed?" ac-error":"")}>{status}</p>
-     <p className="ac-muted">Motor Windows: {connected?"V6 conectado":motorVersion?"versión "+motorVersion+" (se requiere V6)":"no conectado"}. Ninguna publicación es automática.</p>
+     <p className="ac-muted">Motor Windows: {connected?"V7 conectado":motorVersion?"versión "+motorVersion+" (se requiere V7)":"no conectado"}. Ninguna publicación es automática.</p>
     </article>
    </div>
    <div>
-    <article className="ac-card"><h3>Vista previa del proyecto</h3>
+    <article className="ac-card"><h3>Guion fotográfico</h3>
      <div className="ac-film" data-palette={plan.palette}>
-      <p style={{fontSize:12}}>VENTAS DONATELLO · {palettes[plan.palette]}</p>
+      <p style={{fontSize:12}}>VENTAS DONATELLO · {artDirections[plan.artDirection||"cinema"]} · {palettes[plan.palette]}</p>
       {Array.isArray(plan.storyboard?.scenes)?plan.storyboard.scenes.map((scene,i)=><div key={i} style={{marginBottom:19,borderBottom:"1px solid #97836a",paddingBottom:14}}>
         <p style={{fontSize:12}}>{i+1} · {sceneLayouts[scene.layout]} · {scene.duration} segundos · {sceneEffects[scene.animation]}</p>
         <img src={photos[scene.image]||""} alt={"Escena "+(i+1)}/>
