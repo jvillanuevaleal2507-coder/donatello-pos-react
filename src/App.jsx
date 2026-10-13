@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
+import AtlasCreativePage from "./pages/AtlasCreativePage";
 import AddProductPage from "./pages/AddProductPage";
 import logoDonatello from "./assets/logo-donatello.png";
 import JSZip from "jszip";
@@ -1238,6 +1239,7 @@ function VentasDonatelloPOSApp() {
           }
         />
 
+        <Route path="/atlas-creativo" element={<AtlasCreativePage products={products} />} />
         <Route
           path="/agregar"
           element={<AddProductPage products={products} loadProducts={loadProducts} />}
