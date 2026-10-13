@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 const items = [
   { to: "/", icon: "⌂", label: "Venta" },
   { to: "/inventario", icon: "▦", label: "Inventario" },
+  { to: "/atlas-creativo", icon: "✦", label: "Atlas Creativo" },
   { to: "/agregar", icon: "+", label: "Agregar" },
   { to: "/qr", icon: "⌁", label: "QR" },
   { to: "/historial", icon: "▤", label: "Ventas" },
