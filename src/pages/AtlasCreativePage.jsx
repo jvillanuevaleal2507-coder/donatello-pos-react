@@ -37,6 +37,14 @@ const css=[
 ".atlas-creative .ac-photo{padding:12px;border:1px solid #dfd6c7;border-radius:12px;min-width:0}",
 ".atlas-creative .ac-photo img{display:block;width:100%;height:215px;object-fit:contain;background:#f1eade;border-radius:8px}",
 ".atlas-creative .ac-film{background:linear-gradient(180deg,#2b3329,#4d3d2d);padding:17px;border-radius:15px;color:#f7efe4}",
+".atlas-creative .ac-film[data-palette=verde]{background:#143b2b;color:#fffaf2;border:5px solid #c9d6b4}",
+".atlas-creative .ac-film[data-palette=verde] img{background:#eee9dc;border:3px solid #c7d4bb}",
+".atlas-creative .ac-film[data-palette=verde] h3{color:#eee8c6}",
+".atlas-creative .ac-film[data-palette=verde] p{color:#faf1de}",
+".atlas-creative .ac-film[data-palette=arena]{background:#e9dbc5;color:#392e24;border:5px solid #bb9e7d}",
+".atlas-creative .ac-film[data-palette=arena] img{background:#fbf7ed;border:3px solid #bb9e7d}",
+".atlas-creative .ac-film[data-palette=arena] h3{color:#6d5037}",
+".atlas-creative .ac-film[data-palette=arena] p{color:#594431}",
 ".atlas-creative .ac-film img{width:100%;height:260px;object-fit:contain;background:#20231d;border-radius:9px}",
 ".atlas-creative .ac-film h3{color:#f8ddb7;margin:12px 0 4px}",
 ".atlas-creative .ac-film p{color:#eadcc6;margin:0 0 13px}",
@@ -90,7 +98,7 @@ export default function AtlasCreativePage({products=[]}){
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  useEffect(()=>{
   let running=true;
-  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=5)}}).catch(()=>{if(running)setConnected(false)});
+  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=5.1)}}).catch(()=>{if(running)setConnected(false)});
   return()=>{running=false};
  },[]);
  useEffect(()=>{
@@ -125,7 +133,7 @@ export default function AtlasCreativePage({products=[]}){
  }
  async function generate(){
   if(!product)return;
-  if(!connected){message("Actualiza el motor de Windows a V5. Luego reinicia CMD y recarga la página.",true);return}
+  if(!connected){message("Actualiza el motor de Windows a V5.1. Luego reinicia CMD y recarga la página.",true);return}
   setRendering(true);setVideo("");message("Verificando el precio y stock actuales...");
   try{
    const {data:p,error:e}=await supabase.from("products").select("id,price,stock,image_url,image_url_2,image_url_3,image_url_4").eq("id",product.id).single();
@@ -207,18 +215,18 @@ export default function AtlasCreativePage({products=[]}){
        <input id={"file"+i} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>i===1?setFile1(e.target.files?.[0]||null):setFile2(e.target.files?.[0]||null)}/>
       </div>)}
      </div>
-     <p className="ac-muted">Fotografías completas, sin zoom agresivo. Si hay una sola, puede usarse dos veces o añadirse otra foto auténtica.</p>
+     <p className="ac-muted">Fotografías completas, sin zoom agresivo. La paleta ahora cambia el estudio entero: cálido fotográfico, verde Donatello o arena clara. Revisa el storyboard a la derecha.</p>
      <div className="ac-two">{props.map(([key,label,max])=><div key={key}>
        <label htmlFor={"field"+key}>{label}</label><input id={"field"+key} maxLength={max} value={plan[key]||""} onChange={e=>change(key,e.target.value)}/>
       </div>)}</div>
      <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering||!connected} onClick={generate}>{rendering?"HyperFrames está creando el MP4...":"▶ Generar MP4 gratis con HyperFrames"}</button>
      <p role="status" className={"ac-status"+(failed?" ac-error":"")}>{status}</p>
-     <p className="ac-muted">Motor Windows: {connected?"V5 conectado":motorVersion?"versión "+motorVersion+" (se requiere V5)":"no conectado"}. Ninguna publicación es automática.</p>
+     <p className="ac-muted">Motor Windows: {connected?"V5.1 conectado":motorVersion?"versión "+motorVersion+" (se requiere V5.1)":"no conectado"}. Ninguna publicación es automática.</p>
     </article>
    </div>
    <div>
     <article className="ac-card"><h3>Vista previa del proyecto</h3>
-     <div className="ac-film">
+     <div className="ac-film" data-palette={plan.palette}>
       <p style={{fontSize:12}}>VENTAS DONATELLO · {templates[plan.template]}</p>
       <p style={{fontSize:12}}>Storyboard: {layouts[plan.layout]} · {transitions[plan.transition]}</p>
       <img src={localUrls[0]||choose(1)||""} alt="Escena uno"/><h3>{plan.title1}</h3><p>{plan.sub1}</p>
