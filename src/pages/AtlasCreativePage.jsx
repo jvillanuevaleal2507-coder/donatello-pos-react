@@ -196,7 +196,7 @@ export default function AtlasCreativePage({products=[]}){
   message("Preparando fotografías originales y animaciones...");
   const images=[];
   for(let i=0;i<photos.length&&i<4;i++){
-    const replaceFile=i===Number(plan.image1)&&file1?file1:i===Number(plan.image2)&&file2?file2:null;
+    const replaceFile=i===0?file1:i===1?file2:null;
     images.push(await photoBytes(photos[i],replaceFile));
   }
   const payload={
@@ -298,39 +298,21 @@ export default function AtlasCreativePage({products=[]}){
        </details>
      </div>)}</div>}
      <p className="ac-muted">La IA define las escenas. Edita solo lo necesario. El precio final siempre se obtiene del POS.</p>
-     <p className="ac-muted">Atlas elige automáticamente el ambiente editorial, la posición de las fotos y la transición. Puedes corregir su propuesta antes de generar.</p>
-     <div className="ac-two">
-       <div><label htmlFor="acLayout">Forma del video</label>
-        <select id="acLayout" value={plan.layout} onChange={e=>change("layout",e.target.value)}>
-         {Object.entries(layouts).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-        </select>
+     <label htmlFor="acPalette">Identidad visual de Donatello</label>
+     <select id="acPalette" value={plan.palette} onChange={e=>change("palette",e.target.value)}>{Object.entries(palettes).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
+     <label htmlFor="acQuestion">Pregunta final del Reel</label>
+     <input id="acQuestion" value={plan.cta||""} maxLength={75} onChange={e=>change("cta",e.target.value)}/>
+     <details style={{margin:"18px 0",padding:12,border:"1px solid #ddd4c5",borderRadius:10}}>
+       <summary style={{fontWeight:800,cursor:"pointer"}}>Revisar fotografías o sustituir una foto real</summary>
+       <div className="ac-two" style={{marginTop:12}}>
+         {photos.map((u,i)=><div className="ac-photo" key={u+i}><strong>Foto {i+1} del POS</strong>
+           <img src={i===0&&localUrls[0]?localUrls[0]:i===1&&localUrls[1]?localUrls[1]:u} alt={"Fotografía "+(i+1)}/>
+           {i<2&&<><label htmlFor={"file"+i}>Cambiar por otra foto auténtica desde Windows</label>
+             <input id={"file"+i} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>i===0?setFile1(e.target.files?.[0]||null):setFile2(e.target.files?.[0]||null)}/></>}
+         </div>)}
        </div>
-       <div><label htmlFor="acTransition">Transición entre fotografías</label>
-        <select id="acTransition" value={plan.transition} onChange={e=>change("transition",e.target.value)}>
-         {Object.entries(transitions).map(([k,v])=><option key={k} value={k}>{v}</option>)}
-        </select>
-       </div>
-     </div>
-     <p className="ac-muted">Propuesta visual: {layouts[plan.layout]} + {transitions[plan.transition]}. La imagen real siempre se muestra completa.</p>
-     <div className="ac-two">
-      <div><label htmlFor="acTpl">Composición base</label><select id="acTpl" value={plan.template} onChange={e=>change("template",e.target.value)}>{Object.entries(templates).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
-      <div><label htmlFor="acMotion">Movimiento</label><select id="acMotion" value={plan.motion} onChange={e=>change("motion",e.target.value)}>{Object.entries(motions).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
-     </div>
-     <label htmlFor="acPalette">Paleta visual</label><select id="acPalette" value={plan.palette} onChange={e=>change("palette",e.target.value)}>{Object.entries(palettes).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select>
-     <div className="ac-two">
-      {[1,2].map(i=><div className="ac-photo" key={i}><strong>{i===1?"Primera foto":"Segunda foto y precio"}</strong>
-       <img src={localUrls[i-1]||choose(i)||""} alt={"Foto "+i}/>
-       <label htmlFor={"pick"+i}>Elegir del POS</label><select id={"pick"+i} value={plan["image"+i]} onChange={e=>{change("image"+i,Number(e.target.value));i===1?setFile1(null):setFile2(null)}}>
-        {photos.map((url,k)=><option key={url+k} value={k}>Foto {k+1}</option>)}
-       </select>
-       <label htmlFor={"file"+i}>O cargar foto real desde Windows</label>
-       <input id={"file"+i} type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>i===1?setFile1(e.target.files?.[0]||null):setFile2(e.target.files?.[0]||null)}/>
-      </div>)}
-     </div>
-     <p className="ac-muted">Fotografías completas, sin zoom agresivo. La paleta ahora cambia el estudio entero: cálido fotográfico, verde Donatello o arena clara. Revisa el storyboard a la derecha.</p>
-     <div className="ac-two">{props.map(([key,label,max])=><div key={key}>
-       <label htmlFor={"field"+key}>{label}</label><input id={"field"+key} maxLength={max} value={plan[key]||""} onChange={e=>change(key,e.target.value)}/>
-      </div>)}</div>
+       <p className="ac-help">Las escenas eligen qué fotografía usar. No se generan imágenes artificiales ni se recorta el mueble.</p>
+     </details>
      <button type="button" className="ac-btn" style={{background:"#d2e0ca",color:"#1a4630"}} disabled={!product||!photos.length||busy||rendering||previewing||!connected} onClick={preparePreview}>
       {previewing?"Preparando storyboard...":"◉ Previsualizar animaciones sin renderizar"}
      </button>
@@ -346,15 +328,15 @@ export default function AtlasCreativePage({products=[]}){
    <div>
     <article className="ac-card"><h3>Vista previa del proyecto</h3>
      <div className="ac-film" data-palette={plan.palette}>
-      <p style={{fontSize:12}}>VENTAS DONATELLO · {templates[plan.template]}</p>
-      <p style={{fontSize:12}}>Storyboard: {layouts[plan.layout]} · {transitions[plan.transition]}</p>
-      <img src={localUrls[0]||choose(1)||""} alt="Escena uno"/><h3>{plan.title1}</h3><p>{plan.sub1}</p>
-      <img src={localUrls[1]||choose(2)||""} alt="Escena dos"/><h3>{plan.title2}</h3><p>{plan.sub2}</p>
-      <div style={{border:"1px solid #c0ab82",borderRadius:10,padding:15}}>
-       <strong>{product?.name||"Selecciona un producto"}</strong>
-       <h3>{product?money(product.price):""}</h3><p>{plan.details}</p><p>{plan.cta}</p>
-      </div>
-     </div><p className="ac-muted">Esta vista muestra fotos y textos; las animaciones se comprueban en el MP4 final.</p>
+      <p style={{fontSize:12}}>VENTAS DONATELLO · {palettes[plan.palette]}</p>
+      {Array.isArray(plan.storyboard?.scenes)?plan.storyboard.scenes.map((scene,i)=><div key={i} style={{marginBottom:19,borderBottom:"1px solid #97836a",paddingBottom:14}}>
+        <p style={{fontSize:12}}>{i+1} · {sceneLayouts[scene.layout]} · {scene.duration} segundos · {sceneEffects[scene.animation]}</p>
+        <img src={photos[scene.image]||""} alt={"Escena "+(i+1)}/>
+        <h3>{scene.layout==="offer"?product?.name:scene.title}</h3>
+        <p>{scene.layout==="offer"?money(product?.price):scene.subtitle}</p>
+      </div>):<p>Selecciona un producto y pídele a Atlas que proponga un Reel.</p>}
+      <p style={{fontSize:12}}>El producto siempre se presenta con sus fotografías originales.</p>
+    </div><p className="ac-muted">Esta vista muestra fotos y textos; las animaciones se comprueban en el MP4 final.</p>
     </article>
     <article className="ac-card"><h3>Texto para Facebook y grupos</h3>
       <label htmlFor="acPost">Publicación preparada por Atlas · editable</label>
