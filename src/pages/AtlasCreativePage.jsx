@@ -8,6 +8,8 @@ const ENGINE="http://127.0.0.1:4477";
 const templates={editorial:"Editorial cálido",detalles:"Detalles que enamoran",imagina:"Imagina tu espacio"};
 const motions={suave:"Suave",lateral:"Desplazamiento lateral",revelado:"Revelado",estatico:"Estático"};
 const palettes={calido:"Cálido",verde:"Verde Donatello",arena:"Arena"};
+const CONCEPT_DIRECTIONS=["cinema","revista","impacto"];
+const conceptCaptions={cinema:"Primero el mueble, después el mensaje y al final el precio.",revista:"Primero una idea, después la fotografía y al final la marca.",impacto:"Primero el precio, después el mueble y al final una pregunta."};
 const artDirections={
  cinema:"Cine · fotografía a pantalla completa",
  revista:"Revista · papel claro, composición asimétrica",
@@ -76,6 +78,14 @@ const css=[
 ".atlas-creative .ac-concept{padding:14px;border-left:4px solid #ba8c55;background:#f7f1e6;border-radius:8px;margin:16px 0}",
 ".atlas-creative video{width:100%;max-height:650px;border-radius:12px;background:#1c1c1c}",
 ".atlas-creative .ac-queue{display:flex;gap:8px;flex-wrap:wrap;padding:8px 0}",
+".atlas-creative .ac-concepts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:17px}",
+".atlas-creative .ac-concept-item{min-width:0;border:1px solid #cfc4b5;border-radius:12px;padding:10px;background:#fbf8ef}",
+".atlas-creative .ac-concept-item.selected{border:3px solid #38684a;background:#eff4e7}",
+".atlas-creative .ac-concept-item iframe{display:block;width:100%;height:310px;background:#292d24;border:0;border-radius:8px;margin:8px 0}",
+".atlas-creative .ac-concept-item h4{font-size:14px;margin:0 0 8px}",
+".atlas-creative .ac-concept-item p{font-size:12px;color:#596455;line-height:1.4;margin:8px 0}",
+".atlas-creative .ac-concept-item button{border:0;background:#204b35;color:white;padding:10px;border-radius:8px;width:100%;font-weight:800;cursor:pointer}",
+"@media(max-width:680px){.atlas-creative .ac-concepts{grid-template-columns:1fr}.atlas-creative .ac-concept-item iframe{height:450px}}",
 ".atlas-creative .ac-queue button{background:#f5f0e5;color:#294634;border:1px solid #cdd0be;padding:10px 12px;border-radius:10px;cursor:pointer;font-weight:700}",
 ".atlas-creative .ac-queue button.active{background:#214a34;color:#fff}",
 ".atlas-creative .ac-queue small{display:block;font-weight:500}",
@@ -118,6 +128,10 @@ export default function AtlasCreativePage({products=[]}){
  const [iteration,setIteration]=useState(0);
  const [pastTitles,setPastTitles]=useState([]);
  const [pastLayouts,setPastLayouts]=useState([]);
+ const [concepts,setConcepts]=useState([]);
+ const [conceptPreviews,setConceptPreviews]=useState({});
+ const [selectedConcept,setSelectedConcept]=useState("");
+ const preserveChosenPreview=useRef(false);
  const [campaign,setCampaign]=useState(loadCampaign);
  const queue=campaign.queue.filter(q=>stock.some(p=>String(p.id)===String(q)));
  const statusFor=pid=>campaign.drafts[String(pid)]?.state||"pendiente";
@@ -153,12 +167,15 @@ export default function AtlasCreativePage({products=[]}){
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  useEffect(()=>{
   let running=true;
-  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=7)}}).catch(()=>{if(running)setConnected(false)});
+  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=8)}}).catch(()=>{if(running)setConnected(false)});
   return()=>{running=false};
  },[]);
  useEffect(()=>{
   const saved=campaign.drafts[String(id)]||{};
   setPlan({...empty,details:product?.name||"",image2:photos.length>1?1:0,...(saved.plan||{})});
+  setConcepts(Array.isArray(saved.concepts)?saved.concepts:[]);
+  setConceptPreviews({});
+  setSelectedConcept(saved.selectedConcept||"");
   setPostCopy(saved.postCopy||"");
   setFile1(null);setFile2(null);setVideo(saved.video||"");setProjectId("");setPreviewUrl("");
   setPastTitles([]);setPastLayouts([]);setIteration(0);
@@ -168,7 +185,10 @@ export default function AtlasCreativePage({products=[]}){
   setLocalUrls(urls);
   return()=>urls.forEach(u=>u&&URL.revokeObjectURL(u));
  },[file1,file2]);
- useEffect(()=>{setProjectId("");setPreviewUrl("")},[plan,file1,file2,id]);
+ useEffect(()=>{
+  if(preserveChosenPreview.current){preserveChosenPreview.current=false;return}
+  setProjectId("");setPreviewUrl("");
+ },[plan,file1,file2,id]);
  const results=useMemo(()=>{
   const q=filter.toLocaleLowerCase("es-MX").trim();
   return stock.filter(p=>!q||(String(p.name)+" "+String(p.code)+" "+String(p.category)).toLocaleLowerCase("es-MX").includes(q)).slice(0,40);
@@ -176,29 +196,81 @@ export default function AtlasCreativePage({products=[]}){
  const change=(key,value)=>setPlan(prev=>({...prev,[key]:value}));
  const choose=n=>photos[Number(plan["image"+n])||0]||"";
  function message(s,error=false){setStatus(s);setFailed(error)}
- async function propose(){
+ async function proposeThree(){
   if(!product)return;
-  setBusy(true);setVideo("");message("Atlas está preparando una propuesta original con las fotos y datos del POS...");
+  setBusy(true);setVideo("");
+  setConcepts([]);setConceptPreviews({});setSelectedConcept("");
+  message("Atlas está preparando tres conceptos realmente diferentes para "+product.name+"...");
+  const proposals=[];
+  const previews={};
   try {
-    const r=await authorizedAtlasFetch("/api/atlas/enrich?mode=creative",{method:"POST",headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({
-       productId:product.id,instruction,variation:iteration+1,pastTitles,pastLayouts,
-       pastDirections:Object.values(campaign.drafts).sort((a,b)=>String(a.updatedAt||"").localeCompare(String(b.updatedAt||""))).slice(-8).map(d=>d.plan?.artDirection).filter(Boolean)
-     })});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d.creative)throw Error(d.error||"Atlas no devolvió una propuesta.");
-    setPlan(prev=>({...prev,...d.creative}));setFile1(null);setFile2(null);
-    setPostCopy(d.creative.facebookPost||"");
+    let images=null;
+    if(connected){
+      try {
+        images=await Promise.all(photos.slice(0,4).map((src,i)=>photoBytes(src,i===0?file1:i===1?file2:null)));
+      }catch(err){
+        message("Las propuestas se podrán crear, pero la vista animada no estará disponible hasta cargar las fotografías originales. "+err.message,true);
+      }
+    }
+    for(const direction of CONCEPT_DIRECTIONS){
+      message("Atlas: creando concepto "+artDirections[direction]+" ("+(proposals.length+1)+"/3)...");
+      const response=await authorizedAtlasFetch("/api/atlas/enrich?mode=creative",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          productId:product.id,instruction,variation:iteration+proposals.length+1,
+          pastTitles,pastLayouts,forcedDirection:direction,
+          pastDirections:Object.values(campaign.drafts)
+            .sort((a,b)=>String(a.updatedAt||"").localeCompare(String(b.updatedAt||"")))
+            .slice(-8).map(d=>d.plan?.artDirection).filter(Boolean)
+        })
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||!data.creative)throw Error(data.error||"Atlas no devolvió el concepto "+direction);
+      const concept={...empty,...data.creative,artDirection:direction};
+      proposals.push(concept);setConcepts([...proposals]);
+      if(connected&&images){
+        try {
+          const job=await motorJson("/api/project",{
+            method:"POST",headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              product:product.name,price:product.price,images,palette:concept.palette,
+              artDirection:direction,title1:concept.title1,title2:concept.title2,
+              sub1:concept.sub1,sub2:concept.sub2,details:concept.details,cta:concept.cta,
+              storyboard:concept.storyboard
+            })
+          });
+          previews[direction]={id:job.id,url:ENGINE+job.preview+"&embed=1"};
+          setConceptPreviews({...previews});
+        }catch(err){message("Concepto "+direction+" creado, pero sin animación previa: "+err.message,true)}
+      }
+    }
     addQueue(product.id);
-    track(product.id,{plan:{...plan,...d.creative},postCopy:d.creative.facebookPost||"",state:"borrador"});
-    setIteration(v=>v+1);setPastTitles(p=>[...p,d.creative.title1,d.creative.title2].slice(-8));
-    setPastLayouts(p=>[...p,d.creative.layout].slice(-8));
-    message("✓ Propuesta preparada. Revisa y modifica los textos antes de generar.");
-  }catch(e){message(e.message||String(e),true)}finally{setBusy(false)}
+    setIteration(v=>v+3);
+    track(product.id,{concepts:proposals,state:"borrador"});
+    message("✓ Tres conceptos listos. Abre las vistas animadas y elige SOLO uno para convertirlo en MP4.");
+  }catch(err){
+    message("Se prepararon "+proposals.length+" de tres conceptos. "+String(err.message||err),true);
+    if(proposals.length)track(product.id,{concepts:proposals,state:"borrador"});
+  }finally{setBusy(false)}
+ }
+ function chooseConcept(direction){
+  const selected=concepts.find(x=>x.artDirection===direction);
+  if(!selected||!product)return;
+  preserveChosenPreview.current=true;
+  setPlan(selected);
+  setPostCopy(selected.facebookPost||"");
+  setSelectedConcept(direction);
+  setVideo("");
+  setProjectId(conceptPreviews[direction]?.id||"");
+  setPreviewUrl(conceptPreviews[direction]?.url||"");
+  track(product.id,{
+    plan:selected,concepts,selectedConcept:direction,postCopy:selected.facebookPost||"",state:"borrador"
+  });
+  message("✓ Elegiste "+artDirections[direction]+". Revisa el guion y genera el MP4 de este concepto.");
  }
  async function createLocalProject(){
   if(!product)throw Error("Selecciona un producto.");
-  if(!connected)throw Error("Inicia el motor V7 de Windows y recarga el POS.");
+  if(!connected)throw Error("Inicia el motor V8 de Windows y recarga el POS.");
   const {data:p,error:e}=await supabase.from("products")
     .select("id,price,stock,image_url,image_url_2,image_url_3,image_url_4")
     .eq("id",product.id).single();
@@ -287,11 +359,33 @@ export default function AtlasCreativePage({products=[]}){
       <p className="ac-muted">{photos.length} foto(s) reales. El costo de compra no se envía a Atlas.</p></div>
      </div>}
     </article>
-    <article className="ac-card"><h3>2 · Pídele una propuesta a Atlas</h3>
-     <label htmlFor="acTalk">Tu instrucción creativa</label>
-     <textarea id="acTalk" maxLength={600} value={instruction} onChange={e=>setInstruction(e.target.value)} placeholder="Ej. Dale un toque editorial diferente, no hagas mucho zoom y enfócate en el mueble real."/>
-     <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering} onClick={propose}>{busy?"Atlas está creando...":"✦ Atlas, propón un Reel diferente"}</button>
-     {plan.concept&&<div className="ac-concept"><strong>{plan.concept}</strong><p>{plan.why}</p></div>}
+    <article className="ac-card"><h3>2 · Atlas crea tres anuncios diferentes</h3>
+     <p className="ac-help">Cine empieza con el producto; Editorial empieza con texto; Impacto empieza con el precio. Las fotos son siempre las originales del POS.</p>
+     <label htmlFor="acTalk">Dile a Atlas qué buscas (opcional)</label>
+     <textarea id="acTalk" maxLength={600} value={instruction} onChange={e=>setInstruction(e.target.value)}
+       placeholder="Por ejemplo: elegante, con movimientos tranquilos y una pregunta natural. Nada de textos exagerados."/>
+     <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering}
+       onClick={proposeThree}>{busy?"Atlas está preparando tus tres opciones...":"✦ Generar 3 conceptos diferentes"}</button>
+     {concepts.length>0&&<div className="ac-concepts">
+       {CONCEPT_DIRECTIONS.map((direction,i)=>{
+         const proposal=concepts.find(x=>x.artDirection===direction);
+         if(!proposal)return <div className="ac-concept-item" key={direction}><h4>{i+1} · {artDirections[direction]}</h4><p>Preparando...</p></div>;
+         const animation=conceptPreviews[direction];
+         return <div className={"ac-concept-item"+(selectedConcept===direction?" selected":"")} key={direction}>
+           <h4>{i+1} · {artDirections[direction]}</h4>
+           {animation?<iframe src={animation.url} title={"Animación "+direction} loading="lazy"/>:
+              <div style={{padding:12,background:"#e8e4d8",borderRadius:8,minHeight:95}}>
+                <p>Storyboard listo, sin previsualización animada. Para verla, inicia el motor V8 y vuelve a generar las opciones.</p>
+              </div>}
+           <p><strong>{proposal.concept||proposal.title1}</strong></p>
+           <p>{conceptCaptions[direction]}</p>
+           <p>{proposal.storyboard?.scenes?.length||0} escenas · {Math.round((proposal.storyboard?.scenes||[]).reduce((n,x)=>n+Number(x.duration||0),0)*10)/10}s</p>
+           <button type="button" onClick={()=>chooseConcept(direction)}>{selectedConcept===direction?"✓ Elegido":"Elegir este concepto"}</button>
+         </div>;
+       })}
+     </div>}
+     {selectedConcept&&<p className="ac-status">Seleccionado: <strong>{artDirections[selectedConcept]}</strong>. Ahora solo ese diseño se convierte a MP4.</p>}
+     {!selectedConcept&&concepts.length>0&&<p className="ac-help">Para evitar tres renders innecesarios, las animaciones son vistas HTML rápidas; HyperFrames producirá únicamente el MP4 que apruebes.</p>}
     </article>
     <article className="ac-card"><h3>3 · Dirección de arte del Reel</h3>
      <label htmlFor="acArtDirection">Estilo completo del video (no solo colores)</label>
@@ -344,7 +438,7 @@ export default function AtlasCreativePage({products=[]}){
      </div>}
      <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering||previewing||!connected} onClick={generate}>{rendering?"HyperFrames está creando el MP4...":"▶ Generar MP4 gratis con HyperFrames"}</button>
      <p role="status" className={"ac-status"+(failed?" ac-error":"")}>{status}</p>
-     <p className="ac-muted">Motor Windows: {connected?"V7 conectado":motorVersion?"versión "+motorVersion+" (se requiere V7)":"no conectado"}. Ninguna publicación es automática.</p>
+     <p className="ac-muted">Motor Windows: {connected?"V8 conectado":motorVersion?"versión "+motorVersion+" (se requiere V8)":"no conectado"}. Ninguna publicación es automática.</p>
     </article>
    </div>
    <div>
