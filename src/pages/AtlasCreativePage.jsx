@@ -8,13 +8,15 @@ const ENGINE="http://127.0.0.1:4477";
 const templates={editorial:"Editorial cálido",detalles:"Detalles que enamoran",imagina:"Imagina tu espacio"};
 const motions={suave:"Suave",lateral:"Desplazamiento lateral",revelado:"Revelado",estatico:"Estático"};
 const palettes={calido:"Cálido",verde:"Verde Donatello",arena:"Arena"};
+const layouts={escaparate:"Escaparate · imagen central",dividida:"Revista · foto y texto lateral",galeria:"Galería · dos fotografías",portada:"Portada · foto protagonista"};
+const transitions={fundido:"Fundido elegante",cortina:"Cortina editorial",lateral:"Desplazamiento lateral",vertical:"Aparición vertical"};
 const props=[
   ["title1","Título inicial",55],["sub1","Frase de apertura",110],
   ["title2","Título segunda escena",55],["sub2","Frase segunda escena",110],
   ["details","Detalle final",100],["cta","Pregunta final",75],
   ["tag1","Etiqueta inicial",32],["tag2","Etiqueta final",32]
 ];
-const empty={concept:"",why:"",template:"editorial",motion:"suave",palette:"calido",
+const empty={concept:"",why:"",template:"editorial",motion:"suave",palette:"calido",layout:"escaparate",transition:"fundido",
  image1:0,image2:1,title1:"Un detalle para tu hogar.",title2:"Dale personalidad a tu espacio.",
  sub1:"Conoce este producto en Donatello.",sub2:"Un complemento especial.",
  details:"",cta:"¿Dónde lo pondrías?",tag1:"Donatello",tag2:"Pregunta sin compromiso"};
@@ -77,6 +79,7 @@ export default function AtlasCreativePage({products=[]}){
  const [instruction,setInstruction]=useState("");
  const [iteration,setIteration]=useState(0);
  const [pastTitles,setPastTitles]=useState([]);
+ const [pastLayouts,setPastLayouts]=useState([]);
  const [file1,setFile1]=useState(null),[file2,setFile2]=useState(null);
  const [localUrls,setLocalUrls]=useState(["",""]);
  const [connected,setConnected]=useState(false),[motorVersion,setMotorVersion]=useState("");
@@ -87,12 +90,12 @@ export default function AtlasCreativePage({products=[]}){
  useEffect(()=>{alive.current=true;return()=>{alive.current=false}},[]);
  useEffect(()=>{
   let running=true;
-  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=4)}}).catch(()=>{if(running)setConnected(false)});
+  motorJson("/health").then(d=>{if(running){setMotorVersion(d.version||"");setConnected(Number.parseFloat(d.version)>=5)}}).catch(()=>{if(running)setConnected(false)});
   return()=>{running=false};
  },[]);
  useEffect(()=>{
   setPlan({...empty,details:product?.name||"",image2:photos.length>1?1:0});
-  setFile1(null);setFile2(null);setVideo("");setPastTitles([]);setIteration(0);
+  setFile1(null);setFile2(null);setVideo("");setPastTitles([]);setPastLayouts([]);setIteration(0);
  },[id,product?.name,photos.length]);
  useEffect(()=>{
   const urls=[file1,file2].map(f=>f?URL.createObjectURL(f):"");
@@ -111,17 +114,18 @@ export default function AtlasCreativePage({products=[]}){
   setBusy(true);setVideo("");message("Atlas está preparando una propuesta original con las fotos y datos del POS...");
   try {
     const r=await authorizedAtlasFetch("/api/atlas/enrich?mode=creative",{method:"POST",headers:{"Content-Type":"application/json"},
-     body:JSON.stringify({productId:product.id,instruction,variation:iteration+1,pastTitles})});
+     body:JSON.stringify({productId:product.id,instruction,variation:iteration+1,pastTitles,pastLayouts})});
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.creative)throw Error(d.error||"Atlas no devolvió una propuesta.");
     setPlan(prev=>({...prev,...d.creative}));setFile1(null);setFile2(null);
     setIteration(v=>v+1);setPastTitles(p=>[...p,d.creative.title1,d.creative.title2].slice(-8));
+    setPastLayouts(p=>[...p,d.creative.layout].slice(-8));
     message("✓ Propuesta preparada. Revisa y modifica los textos antes de generar.");
   }catch(e){message(e.message||String(e),true)}finally{setBusy(false)}
  }
  async function generate(){
   if(!product)return;
-  if(!connected){message("Actualiza el motor de Windows a V4. Luego reinicia CMD y recarga la página.",true);return}
+  if(!connected){message("Actualiza el motor de Windows a V5. Luego reinicia CMD y recarga la página.",true);return}
   setRendering(true);setVideo("");message("Verificando el precio y stock actuales...");
   try{
    const {data:p,error:e}=await supabase.from("products").select("id,price,stock,image_url,image_url_2,image_url_3,image_url_4").eq("id",product.id).single();
@@ -131,7 +135,7 @@ export default function AtlasCreativePage({products=[]}){
    if(!plan.title1.trim()||!plan.title2.trim())throw Error("Completa los títulos de las dos escenas.");
    message("Preparando las fotografías originales...");
    const images=[await photoBytes(choose(1),file1),await photoBytes(choose(2),file2)];
-   const payload={product:product.name,price:product.price,images,template:plan.template,motion:plan.motion,palette:plan.palette,
+   const payload={product:product.name,price:product.price,images,template:plan.template,motion:plan.motion,palette:plan.palette,layout:plan.layout,transition:plan.transition,
      title1:plan.title1,title2:plan.title2,sub1:plan.sub1,sub2:plan.sub2,details:plan.details,cta:plan.cta,tag1:plan.tag1,tag2:plan.tag2};
    const job=await motorJson("/api/project",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
    message("HyperFrames está convirtiendo HTML a MP4 en tu computadora...");
@@ -173,7 +177,21 @@ export default function AtlasCreativePage({products=[]}){
      <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering} onClick={propose}>{busy?"Atlas está creando...":"✦ Atlas, propón un Reel diferente"}</button>
      {plan.concept&&<div className="ac-concept"><strong>{plan.concept}</strong><p>{plan.why}</p></div>}
     </article>
-    <article className="ac-card"><h3>3 · Fotos, animación y textos</h3>
+    <article className="ac-card"><h3>3 · Dirección visual y textos</h3>
+     <p className="ac-muted">Atlas elige automáticamente el ambiente editorial, la posición de las fotos y la transición. Puedes corregir su propuesta antes de generar.</p>
+     <div className="ac-two">
+       <div><label htmlFor="acLayout">Forma del video</label>
+        <select id="acLayout" value={plan.layout} onChange={e=>change("layout",e.target.value)}>
+         {Object.entries(layouts).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+        </select>
+       </div>
+       <div><label htmlFor="acTransition">Transición entre fotografías</label>
+        <select id="acTransition" value={plan.transition} onChange={e=>change("transition",e.target.value)}>
+         {Object.entries(transitions).map(([k,v])=><option key={k} value={k}>{v}</option>)}
+        </select>
+       </div>
+     </div>
+     <p className="ac-muted">Propuesta visual: {layouts[plan.layout]} + {transitions[plan.transition]}. La imagen real siempre se muestra completa.</p>
      <div className="ac-two">
       <div><label htmlFor="acTpl">Composición base</label><select id="acTpl" value={plan.template} onChange={e=>change("template",e.target.value)}>{Object.entries(templates).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
       <div><label htmlFor="acMotion">Movimiento</label><select id="acMotion" value={plan.motion} onChange={e=>change("motion",e.target.value)}>{Object.entries(motions).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></div>
@@ -195,13 +213,14 @@ export default function AtlasCreativePage({products=[]}){
       </div>)}</div>
      <button type="button" className="ac-btn" disabled={!product||!photos.length||busy||rendering||!connected} onClick={generate}>{rendering?"HyperFrames está creando el MP4...":"▶ Generar MP4 gratis con HyperFrames"}</button>
      <p role="status" className={"ac-status"+(failed?" ac-error":"")}>{status}</p>
-     <p className="ac-muted">Motor Windows: {connected?"V4 conectado":motorVersion?"versión "+motorVersion+" (se requiere V4)":"no conectado"}. Ninguna publicación es automática.</p>
+     <p className="ac-muted">Motor Windows: {connected?"V5 conectado":motorVersion?"versión "+motorVersion+" (se requiere V5)":"no conectado"}. Ninguna publicación es automática.</p>
     </article>
    </div>
    <div>
     <article className="ac-card"><h3>Vista previa del proyecto</h3>
      <div className="ac-film">
       <p style={{fontSize:12}}>VENTAS DONATELLO · {templates[plan.template]}</p>
+      <p style={{fontSize:12}}>Storyboard: {layouts[plan.layout]} · {transitions[plan.transition]}</p>
       <img src={localUrls[0]||choose(1)||""} alt="Escena uno"/><h3>{plan.title1}</h3><p>{plan.sub1}</p>
       <img src={localUrls[1]||choose(2)||""} alt="Escena dos"/><h3>{plan.title2}</h3><p>{plan.sub2}</p>
       <div style={{border:"1px solid #c0ab82",borderRadius:10,padding:15}}>
