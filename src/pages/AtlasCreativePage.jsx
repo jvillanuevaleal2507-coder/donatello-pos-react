@@ -207,7 +207,7 @@ export default function AtlasCreativePage({products=[]}){
   const job=await motorJson("/api/project",{
     method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)
   });
-  setProjectId(job.id);setPreviewUrl(ENGINE+job.preview);
+  setProjectId(job.id);setPreviewUrl(ENGINE+job.preview+"&embed=1");
   track(product.id,{plan,postCopy,state:"borrador"});
   return job.id;
  }
