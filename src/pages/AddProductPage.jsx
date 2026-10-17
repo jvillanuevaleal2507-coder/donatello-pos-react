@@ -233,6 +233,7 @@ export default function AddProductPage({ products, loadProducts }) {
     baseCostMxn + commissionMxn + taxMxn + extraCostMxn;
   const profit = price - totalCostMxn;
   const margin = price > 0 ? (profit / price) * 100 : 0;
+  const markup = totalCostMxn > 0 ? (profit / totalCostMxn) * 100 : 0;
 
   function updateField(field, value) {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -430,6 +431,38 @@ export default function AddProductPage({ products, loadProducts }) {
                 placeholder="Precio final"
               />
             </label>
+
+            <div
+              className="span-2"
+              aria-live="polite"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+                gap: 12,
+                padding: 16,
+                borderRadius: 14,
+                background: "var(--surface, #f5f7f9)",
+                border: "1px solid var(--border, #dce2e8)",
+              }}
+            >
+              <div>
+                <span style={{ display: "block", fontSize: 12 }}>Utilidad estimada</span>
+                <strong style={{ display: "block", fontSize: 22, color: profit >= 0 ? "#16703d" : "#b42318" }}>
+                  {price > 0 ? money(profit) : "—"}
+                </strong>
+              </div>
+              <div>
+                <span style={{ display: "block", fontSize: 12 }}>Margen sobre venta</span>
+                <strong style={{ display: "block", fontSize: 20 }}>{price > 0 ? `${margin.toFixed(1)}%` : "—"}</strong>
+              </div>
+              <div>
+                <span style={{ display: "block", fontSize: 12 }}>Ganancia sobre costo</span>
+                <strong style={{ display: "block", fontSize: 20 }}>{price > 0 && totalCostMxn > 0 ? `${markup.toFixed(1)}%` : "—"}</strong>
+              </div>
+              <small style={{ gridColumn: "1 / -1", opacity: 0.8 }}>
+                Calculado con el costo total, incluyendo comisión, impuestos y gastos extra.
+              </small>
+            </div>
 
             <label>
               Stock
