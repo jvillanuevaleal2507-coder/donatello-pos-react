@@ -8845,6 +8845,65 @@ select {
   }
 }
 
+/* ===== Inventario móvil: aislamiento final del layout ===== */
+@media (max-width: 700px) {
+  .workspace-content > .inventory-section.inventory-modern {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .inventory-modern .inventory-products-grid,
+  .inventory-modern .inventory-products-grid.list-mode {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .inventory-modern .inventory-products-grid > .inventory-product-card {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .inventory-modern .inventory-products-grid .inventory-product-card-main {
+    display: none !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-row {
+    display: grid !important;
+    grid-template-columns: 82px minmax(0, 1fr) !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 10px;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-info {
+    min-width: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-info h3,
+  .inventory-modern .inventory-products-grid .inventory-mobile-info p {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-prices,
+  .inventory-modern .inventory-products-grid .inventory-mobile-details,
+  .inventory-modern .inventory-products-grid .inventory-mobile-actions {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
