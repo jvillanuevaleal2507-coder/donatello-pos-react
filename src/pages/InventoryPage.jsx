@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import "./InventoryMobile.css";
 import { createClient } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 
