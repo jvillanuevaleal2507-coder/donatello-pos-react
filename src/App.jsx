@@ -8872,8 +8872,10 @@ select {
     display: none !important;
   }
   .inventory-modern .inventory-products-grid .inventory-mobile-row {
-    display: grid !important;
-    grid-template-columns: 82px minmax(0, 1fr) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    grid-template-columns: none !important;
     width: 100%;
     min-width: 0;
     max-width: 100%;
