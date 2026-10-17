@@ -14,7 +14,7 @@
   .inventory-modern .inventory-product-card > .inventory-product-card-main { display: none !important; }
   .inventory-modern .inventory-mobile-row {
     display: grid !important;
-    grid-template-columns: 82px minmax(0,1fr) !important;
+    grid-template-columns: minmax(0,1fr) !important;
     gap: 10px; width: 100%; max-width: 100%; min-width: 0;
     align-items: start;
   }
@@ -67,4 +67,42 @@
   .inventory-modern .inventory-mobile-actions .inventory-danger-link { font-size: 12px; }
   .inventory-modern .inventory-toolbar-card,
   .inventory-modern .inventory-heading-row { max-width: 100%; min-width: 0; }
+}
+
+/* Seguridad contra recortes: apilar fotografía y datos en el ancho completo. */
+@media (max-width: 700px) {
+  .inventory-modern.inventory-section {
+    display: block !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 9px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-thumb {
+    width: 100% !important;
+    height: 130px !important;
+    max-width: 100% !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-info {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-info h3 {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
 }
