@@ -8906,6 +8906,47 @@ select {
   }
 }
 
+/* ===== Inventario: contener anchura de ambas filas del grid ===== */
+@media (max-width: 700px) {
+  /* Grid padre: evita que el contenido de KPI o filtros fije el ancho de la columna. */
+  .workspace-content {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .workspace-content > .inventory-totals-section,
+  .workspace-content > .inventory-section.inventory-modern {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+  }
+  .inventory-totals-section {
+    overflow: hidden;
+  }
+  .inventory-totals-section .inventory-kpis-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+  }
+  .inventory-modern .inventory-toolbar-card,
+  .inventory-modern .inventory-category-row,
+  .inventory-modern .inventory-filter-row,
+  .inventory-modern .inventory-products-grid {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .inventory-modern .inventory-category-row .category-pills {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
