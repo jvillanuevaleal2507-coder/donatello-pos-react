@@ -587,14 +587,15 @@ export default function AddProductPage({ products, loadProducts }) {
                 onChange={(e) => updateField(field, e.target.value)}
                 placeholder="URL opcional"
               />
-              <span className="add-image-upload">
-                {uploadingImage ? "Subiendo..." : "Subir archivo"}
+              <span className="add-image-upload" style={{ display: "block", position: "relative", overflow: "hidden", cursor: uploadingImage ? "wait" : "pointer", minHeight: 44 }}>
+                {uploadingImage ? "Subiendo..." : "Elegir foto del celular"}
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => handleImageFile(field, e)}
-                  hidden
+                  aria-label={`Seleccionar ${label}`}
+                  onChange={(e) => { handleImageFile(field, e); e.target.value = ""; }}
                   disabled={uploadingImage}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", fontSize: 0 }}
                 />
               </span>
             </label>
