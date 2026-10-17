@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import "./InventoryMobile.css";
 import { createClient } from "@supabase/supabase-js";
 import { Link } from "react-router-dom";
 
@@ -344,6 +345,31 @@ export default function InventoryPage({
 
             return (
               <Card key={p.id} className="inventory-product-card">
+                <div className="inventory-mobile-row">
+                  <div className="inventory-mobile-thumb">
+                    <ProductImage src={p.image_url} alt={p.name} priority={index < 8} />
+                    {extraPhotos > 0 && <span className="inventory-photo-count">+{extraPhotos} fotos</span>}
+                  </div>
+                  <div className="inventory-mobile-info">
+                    <h3>{p.name}</h3>
+                    <p>{p.code || "Sin código"} · {p.category || "Sin categoría"}</p>
+                    <span className={`stock-status ${status.tone}`}>{status.label}</span>
+                    <div className="inventory-mobile-prices">
+                      <div><small>Precio</small><strong>{money(p.price)}</strong></div>
+                      <div><small>Stock</small><strong>{Number(p.stock || 0)}</strong></div>
+                    </div>
+                    <div className="inventory-mobile-details">
+                      <span>Costo <b>{money(p.cost)}</b></span>
+                      <span>Margen <b>{margin(p.price, p.cost).toFixed(1)}%</b></span>
+                    </div>
+                    <div className="inventory-mobile-actions">
+                      <button className="btn btn-secondary" onClick={() => setEditingId(editingId === p.id ? null : p.id)} type="button">
+                        {editingId === p.id ? "Cerrar edición" : "✎ Editar"}
+                      </button>
+                      <button className="inventory-danger-link" onClick={() => deleteProduct(p)} type="button">Eliminar</button>
+                    </div>
+                  </div>
+                </div>
                 <div className="inventory-product-card-main">
                   <div className="inventory-image-wrap">
                     <ProductImage src={p.image_url} alt={p.name} priority={index < 8} />

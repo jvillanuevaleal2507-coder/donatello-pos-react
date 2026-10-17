@@ -8845,6 +8845,108 @@ select {
   }
 }
 
+/* ===== Inventario móvil: aislamiento final del layout ===== */
+@media (max-width: 700px) {
+  .workspace-content > .inventory-section.inventory-modern {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .inventory-modern .inventory-products-grid,
+  .inventory-modern .inventory-products-grid.list-mode {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .inventory-modern .inventory-products-grid > .inventory-product-card {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .inventory-modern .inventory-products-grid .inventory-product-card-main {
+    display: none !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-row {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    grid-template-columns: none !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    gap: 10px;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-info {
+    min-width: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-info h3,
+  .inventory-modern .inventory-products-grid .inventory-mobile-info p {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+  .inventory-modern .inventory-products-grid .inventory-mobile-prices,
+  .inventory-modern .inventory-products-grid .inventory-mobile-details,
+  .inventory-modern .inventory-products-grid .inventory-mobile-actions {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+/* ===== Inventario: contener anchura de ambas filas del grid ===== */
+@media (max-width: 700px) {
+  /* Grid padre: evita que el contenido de KPI o filtros fije el ancho de la columna. */
+  .workspace-content {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .workspace-content > .inventory-totals-section,
+  .workspace-content > .inventory-section.inventory-modern {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    justify-self: stretch !important;
+  }
+  .inventory-totals-section {
+    overflow: hidden;
+  }
+  .inventory-totals-section .inventory-kpis-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain;
+  }
+  .inventory-modern .inventory-toolbar-card,
+  .inventory-modern .inventory-category-row,
+  .inventory-modern .inventory-filter-row,
+  .inventory-modern .inventory-products-grid {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .inventory-modern .inventory-category-row .category-pills {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+}
+
 `;
   export default function VentasDonatelloPOS() {
   return (
