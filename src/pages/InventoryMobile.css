@@ -100,3 +100,33 @@
   .inventory-modern .inventory-status-pills,
   .inventory-modern .category-pills { max-width: 100%; min-width: 0; overflow-x: auto; }
 }
+
+/* Contención estructural: evitar que hijos de grid/flex impongan ancho al viewport. */
+@media (max-width: 700px) {
+  #root, .app, .shell, .workspace, .workspace-content {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+  .app { overflow-x: clip; }
+  .shell, .workspace, .workspace-content { overflow-x: clip; }
+  .workspace { display: block !important; }
+  .inventory-modern .inventory-heading-row { display: flex; flex-direction: column; align-items: stretch; }
+  .inventory-modern .inventory-heading-row p { overflow-wrap: anywhere; }
+  .inventory-modern .inventory-heading-actions { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; }
+  .inventory-modern .inventory-heading-actions > * { width: 100% !important; min-width: 0 !important; }
+  .inventory-modern .inventory-filter-row { display: flex; flex-direction: column; }
+  .inventory-modern .inventory-category-row { display: flex; flex-direction: column; }
+  .inventory-modern .inventory-product-card-main { display: grid !important; }
+  .inventory-modern .inventory-product-topline h3 {
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: normal !important;
+    word-break: normal;
+  }
+  .inventory-modern .inventory-product-content { display: block !important; }
+  .inventory-modern .inventory-product-content > * { margin-bottom: 8px; }
+  .inventory-modern .inventory-price-row { justify-content: flex-start !important; }
+  .inventory-modern .inventory-toolbar-card { overflow: hidden; }
+}
