@@ -64,3 +64,39 @@
   .inventory-modern .inventory-toolbar-card { padding: 12px !important; }
   .inventory-modern .inventory-heading-row { gap: 8px !important; }
 }
+
+@media (max-width: 700px) {
+  html, body, #root { max-width: 100%; overflow-x: clip; }
+  .inventory-modern, .inventory-modern * { box-sizing: border-box; }
+  .inventory-modern { width: 100%; min-width: 0; max-width: 100%; overflow-x: clip; }
+  .inventory-modern .inventory-heading-row,
+  .inventory-modern .inventory-toolbar-card,
+  .inventory-modern .inventory-products-grid,
+  .inventory-modern .inventory-product-card {
+    width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+  }
+  .inventory-modern .inventory-product-card-main {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+    width: 100%; min-width: 0;
+  }
+  .inventory-modern .inventory-image-wrap { width: 88px !important; height: 96px !important; }
+  .inventory-modern .inventory-product-image { max-height: 96px !important; }
+  .inventory-modern .inventory-product-topline,
+  .inventory-modern .inventory-product-topline > div,
+  .inventory-modern .inventory-product-content,
+  .inventory-modern .inventory-product-content h3 {
+    min-width: 0 !important; max-width: 100% !important;
+    overflow-wrap: anywhere !important; white-space: normal !important;
+  }
+  .inventory-modern .inventory-product-topline h3 { font-size: 13px !important; line-height: 1.3 !important; }
+  .inventory-modern .inventory-price-row,
+  .inventory-modern .inventory-detail-strip,
+  .inventory-modern .inventory-card-actions { max-width: 100%; min-width: 0; }
+  .inventory-modern .inventory-heading-actions { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+  .inventory-modern .inventory-search-wrap { width: 100%; min-width: 0; }
+  .inventory-modern .inventory-search-input { min-width: 0; max-width: 100%; width: 100%; }
+  .inventory-modern .inventory-category-row,
+  .inventory-modern .inventory-filter-row { max-width: 100%; min-width: 0; }
+  .inventory-modern .inventory-status-pills,
+  .inventory-modern .category-pills { max-width: 100%; min-width: 0; overflow-x: auto; }
+}
