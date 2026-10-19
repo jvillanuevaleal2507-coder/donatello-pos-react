@@ -10,6 +10,7 @@ import logoDonatello from "./assets/logo-donatello.png";
 import JSZip from "jszip";
 import jsPDF from "jspdf";
 import DashboardPage from "./pages/DashboardPage";
+const CommercialIntelligencePage = React.lazy(() => import("./pages/CommercialIntelligencePage.jsx"));
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -168,6 +169,7 @@ function VentasDonatelloPOSApp() {
   const [lastReceipt, setLastReceipt] = useState(null);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [insightsPermission, setInsightsPermission] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -350,6 +352,31 @@ function VentasDonatelloPOSApp() {
       });
     };
   }, [session]);
+
+  // The same authenticated POS session controls visibility. Supabase RLS independently
+  // blocks non-admin access to the underlying catalog analytics.
+  useEffect(() => {
+    let active = true;
+    setInsightsPermission(null);
+    const userId = session?.user?.id;
+    if (!userId) {
+      setInsightsPermission(false);
+      return () => { active = false; };
+    }
+
+    supabase.from("pos_authorized_users")
+      .select("role,active")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (active) setInsightsPermission(!error && data?.active === true && data?.role === "admin");
+      })
+      .catch(() => {
+        if (active) setInsightsPermission(false);
+      });
+
+    return () => { active = false; };
+  }, [session?.user?.id]);
 
   async function loadProducts() {
     setLoadingProducts(true);
@@ -1042,7 +1069,7 @@ const salePayload = {
 
         <div className="workspace">
           <aside className="sidebar-shell">
-            <Navbar clearCart={clearCart} loadProducts={loadProducts} />
+            <Navbar clearCart={clearCart} loadProducts={loadProducts} showIntelligence={insightsPermission === true} />
             <button className="sidebar-signout" onClick={signOut} type="button">
               <span aria-hidden="true">↪</span>
               <span>Cerrar sesión</span>
@@ -1397,6 +1424,19 @@ const salePayload = {
         />
 
         <Route path="/qr" element={<QRSection products={products} />} />
+
+        <Route
+          path="/inteligencia"
+          element={insightsPermission === null
+            ? <Card><p className="muted">Comprobando acceso a inteligencia comercial…</p></Card>
+            : insightsPermission === true
+              ? <React.Suspense fallback={<Card><p className="muted">Cargando panel comercial…</p></Card>}>
+                  <CommercialIntelligencePage supabase={supabase} session={session} />
+                </React.Suspense>
+              : <Card><h2>Acceso restringido</h2><p className="muted">Esta sección es exclusiva de administradores autorizados del POS.</p></Card>
+          }
+        />
+
 
         <Route
           path="/historial"
