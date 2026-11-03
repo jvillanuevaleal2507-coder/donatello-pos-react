@@ -1,0 +1,27 @@
+name: Donatello - Comisión tarjeta (pruebas)
+on:
+  pull_request:
+    paths:
+      - 'src/utils/paymentFee.js'
+      - 'src/pages/PaymentFeeSettingsPage.jsx'
+      - 'src/pages/AddProductPage.jsx'
+      - 'src/components/Navbar.jsx'
+      - 'src/App.jsx'
+      - 'tests/paymentFee.test.mjs'
+      - '.github/workflows/payment-fee-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      # El lockfile anterior al módulo ya está desincronizado con package.json.
+      # Ejecutamos las pruebas puras primero sin requerir instalación.
+      - run: node --test tests/paymentFee.test.mjs
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - run: npm run build
