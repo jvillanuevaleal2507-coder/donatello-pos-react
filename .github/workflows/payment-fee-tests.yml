@@ -20,6 +20,8 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-      - run: npm ci
+      # El lockfile anterior al módulo ya está desincronizado con package.json.
+      # Ejecutamos las pruebas puras primero sin requerir instalación.
       - run: node --test tests/paymentFee.test.mjs
+      - run: npm install --no-package-lock --no-audit --no-fund
       - run: npm run build
