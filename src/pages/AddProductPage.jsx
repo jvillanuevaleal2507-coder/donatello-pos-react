@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import DonatelloAtlas from "../components/DonatelloAtlas";
 import { saveAtlasIntelligence } from "../atlas/intelligenceService";
+import { cardProcessingFee, publicPriceIncludingCardFee } from "../utils/paymentFee.js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -218,6 +219,30 @@ export default function AddProductPage({ products, loadProducts }) {
   const [atlasDraft, setAtlasDraft] = useState(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [savingProduct, setSavingProduct] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState(null);
+  const [paymentSettingsLoading, setPaymentSettingsLoading] = useState(true);
+  const [paymentSettingsError, setPaymentSettingsError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    supabase.from("pos_payment_fee_settings")
+      .select("enabled,provider,rate_percent,fixed_fee_mxn,vat_percent")
+      .eq("id", 1)
+      .single()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error || !data) {
+          setPaymentSettingsError("No se pudo cargar la configuración de tarjeta. No se pueden guardar productos hasta verificarla.");
+          return;
+        }
+        setPaymentSettings(data);
+      })
+      .catch(() => {
+        if (active) setPaymentSettingsError("No se pudo conectar con la configuración de tarjeta.");
+      })
+      .finally(() => { if (active) setPaymentSettingsLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   const costUsd = Number(form.costUsd || 0);
   const exchangeRate = Number(form.exchangeRate || 0);
@@ -231,8 +256,13 @@ export default function AddProductPage({ products, loadProducts }) {
   const taxMxn = baseCostMxn * (taxPercent / 100);
   const totalCostMxn =
     baseCostMxn + commissionMxn + taxMxn + extraCostMxn;
-  const profit = price - totalCostMxn;
-  const margin = price > 0 ? (profit / price) * 100 : 0;
+  const cardFeeActive = paymentSettings?.enabled === true;
+  // El precio ingresado es el objetivo neto. Al activarse, el precio que se
+  // publica incluye la comisión; nunca se suma como recargo al cobrar.
+  const publicPrice = cardFeeActive ? publicPriceIncludingCardFee(price, paymentSettings) : price;
+  const estimatedCardFee = cardFeeActive ? cardProcessingFee(publicPrice, paymentSettings) : 0;
+  const profit = publicPrice - totalCostMxn - estimatedCardFee;
+  const margin = publicPrice > 0 ? (profit / publicPrice) * 100 : 0;
   const markup = totalCostMxn > 0 ? (profit / totalCostMxn) * 100 : 0;
 
   function updateField(field, value) {
@@ -276,6 +306,14 @@ export default function AddProductPage({ products, loadProducts }) {
       alert("Agrega el nombre del producto.");
       return;
     }
+    if (paymentSettingsLoading || paymentSettingsError || !paymentSettings) {
+      alert("Aún no podemos verificar si se aplica comisión por tarjeta. Revisa la configuración antes de guardar.");
+      return;
+    }
+    if (cardFeeActive && (!Number.isFinite(price) || price <= 0 || !Number.isFinite(publicPrice))) {
+      alert("Ingresa un precio objetivo mayor a cero para calcular la tarifa de tarjeta.");
+      return;
+    }
 
     try {
       setSavingProduct(true);
@@ -291,7 +329,7 @@ export default function AddProductPage({ products, loadProducts }) {
         name: form.name.trim(),
         category: form.category || "General",
         cost: Number(totalCostMxn.toFixed(2)),
-        price: Number(form.price || 0),
+        price: Number(publicPrice.toFixed(2)),
         stock: Number(form.stock || 0),
         image_url: form.image_url,
         image_url_2: form.image_url_2,
@@ -423,14 +461,26 @@ export default function AddProductPage({ products, loadProducts }) {
             </label>
 
             <label>
-              Precio de venta MXN
+              {cardFeeActive ? "Precio objetivo sin comisión MXN" : "Precio de venta MXN"}
               <input
                 type="number"
                 value={form.price}
                 onChange={(e) => updateField("price", e.target.value)}
-                placeholder="Precio final"
+                placeholder={cardFeeActive ? "Monto a conservar tras la comisión" : "Precio final"}
               />
             </label>
+            {paymentSettingsLoading && <p className="span-2 muted">Consultando comisión de terminal…</p>}
+            {paymentSettingsError && <p className="span-2" role="alert" style={{ color: "#b42318" }}>{paymentSettingsError}</p>}
+            {cardFeeActive && price > 0 && (
+              <div className="span-2" aria-live="polite" style={{ background: "#effaf2", border: "1px solid #b8dfc0", padding: 14, borderRadius: 14 }}>
+                <strong style={{ display: "block", color: "#125e35" }}>Precio público con comisión: {money(publicPrice)}</strong>
+                <small style={{ display: "block", marginTop: 5 }}>Comisión estimada con IVA: {money(estimatedCardFee)} · Neto que conservamos: {money(publicPrice - estimatedCardFee)}</small>
+                <small style={{ display: "block", marginTop: 5 }}>Este precio se guardará en el producto y aparecerá en el catálogo; no se añadirá ningún cargo al cobrar.</small>
+              </div>
+            )}
+            {paymentSettings && !cardFeeActive && (
+              <p className="span-2 muted" style={{ margin: 0 }}>Comisión de terminal desactivada: el precio público se guarda sin ajustes.</p>
+            )}
 
             <div
               className="span-2"
@@ -460,7 +510,9 @@ export default function AddProductPage({ products, loadProducts }) {
                 <strong style={{ display: "block", fontSize: 20 }}>{price > 0 && totalCostMxn > 0 ? `${markup.toFixed(1)}%` : "—"}</strong>
               </div>
               <small style={{ gridColumn: "1 / -1", opacity: 0.8 }}>
-                Calculado con el costo total, incluyendo comisión, impuestos y gastos extra.
+                {cardFeeActive
+                  ? "Utilidad neta estimada si se cobra con tarjeta, descontando comisión de terminal e IVA. El costo de compra sigue separado."
+                  : "Calculado con el costo total de adquisición, incluyendo comisión de subasta, impuestos y gastos extra."}
               </small>
             </div>
 
@@ -542,10 +594,11 @@ export default function AddProductPage({ products, loadProducts }) {
 
             <div className="add-cost-summary">
               <div><span>Costo base MXN</span><b>{money(baseCostMxn)}</b></div>
-              <div><span>Comisión</span><b>{money(commissionMxn)}</b></div>
+              <div><span>Comisión de compra</span><b>{money(commissionMxn)}</b></div>
               <div><span>Taxes</span><b>{money(taxMxn)}</b></div>
               <div className="total"><span>Costo total</span><strong>{money(totalCostMxn)}</strong></div>
-              <div className="profit"><span>Utilidad estimada</span><strong>{money(profit)}</strong></div>
+              {cardFeeActive && <div><span>Comisión de tarjeta estimada</span><b>{money(estimatedCardFee)}</b></div>}
+              <div className="profit"><span>{cardFeeActive ? "Utilidad neta estimada (tarjeta)" : "Utilidad estimada"}</span><strong>{money(profit)}</strong></div>
             </div>
           </Card>
 
@@ -555,7 +608,7 @@ export default function AddProductPage({ products, loadProducts }) {
             <p>El código Donatello se genera automáticamente.</p>
             <Button
               onClick={saveProduct}
-              disabled={savingProduct}
+              disabled={savingProduct || paymentSettingsLoading || !!paymentSettingsError}
               style={{ width: "100%", minHeight: 54, marginTop: 12 }}
             >
               {savingProduct ? "Guardando..." : "Guardar producto"}
