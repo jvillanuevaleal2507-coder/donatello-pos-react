@@ -11,14 +11,14 @@ const items = [
   { to: "/dashboard", icon: "▥", label: "Resumen" },
 ];
 
-export default function Navbar({ clearCart, loadProducts, showIntelligence = false }) {
+export default function Navbar({ clearCart, loadProducts, showIntelligence = false, showPaymentFees = false }) {
   const location = useLocation();
 
   return (
     <nav className="donatello-nav" aria-label="Navegación principal">
       <div className="nav-section-label">Operación</div>
 
-      {[...items, ...(showIntelligence ? [{ to: "/inteligencia", icon: "◈", label: "Inteligencia comercial" }] : [])].map((item) => {
+      {[...items, ...(showIntelligence ? [{ to: "/inteligencia", icon: "◈", label: "Inteligencia comercial" }] : []), ...(showPaymentFees ? [{ to: "/comisiones-tarjeta", icon: "▣", label: "Comisión tarjeta" }] : [])].map((item) => {
         const active = location.pathname === item.to;
         return (
           <Link
