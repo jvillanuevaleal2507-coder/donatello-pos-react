@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-do
 import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
 import AddProductPage from "./pages/AddProductPage";
+import PaymentFeeSettingsPage from "./pages/PaymentFeeSettingsPage";
 import logoDonatello from "./assets/logo-donatello.png";
 import JSZip from "jszip";
 import jsPDF from "jspdf";
@@ -1069,7 +1070,7 @@ const salePayload = {
 
         <div className="workspace">
           <aside className="sidebar-shell">
-            <Navbar clearCart={clearCart} loadProducts={loadProducts} showIntelligence={insightsPermission === true} />
+            <Navbar clearCart={clearCart} loadProducts={loadProducts} showIntelligence={insightsPermission === true} showPaymentFees={insightsPermission === true} />
             <button className="sidebar-signout" onClick={signOut} type="button">
               <span aria-hidden="true">↪</span>
               <span>Cerrar sesión</span>
@@ -1422,6 +1423,15 @@ const salePayload = {
         <Route
           path="/agregar"
           element={<AddProductPage products={products} loadProducts={loadProducts} />}
+        />
+        <Route
+          path="/comisiones-tarjeta"
+          element={insightsPermission === null
+            ? <Card><p className="muted">Comprobando acceso…</p></Card>
+            : insightsPermission === true
+              ? <PaymentFeeSettingsPage />
+              : <Card><h2>Acceso restringido</h2><p>Solo el administrador del POS puede editar comisiones.</p></Card>
+          }
         />
 
         <Route path="/qr" element={<QRSection products={products} />} />
