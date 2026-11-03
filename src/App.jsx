@@ -1185,7 +1185,8 @@ const salePayload = {
                     <div className="sale-card-heading scanner-heading-modern">
                       <div>
                         <span className="eyebrow">Alternativa rápida</span>
-                        <h2>Escanear QR o capturar código</h2>
+                        <h2 className="scanner-desktop-title">Escanear QR o capturar código</h2>
+                        <h2 className="scanner-mobile-title">Capturar código</h2>
                       </div>
                       <span className="sale-step">02</span>
                     </div>
@@ -8984,6 +8985,21 @@ select {
     min-width: 0 !important;
     max-width: 100% !important;
     flex-wrap: wrap !important;
+  }
+}
+
+/* En teléfonos, Venta mantiene la captura manual de SKU pero no presenta la cámara QR. */
+.scanner-mobile-title {
+  display: none;
+}
+@media (max-width: 760px), (max-width: 1024px) and (pointer: coarse) {
+  .sale-scanner-compact .scanner-box-modern,
+  .sale-scanner-compact .scanner-actions-modern,
+  .sale-scanner-compact .scanner-desktop-title {
+    display: none !important;
+  }
+  .sale-scanner-compact .scanner-mobile-title {
+    display: block !important;
   }
 }
 
