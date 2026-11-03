@@ -43,5 +43,12 @@ export function publicPriceIncludingCardFee(targetNetPrice, config) {
   for (let i = 0; i < 3 && publicPrice - cardProcessingFee(publicPrice, config) < target - 0.00001; i += 1) {
     publicPrice = cents(publicPrice + 0.01);
   }
+  // La comisión real se redondea a centavos; un centavo menos puede
+  // conservar el mismo neto. Buscar el menor precio sin perder utilidad.
+  for (let i = 0; i < 3 && publicPrice >= 0.02; i += 1) {
+    const candidate = cents(publicPrice - 0.01);
+    if (candidate - cardProcessingFee(candidate, config) < target - 0.00001) break;
+    publicPrice = candidate;
+  }
   return publicPrice;
 }
