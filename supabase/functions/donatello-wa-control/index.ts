@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.108.2";
-import { commercialReply } from "../_shared/donatello-commercial-replies.ts";
+import { commercialReply } from "../_shared/donatello-commercial-replies.js";
 
 // Esta función solo administra el número comercial de Donatello.
 // No acepta tokens, WABAs ni secretos proporcionados directamente por el navegador.
