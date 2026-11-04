@@ -1,0 +1,30 @@
+name: Donatello - WhatsApp bot seguro
+on:
+  pull_request:
+    paths:
+      - 'src/pages/DonatelloWhatsAppBotPage.jsx'
+      - 'src/components/Navbar.jsx'
+      - 'src/App.jsx'
+      - 'supabase/functions/donatello-wa-*/**'
+      - 'supabase/functions/_shared/donatello-commercial-replies.js'
+      - 'supabase/migrations/20261103_donatello_whatsapp_bot.sql'
+      - 'tests/donatello-wa-bot.test.mjs'
+      - '.github/workflows/donatello-wa-bot-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/donatello-wa-bot.test.mjs
+      # El lockfile anterior ya difiere del manifest de Donatello, no tocarlo.
+      - run: npm install --no-package-lock --no-audit --no-fund
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://lotgmhfqzthhhadavwlu.supabase.co
+          VITE_SUPABASE_ANON_KEY: build-placeholder
