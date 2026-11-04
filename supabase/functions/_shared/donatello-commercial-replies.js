@@ -14,7 +14,7 @@ export function commercialReply(message, inventory) {
   const q = normalize(message).slice(0,300);
   const includes = (...values) => values.some(v => q.includes(normalize(v)));
   if (q === "2" || includes("asesor","humano","persona","hablar con", "quiero hablar")) {
-    return { text: "", human: true };
+    return { text: "Claro, te atenderá una persona de Donatello por este WhatsApp. En cuanto esté disponible continuará tu consulta.", human: true };
   }
   if (q === "1") {
     return { text: "¡Perfecto! Dime qué producto buscas: por ejemplo, silla, lámpara, mesa o sillón. Te comparto los precios que tenemos publicados.", human: false };
@@ -49,7 +49,7 @@ export function commercialReply(message, inventory) {
     return { p,score };
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
   if (!hits.length) {
-    return { text: "No encontré una coincidencia clara en el catálogo disponible. Si quieres, escribe 2 y te atendemos personalmente para revisar otras opciones.", human: false };
+    return { text: "No encontré una coincidencia confirmada en el catálogo. Una persona de Donatello te atenderá por este WhatsApp para revisar otras opciones.", human: true };
   }
   const lines = hits.map(({p}) => {
     const price = Number(p.price);
