@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.108.2";
+import { commercialReply } from "../_shared/donatello-commercial-replies.ts";
 
 // Esta función solo administra el número comercial de Donatello.
 // No acepta tokens, WABAs ni secretos proporcionados directamente por el navegador.
@@ -107,6 +108,15 @@ Deno.serve(async (req: Request) => {
       const { data, error } = await service.rpc("donatello_wa_read_status");
       if (error) throw error;
       return json(detailsWithFlags(data), 200, origin);
+    }
+    if (action === "preview") {
+      const prompt = String(args.message || "").slice(0,300);
+      if (!prompt.trim()) return json({ error: "escribe_una_pregunta" }, 400, origin);
+      const { data:products, error: productError } = await service.from("products")
+        .select("id,name,code,category,price,stock").gt("stock",0).order("id",{ascending:false}).limit(250);
+      if (productError) throw productError;
+      const preview = commercialReply(prompt,products || []);
+      return json({ preview, simulated:true, sent:false }, 200, origin);
     }
     if (action === "contacts") {
       const { data, error } = await service.rpc("donatello_wa_contacts_read");
