@@ -152,6 +152,11 @@ Deno.serve(async (req: Request) => {
       const code = String(args.code || "");
       const waba = String(args.waba_id || "");
       const phoneId = String(args.phone_number_id || "");
+      // Evitar callback por WABA que pudiera afectar el número de Mi Casa Loto.
+      // La WABA de Mi Casa Loto ya está vinculada en su propio Supabase.
+      if (waba === "2551722908529217") {
+        return json({ error: "Esta WABA también pertenece a Mi Casa Loto. No cambiaré el callback compartido; conecta una cuenta WABA exclusiva de Donatello." }, 409, origin);
+      }
       if (!/^[A-Za-z0-9_-]{15,3000}$/.test(code) ||
           !/^\d{6,30}$/.test(waba) || !/^\d{6,30}$/.test(phoneId)) {
         return json({ error: "Meta no devolvió una autorización completa del número." }, 400, origin);
