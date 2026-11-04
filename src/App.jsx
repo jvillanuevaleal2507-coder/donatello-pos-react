@@ -7,6 +7,7 @@ import Navbar from "./components/Navbar";
 import InventoryPage from "./pages/InventoryPage";
 import AddProductPage from "./pages/AddProductPage";
 import PaymentFeeSettingsPage from "./pages/PaymentFeeSettingsPage";
+import DonatelloWhatsAppBotPage from "./pages/DonatelloWhatsAppBotPage";
 import logoDonatello from "./assets/logo-donatello.png";
 import JSZip from "jszip";
 import jsPDF from "jspdf";
@@ -1070,7 +1071,7 @@ const salePayload = {
 
         <div className="workspace">
           <aside className="sidebar-shell">
-            <Navbar clearCart={clearCart} loadProducts={loadProducts} showIntelligence={insightsPermission === true} showPaymentFees={insightsPermission === true} />
+            <Navbar clearCart={clearCart} loadProducts={loadProducts} showIntelligence={insightsPermission === true} showPaymentFees={insightsPermission === true} showWhatsAppBot={insightsPermission === true} />
             <button className="sidebar-signout" onClick={signOut} type="button">
               <span aria-hidden="true">↪</span>
               <span>Cerrar sesión</span>
@@ -1431,6 +1432,17 @@ const salePayload = {
             : insightsPermission === true
               ? <PaymentFeeSettingsPage />
               : <Card><h2>Acceso restringido</h2><p>Solo el administrador del POS puede editar comisiones.</p></Card>
+          }
+        />
+
+
+        <Route
+          path="/bot-whatsapp"
+          element={insightsPermission === null
+            ? <Card><p className="muted">Verificando permisos del POS…</p></Card>
+            : insightsPermission === true
+              ? <DonatelloWhatsAppBotPage />
+              : <Card><h2>Acceso restringido</h2><p>Solo administradores del POS pueden configurar el bot.</p></Card>
           }
         />
 
