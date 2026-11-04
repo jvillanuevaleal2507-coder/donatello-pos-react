@@ -75,7 +75,7 @@ AS $$
 DECLARE sid uuid;
 BEGIN
   IF p_waba !~ '^[0-9]{6,30}$' OR p_phone_id !~ '^[0-9]{6,30}$'
-    OR regexp_replace(coalesce(p_display,''), '\D','','g') <> '528999122313'
+    OR regexp_replace(coalesce(p_display,''), '\D','','g') NOT IN ('528999122313','5218999122313')
     OR length(p_token) < 30 OR NOT p_webhook_ok
   THEN RAISE EXCEPTION 'Meta connection does not match Donatello verified number'; END IF;
 
