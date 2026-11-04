@@ -12,7 +12,7 @@ const IGNORE = new Set([
 ]);
 export function commercialReply(message, inventory) {
   const q = normalize(message).slice(0,300);
-  const includes = (...values: string[]) => values.some(v => q.includes(normalize(v)));
+  const includes = (...values) => values.some(v => q.includes(normalize(v)));
   if (q === "2" || includes("asesor","humano","persona","hablar con", "quiero hablar")) {
     return { text: "", human: true };
   }
