@@ -50,6 +50,7 @@ jobs:
       - run: node --test tests/server-pending.test.mjs
       - run: node --test tests/pos-compatibility.test.mjs
       - run: node --check laboratorio/lab.mjs
+      - run: node --test tests/lab-proxy.test.mjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
         env:
