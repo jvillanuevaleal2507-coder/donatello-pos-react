@@ -1,0 +1,85 @@
+name: Donatello - abonos atómicos (aislado)
+on:
+  pull_request:
+    paths:
+      - 'src/App.jsx'
+      - 'src/lib/layawayPayment.js'
+      - 'supabase/migrations/20261105_atomic_layaway_payments.sql'
+      - 'tests/layaway-payment.test.mjs'
+      - 'tests/sql/layaway_*'
+      - '.github/workflows/layaway-payment-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contrato:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probar contrato de pago e idempotencia, sin producción
+        run: node --test tests/layaway-payment.test.mjs
+      - name: Instalar dependencias
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Compilar POS
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://lotgmhfqzthhhadavwlu.supabase.co
+          VITE_SUPABASE_ANON_KEY: placeholder-build-only
+
+  postgres:
+    name: PostgreSQL 17 - abonos, rollback y carreras
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: atlas_layaways_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d atlas_layaways_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: test-only-password
+      PGDATABASE: atlas_layaways_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar apartados, ventas y usuarios sintéticos
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/layaway_fixture.sql
+      - name: Instalar migración solo en PostgreSQL desechable
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261105_atomic_layaway_payments.sql
+      - name: Abono parcial, liquidación, duplicado, rollback, seguridad y cancelación
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_assertions.sql | grep -qx 'PRIVILEGES_OK'
+      - name: Dos solicitudes concurrentes; una única aplicación de pago
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_concurrent.sql > /tmp/abono1.txt &
+          p1=$!
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_concurrent.sql > /tmp/abono2.txt &
+          p2=$!
+          wait "$p1"
+          wait "$p2"
+          cmp /tmp/abono1.txt /tmp/abono2.txt
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT CASE WHEN
+            (SELECT count(*) FROM public.layaway_payments WHERE layaway_id=10)=1
+            AND (SELECT balance FROM public.layaways WHERE id=10)=60
+            AND (SELECT deposit FROM public.layaways WHERE id=10)=60
+            AND (SELECT count(*) FROM public.sales)=1
+            AND (SELECT count(*) FROM private.pos_layaway_payment_requests WHERE state='completed')=3
+            AND (SELECT count(*) FROM private.pos_layaway_payment_requests WHERE state='cancelled')=1
+            THEN 'ONCE_OK' ELSE 'DUPLICATE_OR_MISSING' END" | grep -qx 'ONCE_OK'
