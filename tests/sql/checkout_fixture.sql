@@ -70,6 +70,10 @@ CREATE TABLE public.layaways (
   notes text
 );
 
+-- La prueba ejecuta aserciones bajo el rol authenticated.
+-- Lectura limitada a las tablas sintéticas, no a producción.
+GRANT SELECT ON public.products, public.layaways TO authenticated;
+
 -- Conteo sintético y demora controlada para ensayar carreras.
 CREATE FUNCTION public.test_record_sale() RETURNS trigger
 LANGUAGE plpgsql
