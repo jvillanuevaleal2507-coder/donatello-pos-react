@@ -5,6 +5,8 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'src/App.jsx'
+      - 'src/main.jsx'
+      - 'laboratorio/**'
       - 'tests/pos-compatibility.test.mjs'
       - 'src/pages/**'
       - 'api/**'
@@ -47,6 +49,7 @@ jobs:
       - run: node --test tests/atomic-layaway.test.mjs
       - run: node --test tests/server-pending.test.mjs
       - run: node --test tests/pos-compatibility.test.mjs
+      - run: node --check laboratorio/lab.mjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
         env:

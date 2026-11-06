@@ -5,7 +5,7 @@ import {resolve,dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {spawnSync,spawn} from "node:child_process";
 import {networkInterfaces} from "node:os";
-import {createClient} from "@supabase/supabase-js";
+
 
 const folder=dirname(fileURLToPath(import.meta.url));
 const root=resolve(folder,"..");
@@ -88,6 +88,8 @@ function initDatabase(){
   return true;
 }
 async function seedAuth(keys,isNew){
+  // Import only after npm ci completes on a fresh Windows PC.
+  const {createClient}=await import("@supabase/supabase-js");
   const admin=createClient(keys.API_URL,keys.SERVICE_ROLE_KEY,{
     auth:{persistSession:false,autoRefreshToken:false}});
   if(isNew){

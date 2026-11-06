@@ -35,3 +35,6 @@ que falta el requisito; no tendras que pegar comandos SQL.
 ESTADO DE VALIDACION: el codigo del lanzador requiere primera ejecucion
 en Windows para certificar Docker, el firewall LAN y Android fisico. Los
 motores SQL/Auth del laboratorio ya se probaron en Linux CI con datos ficticios.
+
+En Android por HTTP local, el escaner QR/camara puede no estar disponible;
+para probar cobros, selecciona el producto manualmente.
