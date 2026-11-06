@@ -1447,6 +1447,7 @@ function VentasDonatelloPOSApp() {
               layaways={layaways}
               loadLayaways={loadLayaways}
               loadSales={loadSales}
+              userId={session?.user?.id}
             />
           }
         />
@@ -2870,7 +2871,7 @@ function SalesSection({ sales, loadingSales, loadSales, loadProducts }) {
 }
 
 
-function LayawaysSection({ layaways, loadLayaways, loadSales }) {
+function LayawaysSection({ layaways, loadLayaways, loadSales, userId }) {
   const [selected, setSelected] = useState(null);
   const [payment, setPayment] = useState("");
   const [loadingLayaways, setLoadingLayaways] = useState(false);
@@ -2960,7 +2961,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     layawayPaymentLock.current = true;
     setProcessingPayment(true);
     try {
-      const result = await checkLayawayPayment(supabase, pendingLayawayPayment);
+      const result = await checkLayawayPayment(supabase, pendingLayawayPayment, userId);
       if (result === null) {
         alert("El abono aún no aparece. Una solicitud retrasada podría llegar después. Debes cancelar el intento de forma segura antes de volver a abonar.");
       } else if (result.state === "cancelled") {
@@ -2987,7 +2988,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     layawayPaymentLock.current = true;
     setProcessingPayment(true);
     try {
-      const result = await cancelLayawayPayment(supabase, pendingLayawayPayment);
+      const result = await cancelLayawayPayment(supabase, pendingLayawayPayment, userId);
       if (result.state === "cancelled") {
         clearPendingLayawayPayment();
         setPendingLayawayPayment(null);
@@ -3022,7 +3023,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
         operationId, layawayId:selected.id, amount,
       });
       const pending = storePendingLayawayPayment({
-        operationId, layawayId:selected.id,
+        operationId, layawayId:selected.id, userId,
       });
       setPendingLayawayPayment(pending);
     } catch (error) {

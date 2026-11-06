@@ -11,17 +11,20 @@ export function readPendingLayawayPayment(storage = globalThis.sessionStorage) {
   try {
     const v = JSON.parse(storage?.getItem(STORAGE_KEY) || "null");
     return v && UUID.test(v.operationId) && positiveId(v.layawayId)
-      ? { operationId: v.operationId, layawayId: Number(v.layawayId) }
+      ? { operationId:v.operationId, layawayId:Number(v.layawayId),
+          userId:UUID.test(String(v.userId || "")) ? String(v.userId).toLowerCase() : null }
       : null;
   } catch { return null; }
 }
 export function storePendingLayawayPayment(pending, storage = globalThis.sessionStorage) {
-  if (!pending || !UUID.test(pending.operationId) || !positiveId(pending.layawayId)) {
+  if (!pending || !UUID.test(pending.operationId) || !positiveId(pending.layawayId) ||
+      !UUID.test(String(pending.userId || ""))) {
     throw Error("Operacion de abono invalida");
   }
   if (!storage?.setItem) throw Error("No se puede conservar el abono pendiente");
-  // Only UUID and layaway ID, never name, phone, amount or customer data.
-  const record = { operationId: pending.operationId, layawayId: Number(pending.layawayId) };
+  // Only UUID, layaway ID and original Supabase user ID (never a token or customer data).
+  const record = { operationId:pending.operationId, layawayId:Number(pending.layawayId),
+    userId:String(pending.userId).toLowerCase() };
   storage.setItem(STORAGE_KEY, JSON.stringify(record));
   return record;
 }
@@ -54,14 +57,21 @@ export async function submitLayawayPayment(supabase, params) {
   if (error) throw Error(error.message || "Error registrando abono");
   return readReceipt(data,params.p_layaway_id);
 }
-export async function checkLayawayPayment(supabase,pending) {
-  if (!pending || !UUID.test(pending.operationId) || !positiveId(pending.layawayId)) throw Error("UUID invalido");
+export function assertLayawayPaymentOwner(pending,userId) {
+  if (!pending || !UUID.test(String(pending.operationId || "")) ||
+      !positiveId(pending.layawayId) || !UUID.test(String(userId || "")) ||
+      String(pending.userId || "").toLowerCase() !== String(userId || "").toLowerCase()) {
+    throw Error("El abono pendiente pertenece a otra cuenta; ingresa con la cuenta original");
+  }
+}
+export async function checkLayawayPayment(supabase,pending,userId) {
+  assertLayawayPaymentOwner(pending,userId);
   const {data,error}=await supabase.rpc("donatello_checkout_status",{p_operation_id:pending.operationId});
   if (error) throw Error(error.message || "No se pudo consultar el estado");
   return data===null ? null : readReceipt(data,pending.layawayId);
 }
-export async function cancelLayawayPayment(supabase,pending) {
-  if (!pending || !UUID.test(pending.operationId) || !positiveId(pending.layawayId)) throw Error("UUID invalido");
+export async function cancelLayawayPayment(supabase,pending,userId) {
+  assertLayawayPaymentOwner(pending,userId);
   const {data,error}=await supabase.rpc("donatello_checkout_cancel",{p_operation_id:pending.operationId});
   if (error) throw Error(error.message || "No se pudo cancelar el intento");
   return readReceipt(data,pending.layawayId);

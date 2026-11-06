@@ -4,10 +4,12 @@ import {readFileSync} from "node:fs";
 import {
   newLayawayPaymentId, readPendingLayawayPayment,storePendingLayawayPayment,
   clearPendingLayawayPayment,buildLayawayPaymentParams,
-  submitLayawayPayment,checkLayawayPayment,cancelLayawayPayment
+  submitLayawayPayment,checkLayawayPayment,cancelLayawayPayment,assertLayawayPaymentOwner
 } from "../src/lib/atomicLayawayPayments.js";
 const OP="1fbc9d2a-721f-48de-9ca8-3ed00cf93681";
-const pending={operationId:OP,layawayId:200};
+const OWNER="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const OTHER="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const pending={operationId:OP,layawayId:200,userId:OWNER};
 const receipt={id:200,payment_id:300,type:"payment",total:100,
   payment_amount:30,items:[{name:"Producto sintetico"}],balance:50};
 test("UUID y storage sin PII",()=>{
@@ -47,14 +49,14 @@ test("revisión y cancelación solo llaman RPC sin INSERT directo",async()=>{
     called.push(name);assert.deepEqual(args,{p_operation_id:OP});
     return {data:{state:"cancelled"},error:null};
   }};
-  assert.deepEqual(await checkLayawayPayment(api,pending),{state:"cancelled"});
-  assert.deepEqual(await cancelLayawayPayment(api,pending),{state:"cancelled"});
+  assert.deepEqual(await checkLayawayPayment(api,pending,OWNER),{state:"cancelled"});
+  assert.deepEqual(await cancelLayawayPayment(api,pending,OWNER),{state:"cancelled"});
   assert.deepEqual(called,["donatello_checkout_status","donatello_checkout_cancel"]);
 });
 test("NULL no equivale a cancelación confirmada",async()=>{
   const api={rpc:async ()=>({data:null,error:null})};
-  assert.equal(await checkLayawayPayment(api,pending),null);
-  await assert.rejects(cancelLayawayPayment(api,pending),/Recibo incompleto/);
+  assert.equal(await checkLayawayPayment(api,pending,OWNER),null);
+  await assert.rejects(cancelLayawayPayment(api,pending,OWNER),/Recibo incompleto/);
 });
 test("fallo de red no reintenta ni emite éxito",async()=>{
   let calls=0;
@@ -70,4 +72,27 @@ test("el nuevo flujo de liquidación no hace escrituras independientes",()=>{
   assert.doesNotMatch(section,/\.from\(["'](?:sales|sale_items|layaways|layaway_payments)["']\)/);
   assert.match(source,/pendingLayawayPayment/);
   assert.match(source,/cancelPendingLayawayPayment/);
+});
+
+
+test("no permite recuperar ni cancelar pago con otra cuenta de administrador", async () => {
+  let calls=0;
+  const api={rpc:async()=>{calls++;return {data:null,error:null}}};
+  assert.throws(()=>assertLayawayPaymentOwner(pending,OTHER),/otra cuenta/);
+  await assert.rejects(checkLayawayPayment(api,pending,OTHER),/otra cuenta/);
+  await assert.rejects(cancelLayawayPayment(api,pending,OTHER),/otra cuenta/);
+  assert.equal(calls,0);
+});
+test("entrada previa sin usuario queda bloqueada (fail closed)",() => {
+  const store={getItem:()=>JSON.stringify({operationId:OP,layawayId:200})};
+  const old=readPendingLayawayPayment(store);
+  assert.equal(old.userId,null);
+  assert.throws(()=>assertLayawayPaymentOwner(old,OWNER),/otra cuenta/);
+});
+test("pantalla vincula la comprobación del recibo a la sesión original",()=>{
+  const src=readFileSync(new URL("../src/App.jsx",import.meta.url),"utf8");
+  assert.match(src,/userId=\{session\?\.user\?\.id\}/);
+  assert.match(src,/checkLayawayPayment\(supabase, pendingLayawayPayment, userId\)/);
+  assert.match(src,/cancelLayawayPayment\(supabase, pendingLayawayPayment, userId\)/);
+  assert.match(src,/operationId, layawayId:selected\.id, userId/);
 });
