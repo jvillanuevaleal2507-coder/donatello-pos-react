@@ -1,0 +1,43 @@
+name: Donatello - Auth y PostgREST aislados
+on:
+  pull_request:
+    paths:
+      - 'tests/auth-integration/**'
+      - '.github/workflows/pos-real-auth-tests.yml'
+      - 'tests/sql/checkout_fixture.sql'
+      - 'tests/sql/layaway_fixture.sql'
+      - 'supabase/migrations/20261105_pos_checkout_idempotency.sql'
+      - 'supabase/migrations/20261106_pos_layaway_payments.sql'
+      - 'supabase/migrations/20261106_pos_pending_recovery.sql'
+      - 'supabase/migrations/20261106_pos_operator_read_guards.sql'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  auth_real:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Verificar CLI y PostgreSQL
+        run: |
+          supabase --version
+          psql --version
+      - name: Arrancar GoTrue, PostgREST y PostgreSQL locales
+        working-directory: tests/auth-integration/runner
+        run: supabase start -x studio,storage,realtime,edge-runtime,analytics,imgproxy
+      - name: Dependencias controladas por lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Probar sesiones reales y autorizacion por roles
+        run: node tests/auth-integration/real-auth.test.mjs
+      - name: Detener laboratorio local
+        if: always()
+        working-directory: tests/auth-integration/runner
+        run: supabase stop || true
