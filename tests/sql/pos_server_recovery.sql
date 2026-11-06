@@ -66,6 +66,12 @@ BEGIN
     RAISE EXCEPTION 'Late cancelled UUID charged' USING ERRCODE='P0002';
   EXCEPTION WHEN SQLSTATE '22023' THEN NULL; END;
 
+  -- A delayed payment with NO reservation must roll back both sale and journal.
+  BEGIN
+    PERFORM public.donatello_layaway_payment_once(other,201,10);
+    RAISE EXCEPTION 'Unreserved layaway payment committed' USING ERRCODE='P0002';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+
   PERFORM public.donatello_payment_reserve(payment,'layaway_payment',201);
   receipt:=public.donatello_layaway_payment_once(payment,201,10);
   got:=public.donatello_payment_recover();
