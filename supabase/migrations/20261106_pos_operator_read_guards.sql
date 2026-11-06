@@ -47,3 +47,19 @@ USING (EXISTS (
   SELECT 1 FROM public.pos_authorized_users AS pau
   WHERE pau.user_id=(SELECT auth.uid()) AND pau.active IS TRUE AND pau.role='admin'
 ));
+
+
+-- Every financial mutation must enter through a reserved, idempotent RPC.
+-- The legacy checkout is an invoker function; the SECURITY DEFINER
+-- donatello_checkout_once() can still call it as its trusted owner.
+-- Revoke PUBLIC as well as authenticated to avoid inherited EXECUTE.
+REVOKE EXECUTE ON FUNCTION public.donatello_checkout(
+  text,jsonb,numeric,numeric,text,text,numeric,date
+) FROM PUBLIC,anon,authenticated;
+
+-- A direct REST INSERT by an authenticated administrator previously bypassed
+-- the UUID ledger entirely. The frontend does not insert into these tables;
+-- sales corrections still rely on UPDATE, which is intentionally retained.
+REVOKE INSERT ON TABLE
+  public.sales,public.sale_items,public.layaways,public.layaway_payments
+FROM PUBLIC,anon,authenticated;

@@ -33,8 +33,8 @@ jobs:
       - name: Arrancar GoTrue, PostgREST y PostgreSQL locales
         working-directory: tests/auth-integration/runner
         run: supabase start -x studio,storage,realtime,edge-runtime,analytics,imgproxy
-      - name: Dependencias controladas por lockfile
-        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Instalar para prueba aislada sin modificar lockfile existente
+        run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund
       - name: Probar sesiones reales y autorizacion por roles
         run: node tests/auth-integration/real-auth.test.mjs
       - name: Detener laboratorio local

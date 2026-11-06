@@ -61,6 +61,46 @@ END;
 $test$;
 RESET ROLE;
 
+
+-- The old invoker checkout and direct writes would bypass UUID reservation.
+-- They must be blocked even for an active administrator after this migration.
+SET ROLE authenticated;
+SET request.jwt.claim.sub = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+DO $test$
+DECLARE
+ r jsonb;
+ attempt uuid:='f5555555-5555-4555-8555-555555555555';
+ stock_before integer;
+ sales_before integer;
+BEGIN
+ BEGIN
+  PERFORM public.donatello_checkout('sale',
+    '[{"id":12,"qty":1,"expected_price":10}]'::jsonb,0,10,
+    NULL,NULL,0,NULL);
+  RAISE EXCEPTION 'Legacy checkout callable directly' USING ERRCODE='P0002';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+
+ BEGIN
+  INSERT INTO public.sales(total,received,profit) VALUES(99,99,99);
+  RAISE EXCEPTION 'Direct financial insert allowed' USING ERRCODE='P0002';
+ EXCEPTION WHEN SQLSTATE '42501' THEN NULL; END;
+
+ stock_before:=(SELECT stock FROM public.products WHERE id=12);
+ sales_before:=(SELECT count(*) FROM public.sales);
+ PERFORM public.donatello_payment_reserve(attempt,'checkout',NULL);
+ r:=public.donatello_checkout_once(attempt,'sale',
+   '[{"id":12,"qty":1,"expected_price":10}]'::jsonb,
+   0,10,NULL,NULL,0,NULL);
+ IF r->>'type'<>'sale'
+  OR (SELECT stock FROM public.products WHERE id=12)<>stock_before-1
+  OR (SELECT count(*) FROM public.sales)<>sales_before+1 THEN
+   RAISE EXCEPTION 'Authorized atomic checkout was broken by REVOKE';
+ END IF;
+ PERFORM public.donatello_payment_ack(attempt);
+END;
+$test$;
+RESET ROLE;
+
 -- Explicitly verify FIVE policies are restrictive and only target authenticated;
 -- this guard MUST NOT change any anon/public catalog policies.
 SELECT CASE WHEN
@@ -68,6 +108,15 @@ SELECT CASE WHEN
     AND policyname LIKE 'pos_admin_read_guard_%'
     AND permissive='RESTRICTIVE' AND cmd='SELECT'
     AND roles='{authenticated}')=5
+ AND NOT has_function_privilege('authenticated',
+     'public.donatello_checkout(text,jsonb,numeric,numeric,text,text,numeric,date)','EXECUTE')
+ AND NOT has_function_privilege('anon',
+     'public.donatello_checkout(text,jsonb,numeric,numeric,text,text,numeric,date)','EXECUTE')
+ AND NOT has_table_privilege('authenticated','public.sales','INSERT')
+ AND NOT has_table_privilege('authenticated','public.sale_items','INSERT')
+ AND NOT has_table_privilege('authenticated','public.layaways','INSERT')
+ AND NOT has_table_privilege('authenticated','public.layaway_payments','INSERT')
+ AND has_table_privilege('authenticated','public.sales','UPDATE')
  AND (SELECT count(*) FROM public.products)>0
  AND (SELECT count(*) FROM public.sales)>0
  AND (SELECT count(*) FROM public.pos_authorized_users

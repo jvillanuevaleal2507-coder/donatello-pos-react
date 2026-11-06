@@ -85,6 +85,25 @@ async function denied(client,name,args){
  const {error}=await client.rpc(name,args);
  assert.ok(error,"Expected denied RPC: "+name);
 }
+
+test("admin no puede usar checkout antiguo ni INSERT financiero directo",async()=>{
+ const c=users.second.client;
+ await denied(c,"donatello_checkout",{
+   p_mode:"sale",p_items:[{id:12,qty:1,expected_price:10}],
+   p_discount_percent:0,p_received:10,p_customer_name:null,
+   p_customer_phone:null,p_deposit:0,p_due_date:null
+ });
+ for(const [table,body] of [
+   ["sales",{total:88,received:88,profit:88}],
+   ["layaways",{customer_name:"CI",total:88,balance:88}],
+   ["sale_items",{sale_id:99,qty:1}],
+   ["layaway_payments",{layaway_id:201,payment_amount:1}]
+ ]) {
+   const {error}=await c.from(table).insert(body);
+   assert.ok(error,"Admin directly inserted into "+table);
+ }
+});
+
 test("Admin Auth token permite leer y hacer venta atómica con PostgREST",async()=>{
  const c=users.owner.client;
  const {data:products,error:e}=await c.from("products").select("id,cost,stock");
