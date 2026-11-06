@@ -1,0 +1,32 @@
+name: Donatello - seguridad librería PDF
+on:
+  pull_request:
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/App.jsx'
+      - 'tests/pdf-label-smoke.test.mjs'
+      - '.github/workflows/pdf-label-security.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pdf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar versiones declaradas (lockfile pendiente de reconciliar)
+        run: npm install --no-package-lock --no-audit --no-fund
+      - name: Probar QR, PDF y AutoTable
+        run: node --test tests/pdf-label-smoke.test.mjs
+      - name: Compilar POS sin credenciales de producción
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://lotgmhfqzthhhadavwlu.supabase.co
+          VITE_SUPABASE_ANON_KEY: build-placeholder
