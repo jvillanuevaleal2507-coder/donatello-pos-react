@@ -10,7 +10,7 @@ import PaymentFeeSettingsPage from "./pages/PaymentFeeSettingsPage";
 import DonatelloWhatsAppBotPage from "./pages/DonatelloWhatsAppBotPage";
 import logoDonatello from "./assets/logo-donatello.png";
 import JSZip from "jszip";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import DashboardPage from "./pages/DashboardPage";
 const CommercialIntelligencePage = React.lazy(() => import("./pages/CommercialIntelligencePage.jsx"));
 // Scanner QR nativo del navegador: getUserMedia + BarcodeDetector
