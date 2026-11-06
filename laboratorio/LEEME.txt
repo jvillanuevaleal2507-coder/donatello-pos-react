@@ -1,0 +1,37 @@
+DONATELLO / LABORATORIO ATLAS PARA WINDOWS
+
+1. Descarga la rama de pruebas y extrae el ZIP en tu computadora.
+2. Abre Docker Desktop (debe estar funcionando).
+3. Haz doble clic en laboratorio\INICIAR_LABORATORIO.cmd.
+4. El programa instalara lo necesario de forma automatica la primera vez.
+5. Abre en Android la URL que aparezca en la pantalla del PC.
+   Ambos dispositivos deben estar en el mismo Wi-Fi PRIVADO.
+6. Usa el usuario y contrasena ficticios que muestra la pantalla.
+7. Al terminar haz doble clic en laboratorio\CERRAR_LABORATORIO.cmd.
+
+REQUISITOS: Windows, Node.js 22, Docker Desktop, conexion a internet
+solo para descargar las dependencias de prueba la primera vez.
+El laboratorio NO utiliza una rama de Supabase Cloud ni crea costos adicionales
+de Supabase. No se conecta a la base productiva.
+NO usar nombres, telefonos, clientes ni datos de tienda reales.
+No activar reenvio de puertos en el router. No usar redes Wi-Fi publicas.
+En Windows, permitir acceso de Node y Docker SOLO en redes PRIVADAS.
+
+QUE SE PUEDE PROBAR: ventas ficticias, descuentos, comprobantes, apartados,
+perdida de conexion, cerrar navegador y recuperar el mismo intento, pruebas
+desde un segundo dispositivo en el mismo Wi-Fi.
+Los modulos secundarios que dependen de Storage o Edge Functions no estan
+habilitados en este laboratorio reducido.
+
+PRUEBA SEGURA: primero confirma que la pantalla diga
+"ATLAS LABORATORIO - DATOS FICTICIOS - NO PRODUCCION".
+Si no aparece esa etiqueta, NO realices ninguna operacion.
+
+AL CERRAR: solo detiene los contenedores del proyecto "donatello-mobilelab"
+con --no-backup y elimina los datos de prueba. No toca otros proyectos.
+Si Docker Desktop o Node no estan instalados, el lanzador indicara
+que falta el requisito; no tendras que pegar comandos SQL.
+
+ESTADO DE VALIDACION: el codigo del lanzador requiere primera ejecucion
+en Windows para certificar Docker, el firewall LAN y Android fisico. Los
+motores SQL/Auth del laboratorio ya se probaron en Linux CI con datos ficticios.
