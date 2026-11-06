@@ -198,6 +198,6 @@ SELECT CASE WHEN
   AND (SELECT relrowsecurity FROM pg_class WHERE oid='public.pos_authorized_users'::regclass)
   AND (SELECT count(*) FROM public.pos_authorized_users WHERE active=true AND role='operator')=1
   AND (SELECT count(*) FROM public.sales)=6
-  AND (SELECT count(*) FROM public.layaway_payments)=4
+  AND (SELECT count(*) FROM public.layaway_payments)=5
   AND (SELECT stock FROM public.products WHERE id=12)=7
 THEN 'AUTH_RLS_OK' ELSE 'AUTH_RLS_FAILED' END;

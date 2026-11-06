@@ -250,7 +250,7 @@ BEGIN
     'sale_items', v_items
   );
 END;
-$function$
+$function$;
 
 
 
