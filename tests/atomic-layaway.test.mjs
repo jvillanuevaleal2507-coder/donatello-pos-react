@@ -96,3 +96,35 @@ test("pantalla vincula la comprobación del recibo a la sesión original",()=>{
   assert.match(src,/cancelLayawayPayment\(supabase, pendingLayawayPayment, userId\)/);
   assert.match(src,/operationId, layawayId:selected\.id, userId/);
 });
+
+
+test("abono pendiente se mantiene tras reiniciar pestaña o cerrar sesión",()=>{
+  const durable=new Map();
+  const local={setItem:(k,v)=>durable.set(k,v),getItem:k=>durable.get(k)||null,
+    removeItem:k=>durable.delete(k)};
+  const tab={getItem:()=>null,removeItem:()=>{},clear:()=>{}};
+  storePendingLayawayPayment(pending,local,tab);
+  tab.clear();
+  assert.deepEqual(readPendingLayawayPayment(local,tab),pending);
+  assert.throws(()=>storePendingLayawayPayment({...pending,
+    operationId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"},local,tab),/pendiente/);
+  clearPendingLayawayPayment(local,tab);
+  assert.equal(readPendingLayawayPayment(local,tab),null);
+});
+test("abono pendiente antiguo se migra a almacenamiento persistente",()=>{
+  const record=new Map([["donatello.pos.pendingLayawayPayment.v1",JSON.stringify(pending)]]);
+  const localMap=new Map();
+  const local={setItem:(k,v)=>localMap.set(k,v),getItem:k=>localMap.get(k)||null,
+    removeItem:k=>localMap.delete(k)};
+  const legacy={getItem:k=>record.get(k)||null,removeItem:k=>record.delete(k)};
+  assert.deepEqual(readPendingLayawayPayment(local,legacy),pending);
+  assert.equal(record.size,0);
+  assert.deepEqual(readPendingLayawayPayment(local,legacy),pending);
+});
+test("abono bloquea caja si almacenamiento no permite lectura fiable",()=>{
+  const bad={getItem:()=>"{invalido"};
+  const denied={getItem:()=>{throw Error("Storage disabled")}};
+  assert.equal(readPendingLayawayPayment(bad,null).storageUnavailable,true);
+  assert.equal(readPendingLayawayPayment(denied,null).storageUnavailable,true);
+  assert.throws(()=>storePendingLayawayPayment(pending,denied,null),/Storage disabled/);
+});

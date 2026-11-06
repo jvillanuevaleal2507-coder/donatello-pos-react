@@ -470,6 +470,8 @@ function VentasDonatelloPOSApp() {
         }
       });
 
+      // Solo limpiar estado efimero. Los UUID pendientes en localStorage
+      // deben sobrevivir al logout para impedir duplicaciones al reingresar.
       sessionStorage.clear();
 
       setSession(null);

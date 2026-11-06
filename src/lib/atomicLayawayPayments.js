@@ -1,35 +1,74 @@
 // ATLAS POS: atomic layaway payments. Uses checkout's shared UUID ledger.
 import { newCheckoutOperationId } from "./atomicCheckout.js";
 const STORAGE_KEY = "donatello.pos.pendingLayawayPayment.v1";
+// Durable only for opaque operation IDs and an account UUID; no PII or tokens.
+// localStorage survives mobile tab closure and deliberate logout. Old session-
+// storage drafts are migrated opportunistically without losing the original ID.
+const safeStorage=(name)=>{try{return globalThis[name]||null;}catch{return null;}};
+const unreadablePending=()=>({operationId:null,userId:null,storageUnavailable:true});
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const positiveId = (v) => Number.isSafeInteger(Number(v)) && Number(v)>0;
 
 export function newLayawayPaymentId(cryptoProvider) {
   return newCheckoutOperationId(cryptoProvider);
 }
-export function readPendingLayawayPayment(storage = globalThis.sessionStorage) {
+export function readPendingLayawayPayment(
+  storage=safeStorage("localStorage"), legacyStorage=safeStorage("sessionStorage")
+) {
   try {
-    const v = JSON.parse(storage?.getItem(STORAGE_KEY) || "null");
-    return v && UUID.test(v.operationId) && positiveId(v.layawayId)
-      ? { operationId:v.operationId, layawayId:Number(v.layawayId),
-          userId:UUID.test(String(v.userId || "")) ? String(v.userId).toLowerCase() : null }
-      : null;
-  } catch { return null; }
+    const durable=storage?.getItem(STORAGE_KEY);
+    const legacy=legacyStorage?.getItem(STORAGE_KEY);
+    const raw=durable || legacy;
+    if (!raw) return null;
+    let v;
+    try { v=JSON.parse(raw); } catch { return unreadablePending(); }
+    if (!v || !UUID.test(String(v.operationId || "")) || !positiveId(v.layawayId)) {
+      return unreadablePending();
+    }
+    const record={operationId:String(v.operationId).toLowerCase(),
+      layawayId:Number(v.layawayId),
+      userId:UUID.test(String(v.userId || "")) ? String(v.userId).toLowerCase() : null};
+    if (!durable && legacy && storage?.setItem) {
+      try {
+        storage.setItem(STORAGE_KEY,JSON.stringify(record));
+        legacyStorage?.removeItem(STORAGE_KEY);
+      } catch { /* original pending ID stays in sessionStorage */ }
+    }
+    return record;
+  } catch {
+    return unreadablePending();
+  }
 }
-export function storePendingLayawayPayment(pending, storage = globalThis.sessionStorage) {
-  if (!pending || !UUID.test(pending.operationId) || !positiveId(pending.layawayId) ||
-      !UUID.test(String(pending.userId || ""))) {
+export function storePendingLayawayPayment(
+  pending,storage=safeStorage("localStorage"),
+  legacyStorage=safeStorage("sessionStorage")
+) {
+  if (!pending || !UUID.test(String(pending.operationId || "")) ||
+      !positiveId(pending.layawayId) || !UUID.test(String(pending.userId || ""))) {
     throw Error("Operacion de abono invalida");
   }
-  if (!storage?.setItem) throw Error("No se puede conservar el abono pendiente");
-  // Only UUID, layaway ID and original Supabase user ID (never a token or customer data).
-  const record = { operationId:pending.operationId, layawayId:Number(pending.layawayId),
-    userId:String(pending.userId).toLowerCase() };
-  storage.setItem(STORAGE_KEY, JSON.stringify(record));
+  if (!storage?.setItem || !storage?.getItem) {
+    throw Error("No se puede conservar un abono de forma persistente");
+  }
+  if (readPendingLayawayPayment(storage,legacyStorage)) {
+    throw Error("Existe un abono pendiente por comprobar o cancelar");
+  }
+  // Persist only UUID, layaway ID and authenticated account UUID.
+  const record={operationId:String(pending.operationId).toLowerCase(),
+    layawayId:Number(pending.layawayId),userId:String(pending.userId).toLowerCase()};
+  storage.setItem(STORAGE_KEY,JSON.stringify(record));
+  if (storage.getItem(STORAGE_KEY)!==JSON.stringify(record)) {
+    throw Error("No se pudo verificar el guardado del abono pendiente");
+  }
+  try { legacyStorage?.removeItem(STORAGE_KEY); } catch { /* durable is primary */ }
   return record;
 }
-export function clearPendingLayawayPayment(storage = globalThis.sessionStorage) {
+export function clearPendingLayawayPayment(
+  storage=safeStorage("localStorage"),legacyStorage=safeStorage("sessionStorage")
+) {
   storage?.removeItem(STORAGE_KEY);
+  legacyStorage?.removeItem(STORAGE_KEY);
 }
 export function buildLayawayPaymentParams({ operationId, layawayId, amount }) {
   const n = Number(amount);

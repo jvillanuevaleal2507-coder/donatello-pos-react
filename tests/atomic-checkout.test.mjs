@@ -169,3 +169,39 @@ test("UI de checkout no envía consultas de otra cuenta",()=>{
   assert.match(src,/cancelAtomicCheckout\(supabase, pendingCheckoutId\.operationId\)/);
   assert.match(src,/storePendingCheckoutId\(operationId, session\?\.user\?\.id\)/);
 });
+
+
+test("checkout pendiente sobrevive cierre de pestaña y logout, sin datos sensibles",()=>{
+  const values=new Map();
+  const storage={setItem:(k,v)=>values.set(k,v),getItem:k=>values.get(k)||null,
+    removeItem:k=>values.delete(k),clear:()=>values.clear()};
+  const session={getItem:()=>null,removeItem:()=>{},clear:()=>{}};
+  const owner="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  storePendingCheckoutId(ID,owner,storage,session);
+  session.clear(); // logout clears sessionStorage, not durable localStorage
+  assert.deepEqual(readPendingCheckoutId(storage,session),{operationId:ID,userId:owner});
+  assert.throws(()=>storePendingCheckoutId("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",owner,storage,session),
+    /pendiente/);
+  assert.equal(values.size,1);
+  assert.ok(![...values.values()][0].includes("Silla"));
+  clearPendingCheckoutId(storage,session);
+  assert.equal(readPendingCheckoutId(storage,session),null);
+});
+test("checkout migra UUID previo sin perder identidad",()=>{
+  const current=new Map(),prior=new Map([["donatello.pos.pendingCheckout.v1",
+    JSON.stringify({operationId:ID,userId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"})]]);
+  const local={setItem:(k,v)=>current.set(k,v),getItem:k=>current.get(k)||null,
+    removeItem:k=>current.delete(k)};
+  const session={getItem:k=>prior.get(k)||null,removeItem:k=>prior.delete(k)};
+  assert.equal(readPendingCheckoutId(local,session).operationId,ID);
+  assert.equal(prior.size,0);
+  assert.equal(readPendingCheckoutId(local,session).operationId,ID);
+});
+test("checkout falla cerrado si el almacenamiento es corrupto o ilegible",()=>{
+  const bad={getItem:()=>"{dato-invalido"};
+  const inaccessible={getItem:()=>{throw Error("Blocked")}};
+  assert.equal(readPendingCheckoutId(bad,null).storageUnavailable,true);
+  assert.equal(readPendingCheckoutId(inaccessible,null).storageUnavailable,true);
+  assert.throws(()=>storePendingCheckoutId(ID,"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    inaccessible,null),/Blocked/);
+});

@@ -1,5 +1,11 @@
 // ATLAS POS: idempotent checkout contract; never trust client totals or costs.
 const STORAGE_KEY = "donatello.pos.pendingCheckout.v1";
+// Durable only for opaque operation IDs and an account UUID; no PII or tokens.
+// localStorage survives mobile tab closure and deliberate logout. Old session-
+// storage drafts are migrated opportunistically without losing the original ID.
+const safeStorage=(name)=>{try{return globalThis[name]||null;}catch{return null;}};
+const unreadablePending=()=>({operationId:null,userId:null,storageUnavailable:true});
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function positiveInteger(value) {
@@ -16,28 +22,58 @@ export function newCheckoutOperationId(cryptoProvider = globalThis.crypto) {
   }
   return requireUuid(cryptoProvider.randomUUID());
 }
-export function readPendingCheckoutId(storage = globalThis.sessionStorage) {
+export function readPendingCheckoutId(
+  storage=safeStorage("localStorage"), legacyStorage=safeStorage("sessionStorage")
+) {
   try {
-    const raw = storage?.getItem(STORAGE_KEY);
+    const durable=storage?.getItem(STORAGE_KEY);
+    const legacy=legacyStorage?.getItem(STORAGE_KEY);
+    const raw=durable || legacy;
     if (!raw) return null;
-    // Legacy UUID from earlier previews: retain pending to fail closed,
-    // but do not allow another admin to resolve it without owner identity.
-    if (UUID_RE.test(raw)) return {operationId:requireUuid(raw),userId:null};
-    const value = JSON.parse(raw);
-    if (!UUID_RE.test(String(value?.operationId || ""))) return null;
-    return {
-      operationId:requireUuid(value.operationId),
-      userId:UUID_RE.test(String(value?.userId || "")) ? requireUuid(value.userId) : null,
-    };
+    let record;
+    if (UUID_RE.test(raw)) {
+      record={operationId:requireUuid(raw),userId:null};
+    } else {
+      let parsed;
+      try { parsed=JSON.parse(raw); } catch { return unreadablePending(); }
+      if (!UUID_RE.test(String(parsed?.operationId || ""))) return unreadablePending();
+      record={
+        operationId:requireUuid(parsed.operationId),
+        userId:UUID_RE.test(String(parsed?.userId || "")) ? requireUuid(parsed.userId) : null,
+      };
+    }
+    // Migrate the original pending operation, never create a new UUID.
+    if (!durable && legacy && storage?.setItem) {
+      try {
+        storage.setItem(STORAGE_KEY,JSON.stringify(record));
+        legacyStorage?.removeItem(STORAGE_KEY);
+      } catch {
+        // Keep legacy storage intact; operation remains blocked for recovery.
+      }
+    }
+    return record;
   } catch {
-    return null;
+    // If localStorage becomes unreadable, NEVER interpret that as no payment.
+    return unreadablePending();
   }
 }
-export function storePendingCheckoutId(operationId, userId, storage = globalThis.sessionStorage) {
-  const id = requireUuid(operationId), owner = requireUuid(userId);
-  if (!storage?.setItem) throw Error("No se puede conservar la operación pendiente");
-  const record = {operationId:id,userId:owner};
-  storage.setItem(STORAGE_KEY, JSON.stringify(record));
+export function storePendingCheckoutId(
+  operationId,userId,storage=safeStorage("localStorage"),
+  legacyStorage=safeStorage("sessionStorage")
+) {
+  const id=requireUuid(operationId),owner=requireUuid(userId);
+  if (!storage?.setItem || !storage?.getItem) {
+    throw Error("No se puede conservar una operación de forma persistente");
+  }
+  if (readPendingCheckoutId(storage,legacyStorage)) {
+    throw Error("Existe un cobro pendiente por comprobar o cancelar");
+  }
+  const record={operationId:id,userId:owner};
+  storage.setItem(STORAGE_KEY,JSON.stringify(record));
+  if (storage.getItem(STORAGE_KEY)!==JSON.stringify(record)) {
+    throw Error("No se pudo verificar el guardado del cobro pendiente");
+  }
+  try { legacyStorage?.removeItem(STORAGE_KEY); } catch { /* durable is primary */ }
   return record;
 }
 export function assertPendingCheckoutOwner(pending, userId) {
@@ -47,8 +83,11 @@ export function assertPendingCheckoutOwner(pending, userId) {
     throw Error("Este cobro pendiente pertenece a otra cuenta: entra con la cuenta original");
   }
 }
-export function clearPendingCheckoutId(storage = globalThis.sessionStorage) {
+export function clearPendingCheckoutId(
+  storage=safeStorage("localStorage"), legacyStorage=safeStorage("sessionStorage")
+) {
   storage?.removeItem(STORAGE_KEY);
+  legacyStorage?.removeItem(STORAGE_KEY);
 }
 export function buildAtomicCheckoutParams({
   cart, saleMode, discountPercent, received, operationId,
