@@ -1,12 +1,43 @@
-// Contrato mínimo del RPC: no acepta costo, utilidad o stock desde el navegador.
+// ATLAS POS: idempotent checkout contract; never trust client totals or costs.
+const STORAGE_KEY = "donatello.pos.pendingCheckout.v1";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 function positiveInteger(value) {
   const n = Number(value);
   return Number.isSafeInteger(n) && n > 0 ? n : null;
 }
+function requireUuid(value) {
+  if (!UUID_RE.test(String(value || ""))) throw Error("Identificador de operación inválido");
+  return String(value).toLowerCase();
+}
+export function newCheckoutOperationId(cryptoProvider = globalThis.crypto) {
+  if (typeof cryptoProvider?.randomUUID !== "function") {
+    throw Error("El navegador no permite generar identificadores seguros");
+  }
+  return requireUuid(cryptoProvider.randomUUID());
+}
+export function readPendingCheckoutId(storage = globalThis.sessionStorage) {
+  try {
+    const value = storage?.getItem(STORAGE_KEY);
+    return value && UUID_RE.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+export function storePendingCheckoutId(operationId, storage = globalThis.sessionStorage) {
+  const id = requireUuid(operationId);
+  if (!storage?.setItem) throw Error("No se puede conservar la operación pendiente");
+  storage.setItem(STORAGE_KEY, id);
+  return id;
+}
+export function clearPendingCheckoutId(storage = globalThis.sessionStorage) {
+  storage?.removeItem(STORAGE_KEY);
+}
 export function buildAtomicCheckoutParams({
-  cart, saleMode, discountPercent, received,
+  cart, saleMode, discountPercent, received, operationId,
   customerName = "", customerPhone = "", depositAmount = 0, dueDate = null,
 }) {
+  const operation = requireUuid(operationId);
   if (!["sale", "layaway"].includes(saleMode)) throw Error("Modo inválido");
   if (!Array.isArray(cart) || cart.length < 1 || cart.length > 100) throw Error("Carrito inválido");
   const discount = Number(discountPercent);
@@ -30,19 +61,31 @@ export function buildAtomicCheckoutParams({
     throw Error("Fecha inválida");
   }
   return {
-    p_mode: saleMode, p_items: items, p_discount_percent: discount, p_received: amount,
+    p_operation_id: operation,
+    p_mode: saleMode, p_items: items, p_discount_percent: discount,
+    p_received: amount,
     p_customer_name: saleMode === "layaway" ? String(customerName).trim() : null,
     p_customer_phone: saleMode === "layaway" ? String(customerPhone).trim() : null,
     p_deposit: deposit, p_due_date: saleMode === "layaway" ? dueDate || null : null,
   };
 }
 export async function submitAtomicCheckout(supabase, params) {
-  const { data, error } = await supabase.rpc("donatello_checkout", params);
+  const { data, error } = await supabase.rpc("donatello_checkout_once", params);
   if (error) throw Error(error.message || "Error del servidor");
-  if (!data || data.type !== params.p_mode || !positiveInteger(data.id) ||
+  return validateCheckoutReceipt(data, params.p_mode);
+}
+function validateCheckoutReceipt(data, mode) {
+  if (!data || data.type !== mode || !positiveInteger(data.id) ||
       !Number.isFinite(Number(data.total)) || Number(data.total) <= 0 ||
       !Array.isArray(data.sale_items)) {
-    throw Error("Comprobante incompleto, comprueba el historial");
+    throw Error("Comprobante incompleto: comprueba el historial antes de reintentar");
   }
   return data;
+}
+export async function checkAtomicCheckoutStatus(supabase, operationId) {
+  const { data, error } = await supabase.rpc("donatello_checkout_status", {
+    p_operation_id: requireUuid(operationId),
+  });
+  if (error) throw Error(error.message || "No se pudo consultar el estado");
+  return data === null ? null : validateCheckoutReceipt(data, data.type);
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { buildAtomicCheckoutParams, submitAtomicCheckout } from "./lib/atomicCheckout.js";
+import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId } from "./lib/atomicCheckout.js";
 import QRCode from "qrcode";
 import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
@@ -160,6 +160,7 @@ function VentasDonatelloPOSApp() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState([]);
   const [processingCheckout, setProcessingCheckout] = useState(false);
+  const [pendingCheckoutId, setPendingCheckoutId] = useState(() => readPendingCheckoutId());
   const checkoutPendingRef = useRef(false);
   const [tab, setTab] = useState("sale");
   const [manualCode, setManualCode] = useState("");
@@ -613,8 +614,37 @@ function VentasDonatelloPOSApp() {
     setScanStatus("Carrito vacío");
   }
 
+  async function verifyPendingCheckout() {
+    if (checkoutPendingRef.current || !pendingCheckoutId) return;
+    checkoutPendingRef.current = true;
+    setProcessingCheckout(true);
+    try {
+      // El RPC espera la finalización del cobro original antes de responder.
+      const receipt = await checkAtomicCheckoutStatus(supabase, pendingCheckoutId);
+      if (receipt) {
+        setLastReceipt(receipt);
+        clearCart();
+        setScanStatus(receipt.type === "layaway"
+          ? "Apartado confirmado #" + receipt.id + " · " + money(receipt.total)
+          : "Venta confirmada #" + receipt.id + " · " + money(receipt.total));
+        await Promise.allSettled([loadProducts(),loadSales(),loadLayaways()]);
+      } else {
+        setScanStatus("El servidor confirmó que no registró ese cobro. Puedes intentarlo de nuevo.");
+      }
+      clearPendingCheckoutId();
+      setPendingCheckoutId(null);
+    } catch (error) {
+      // Mantener el identificador pendiente si tampoco se pudo confirmar el estado.
+      setScanStatus("Sigue sin confirmarse la operación: " + error.message +
+        ". No vuelvas a cobrar; comprueba su estado.");
+    } finally {
+      checkoutPendingRef.current = false;
+      setProcessingCheckout(false);
+    }
+  }
+
   async function checkout() {
-    if (checkoutPendingRef.current || cart.length === 0) return;
+    if (checkoutPendingRef.current || pendingCheckoutId || cart.length === 0) return;
     const discount = Number(discountPercent || 0);
     if (!Number.isFinite(discount) || discount < 0 || discount >= 100 ||
         !Number.isFinite(totalFinal) || totalFinal <= 0) {
@@ -643,19 +673,24 @@ function VentasDonatelloPOSApp() {
     }
     let params;
     try {
+      const operationId = newCheckoutOperationId();
       params = buildAtomicCheckoutParams({
         cart, saleMode, discountPercent: discount, received,
-        customerName, customerPhone, depositAmount, dueDate,
+        customerName, customerPhone, depositAmount, dueDate, operationId,
       });
+      // Registrar solo el UUID (nunca nombre/teléfono) antes de enviarlo.
+      storePendingCheckoutId(operationId);
+      setPendingCheckoutId(operationId);
     } catch (error) {
-      setScanStatus("No se pudo preparar el cobro: " + error.message); return;
+      setScanStatus("No se pudo preparar un cobro seguro: " + error.message); return;
     }
     checkoutPendingRef.current = true;
     setProcessingCheckout(true);
     try {
-      // Única transacción RPC para venta/apartado, detalle e inventario.
       const receipt = await submitAtomicCheckout(supabase, params);
       setLastReceipt(receipt);
+      clearPendingCheckoutId();
+      setPendingCheckoutId(null);
       clearCart();
       const label = receipt.type === "layaway"
         ? "Apartado registrado: " + money(receipt.deposit) +
@@ -671,9 +706,10 @@ function VentasDonatelloPOSApp() {
         setScanStatus(label + " · Actualiza el historial de ser necesario.");
       }
     } catch (error) {
-      // Sin fallback de escrituras ni reintento: la red podría fallar tras el commit.
-      setScanStatus("No se pudo confirmar el cobro: " + error.message +
-        ". Revisa historial y existencias antes de volver a intentarlo.");
+      // Una caída de red puede ocurrir después del COMMIT. No reintentar:
+      // el usuario debe consultar el estado del MISMO UUID antes de otro cobro.
+      setScanStatus("Cobro sin confirmar: " + error.message +
+        ". Usa «Comprobar cobro»; NO vuelvas a cobrar antes de verificar.");
     } finally {
       checkoutPendingRef.current = false;
       setProcessingCheckout(false);
@@ -1244,6 +1280,7 @@ function VentasDonatelloPOSApp() {
                     <Button
                       disabled={
                         processingCheckout ||
+                        pendingCheckoutId !== null ||
                         cart.length === 0 ||
                         (saleMode === "sale" && Number(received || 0) < totalFinal) ||
                         (saleMode === "layaway" && Number(depositAmount || 0) <= 0)
@@ -1253,6 +1290,16 @@ function VentasDonatelloPOSApp() {
                     >
                       {processingCheckout ? "Procesando..." : saleMode === "layaway" ? "Registrar apartado" : "Cobrar venta"}
                     </Button>
+                    {pendingCheckoutId && (
+                      <Button
+                        disabled={processingCheckout}
+                        onClick={verifyPendingCheckout}
+                        variant="secondary"
+                        style={{ minHeight: 48, width: "100%", marginTop: 12 }}
+                      >
+                        {processingCheckout ? "Comprobando…" : "Comprobar cobro pendiente"}
+                      </Button>
+                    )}
                   </Card>
                 </div>
               </div>
