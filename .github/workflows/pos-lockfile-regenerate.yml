@@ -1,0 +1,30 @@
+name: Donatello - regenerar lockfile temporal
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/pos-lockfile-regenerate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Resolver dependencias con lockfile actualizado
+        run: |
+          npm --version
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          node --test tests/atomic-checkout.test.mjs tests/atomic-layaway.test.mjs tests/server-pending.test.mjs
+          node -e 'const fs=require("fs");const p=require("./package.json");const l=require("./package-lock.json");if(JSON.stringify(p.dependencies)!==JSON.stringify(l.packages[""].dependencies)||JSON.stringify(p.devDependencies)!==JSON.stringify(l.packages[""].devDependencies))process.exit(3);console.log("LOCKFILE_ROOT_MATCH_OK")'
+      - name: Exportar lockfile generado para incluirlo en la PR
+        run: |
+          echo "ATLAS_LOCKFILE_BEGIN"
+          base64 -w 120 package-lock.json | sed 's/^/ATLAS_LOCK_B64:/'
+          echo "ATLAS_LOCKFILE_END"
