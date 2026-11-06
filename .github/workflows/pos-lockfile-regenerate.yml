@@ -22,7 +22,7 @@ jobs:
           npm ci --ignore-scripts --no-audit --no-fund
           npm run build
           node --test tests/atomic-checkout.test.mjs tests/atomic-layaway.test.mjs tests/server-pending.test.mjs
-          node -e 'const fs=require("fs");const p=require("./package.json");const l=require("./package-lock.json");if(JSON.stringify(p.dependencies)!==JSON.stringify(l.packages[""].dependencies)||JSON.stringify(p.devDependencies)!==JSON.stringify(l.packages[""].devDependencies))process.exit(3);console.log("LOCKFILE_ROOT_MATCH_OK")'
+          node -e 'const p=require("./package.json"),l=require("./package-lock.json");const eq=(a,b)=>Object.keys(a||{}).length===Object.keys(b||{}).length&&Object.entries(a||{}).every(([k,v])=>b?.[k]===v);if(!eq(p.dependencies,l.packages[""].dependencies)||!eq(p.devDependencies,l.packages[""].devDependencies))process.exit(3);console.log("LOCKFILE_ROOT_MATCH_OK")'
       - name: Exportar lockfile generado para incluirlo en la PR
         run: |
           echo "ATLAS_LOCKFILE_BEGIN"
