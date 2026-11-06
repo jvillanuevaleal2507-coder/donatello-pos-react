@@ -17,10 +17,22 @@ function requireUuid(value) {
   return String(value).toLowerCase();
 }
 export function newCheckoutOperationId(cryptoProvider = globalThis.crypto) {
-  if (typeof cryptoProvider?.randomUUID !== "function") {
+  if (typeof cryptoProvider?.randomUUID === "function") {
+    return requireUuid(cryptoProvider.randomUUID());
+  }
+  // In the HTTP-only private LAN lab randomUUID() is unavailable because it
+  // requires HTTPS. getRandomValues() is still cryptographically strong and
+  // usable in insecure browser contexts. Never fall back to Math.random().
+  if (typeof cryptoProvider?.getRandomValues !== "function") {
     throw Error("El navegador no permite generar identificadores seguros");
   }
-  return requireUuid(cryptoProvider.randomUUID());
+  const bytes = new Uint8Array(16);
+  cryptoProvider.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // RFC 4122 v4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // RFC 4122 variant
+  const hex = [...bytes].map(byte=>byte.toString(16).padStart(2,"0")).join("");
+  return requireUuid(hex.slice(0,8)+"-"+hex.slice(8,12)+"-"+hex.slice(12,16)+
+    "-"+hex.slice(16,20)+"-"+hex.slice(20));
 }
 export function readPendingCheckoutId(
   storage=safeStorage("localStorage"), legacyStorage=safeStorage("sessionStorage")

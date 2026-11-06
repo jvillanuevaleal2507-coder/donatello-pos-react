@@ -24,6 +24,21 @@ test("genera y persiste UUID seguro sin guardar datos del cliente", () => {
   clearPendingCheckoutId(storage);
   assert.equal(readPendingCheckoutId(storage),null);
 });
+test("Android HTTP LAN genera UUID v4 criptografico sin randomUUID", () => {
+  let sequence=0;
+  const cryptoProvider={getRandomValues:(bytes)=>{
+    for(let i=0;i<bytes.length;i++)bytes[i]=(sequence+i*23)&255;
+    sequence+=1;
+    return bytes;
+  }};
+  const first=newCheckoutOperationId(cryptoProvider);
+  const second=newCheckoutOperationId(cryptoProvider);
+  assert.match(first,/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+  assert.notEqual(first,second);
+  assert.equal(first.split("-")[2][0],"4");
+  assert.throws(()=>newCheckoutOperationId({}),/seguros/);
+  assert.throws(()=>newCheckoutOperationId(null),/seguros/);
+});
 test("exige UUID de operación para enviar cobro", () => {
   assert.throws(() => buildAtomicCheckoutParams({
     cart:[item],saleMode:"sale",discountPercent:0,received:2600,
