@@ -9,6 +9,11 @@ RETURNS uuid LANGUAGE sql STABLE
 AS $auth$
   SELECT nullif(current_setting('request.jwt.claim.sub', true),'')::uuid;
 $auth$;
+-- Production Supabase grants this access; the simplified PostgreSQL-only
+-- fixture must explicitly mirror it for SECURITY INVOKER RPC authorization.
+GRANT USAGE ON SCHEMA auth TO authenticated;
+GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+
 
 CREATE TABLE public.pos_authorized_users (
   user_id uuid PRIMARY KEY, role text NOT NULL, active boolean NOT NULL
