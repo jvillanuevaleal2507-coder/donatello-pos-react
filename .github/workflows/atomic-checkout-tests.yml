@@ -74,5 +74,8 @@ jobs:
           cmp /tmp/cobro-1.txt /tmp/cobro-2.txt
           psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT CASE WHEN
             (SELECT count(*) FROM public.test_movements)=2
-            AND (SELECT count(*) FROM private.pos_checkout_requests)=2
+            AND (SELECT count(*) FROM public.sales)=2
+            AND (SELECT count(*) FROM public.layaways)=1
+            AND (SELECT stock FROM public.products WHERE id=12)=7
+            AND (SELECT count(*) FROM private.pos_checkout_requests)=3
             THEN 'ONCE_OK' ELSE 'DUPLICATE_OR_MISSING' END" | grep -qx 'ONCE_OK'

@@ -40,14 +40,30 @@ BEGIN
   -- Un fallo del cobro debe dejar el registro privado sin operación.
   BEGIN
     PERFORM public.donatello_checkout_once(
-      failed_op,'failure','[]'::jsonb,0,10,NULL,NULL,0,NULL
+      failed_op,'sale','[{"id":12,"qty":999,"expected_price":10}]'::jsonb,
+      0,9990,NULL,NULL,0,NULL
     );
-    RAISE EXCEPTION 'No se simuló error de cobro';
+    RAISE EXCEPTION 'No rechazó stock insuficiente';
   EXCEPTION WHEN SQLSTATE 'P0001' THEN
-    IF SQLERRM <> 'Simulated checkout failure' THEN RAISE; END IF;
+    IF SQLERRM NOT LIKE 'Existencia insuficiente:%' THEN RAISE; END IF;
   END;
   IF public.donatello_checkout_status(failed_op) IS NOT NULL
     THEN RAISE EXCEPTION 'Fallo dejó registro de cobro'; END IF;
+  IF (SELECT stock FROM public.products WHERE id=12) <> 9
+    THEN RAISE EXCEPTION 'Stock alterado tras fallo o replay'; END IF;
+
+  -- Apartado real, con anticipo y saldo calculados por el servidor.
+  r1 := public.donatello_checkout_once(
+    'ffffffff-ffff-4fff-8fff-ffffffffffff'::uuid,
+    'layaway','[{"id":12,"qty":1,"expected_price":10}]'::jsonb,
+    0,0,'Cliente sintético',NULL,3,'2026-12-20'::date
+  );
+  IF r1->>'type' <> 'layaway' OR (r1->>'balance')::numeric <> 7
+    THEN RAISE EXCEPTION 'Apartado no devuelve recibo o saldo correcto'; END IF;
+  IF (SELECT count(*) FROM public.layaways) <> 1
+    THEN RAISE EXCEPTION 'Apartado no fue creado'; END IF;
+  IF (SELECT stock FROM public.products WHERE id=12) <> 8
+    THEN RAISE EXCEPTION 'Apartado no descontó una pieza'; END IF;
 END;
 $test$;
 
@@ -66,6 +82,23 @@ BEGIN
 END;
 $test$;
 
+-- Un operador activo no puede ejecutar funciones financieras privilegiadas.
+SET request.jwt.claim.sub = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+RESET ROLE;
+INSERT INTO public.pos_authorized_users(user_id,role,active)
+VALUES ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','operator',true);
+SET ROLE authenticated;
+DO $test$
+BEGIN
+  BEGIN
+    PERFORM public.donatello_checkout_status(
+      'ffffffff-ffff-4fff-8fff-ffffffffffff'::uuid
+    );
+    RAISE EXCEPTION 'Operador accedió al recibo administrativo';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+  END;
+END;
+$test$;
 RESET ROLE;
 SELECT CASE WHEN
   has_function_privilege('anon','public.donatello_checkout_once(uuid,text,jsonb,numeric,numeric,text,text,numeric,date)','EXECUTE') = false
