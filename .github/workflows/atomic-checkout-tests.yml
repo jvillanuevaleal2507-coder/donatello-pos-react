@@ -136,6 +136,8 @@ jobs:
 
       - name: Dos dispositivos no pueden reservar cobros simultaneos
         run: |
+          # Actions starts bash -e; disable it briefly to capture both exit codes.
+          set +e
           set -uo pipefail
           ADMIN_ID="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
           UUID_A="11111111-1111-4111-8111-777777777777"
@@ -146,6 +148,7 @@ jobs:
           p2=$!
           wait "$p1"; s1=$?
           wait "$p2"; s2=$?
+          set -e
           printf 'Reserva A: exit=%s\\n' "$s1"
           cat /tmp/reserve-a.txt
           printf 'Reserva B: exit=%s\\n' "$s2"
