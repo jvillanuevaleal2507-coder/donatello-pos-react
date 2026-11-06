@@ -13,6 +13,8 @@ on:
       - 'supabase/migrations/20261106_pos_layaway_payments.sql'
       - 'tests/sql/layaway_*'
       - 'tests/sql/pos_rls_authorization.sql'
+      - 'tests/sql/pos_server_recovery.sql'
+      - 'supabase/migrations/20261106_pos_pending_recovery.sql'
   workflow_dispatch:
 
 permissions:
@@ -122,3 +124,9 @@ jobs:
         run: |
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/pos_rls_authorization.sql | grep -qx 'AUTH_RLS_OK'
+      - name: Activar reserva y conciliacion solo en PostgreSQL descartable
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261106_pos_pending_recovery.sql
+      - name: Validar recuperacion entre dispositivos y bloqueo sin UUID local
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/pos_server_recovery.sql | grep -qx 'RECOVERY_OK'
