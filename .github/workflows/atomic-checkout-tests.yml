@@ -6,6 +6,8 @@ on:
       - 'src/lib/atomicCheckout.js'
       - 'tests/atomic-checkout.test.mjs'
       - '.github/workflows/atomic-checkout-tests.yml'
+      - 'supabase/migrations/20261105_pos_checkout_idempotency.sql'
+      - 'tests/sql/checkout_*'
   workflow_dispatch:
 
 permissions:
@@ -26,3 +28,51 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://lotgmhfqzthhhadavwlu.supabase.co
           VITE_SUPABASE_ANON_KEY: placeholder-build-only
+
+  postgres:
+    name: PostgreSQL 17 - idempotencia y carreras
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: atlas_checkout_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d atlas_checkout_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: test-only-password
+      PGDATABASE: atlas_checkout_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Preparar esquema sintético
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/checkout_fixture.sql
+      - name: Aplicar migración a la base desechable
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261105_pos_checkout_idempotency.sql
+      - name: Validar replay, rechazo de cambios, rollback y permisos
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/checkout_idempotency.sql | grep -qx 'GRANTS_OK'
+      - name: Ejecutar dos solicitudes concurrentes con el mismo UUID
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/checkout_concurrent.sql > /tmp/cobro-1.txt &
+          pid1=$!
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/checkout_concurrent.sql > /tmp/cobro-2.txt &
+          pid2=$!
+          wait "$pid1"
+          wait "$pid2"
+          cmp /tmp/cobro-1.txt /tmp/cobro-2.txt
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT CASE WHEN
+            (SELECT count(*) FROM public.test_movements)=2
+            AND (SELECT count(*) FROM private.pos_checkout_requests)=2
+            THEN 'ONCE_OK' ELSE 'DUPLICATE_OR_MISSING' END" | grep -qx 'ONCE_OK'
