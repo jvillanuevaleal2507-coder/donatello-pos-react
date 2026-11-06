@@ -67,6 +67,43 @@ BEGIN
 END;
 $test$;
 
+-- "No encontrado" no autoriza otra venta: cancelación terminal.
+DO $cancel_test$
+DECLARE
+  late_id uuid := '81818181-8181-4818-8818-818181818181';
+  done_id uuid := 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+  done_receipt jsonb;
+BEGIN
+  IF public.donatello_checkout_status(late_id) IS NOT NULL THEN
+    RAISE EXCEPTION 'Se esperaba UUID no encontrado';
+  END IF;
+  IF public.donatello_checkout_cancel(late_id)->>'state' <> 'cancelled' THEN
+    RAISE EXCEPTION 'No marcó cancelación terminal';
+  END IF;
+  IF public.donatello_checkout_cancel(late_id)->>'state' <> 'cancelled' THEN
+    RAISE EXCEPTION 'Cancelación no es idempotente';
+  END IF;
+  IF public.donatello_checkout_status(late_id)->>'state' <> 'cancelled' THEN
+    RAISE EXCEPTION 'Estado no refleja cancelación';
+  END IF;
+  BEGIN
+    PERFORM public.donatello_checkout_once(
+      late_id,'sale','[{"id":12,"qty":1,"expected_price":10}]'::jsonb,
+      0,10,NULL,NULL,0,NULL
+    );
+    RAISE EXCEPTION 'Cobro tardío no fue bloqueado';
+  EXCEPTION WHEN SQLSTATE '22023' THEN NULL;
+  END;
+  IF (SELECT count(*) FROM public.test_movements) <> 1 THEN
+    RAISE EXCEPTION 'Se generó cobro tardío duplicado';
+  END IF;
+  done_receipt := public.donatello_checkout_status(done_id);
+  IF public.donatello_checkout_cancel(done_id) IS DISTINCT FROM done_receipt THEN
+    RAISE EXCEPTION 'Cancelación alteró cobro confirmado';
+  END IF;
+END;
+$cancel_test$;
+
 -- Un usuario autenticado no autorizado no puede consultar recibos ajenos.
 SET request.jwt.claim.sub = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 DO $test$
