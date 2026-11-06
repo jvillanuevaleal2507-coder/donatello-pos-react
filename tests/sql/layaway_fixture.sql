@@ -44,3 +44,15 @@ END;
 $test$;
 CREATE TRIGGER layaway_payment_rollback_probe BEFORE INSERT ON public.layaway_payments
 FOR EACH ROW EXECUTE FUNCTION public.reject_test_payment();
+
+
+GRANT SELECT, INSERT ON public.layaway_payments TO authenticated;
+ALTER TABLE public.layaway_payments ENABLE ROW LEVEL SECURITY;
+CREATE POLICY layaway_payments_pos_select ON public.layaway_payments
+ FOR SELECT TO authenticated
+ USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+   WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE));
+CREATE POLICY layaway_payments_admin_insert ON public.layaway_payments
+ FOR INSERT TO authenticated
+ WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+   WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));

@@ -12,6 +12,7 @@ on:
       - 'tests/atomic-layaway.test.mjs'
       - 'supabase/migrations/20261106_pos_layaway_payments.sql'
       - 'tests/sql/layaway_*'
+      - 'tests/sql/pos_rls_authorization.sql'
   workflow_dispatch:
 
 permissions:
@@ -116,3 +117,8 @@ jobs:
         run: |
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_discount.sql | grep -qx 'DISCOUNT_OK'
+
+      - name: Autorizacion por perfil y RLS sobre tablas sinteticas
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/pos_rls_authorization.sql | grep -qx 'AUTH_RLS_OK'

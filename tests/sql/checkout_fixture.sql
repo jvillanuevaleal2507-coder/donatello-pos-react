@@ -252,3 +252,69 @@ BEGIN
 END;
 $function$
 
+
+
+-- Replica sintetica de la regla de acceso actual: admin POS activo escribe
+-- y cualquier POS activo puede leer datos operativos. No usa usuarios reales.
+-- SECURITY DEFINER debe comprobar el rol explicito porque pasa por RLS.
+INSERT INTO public.pos_authorized_users(user_id,role,active) VALUES
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb','admin',true),
+  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc','admin',false);
+GRANT SELECT ON public.pos_authorized_users TO authenticated;
+ALTER TABLE public.pos_authorized_users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY pos_auth_own_active ON public.pos_authorized_users
+  FOR SELECT TO authenticated
+  USING (user_id=(SELECT auth.uid()) AND active IS TRUE);
+
+-- Tests intentionally grant write privileges: denials must come from RLS
+-- and explicit function authorization, not missing GRANT permissions.
+GRANT SELECT,INSERT,UPDATE ON public.products,public.sales,public.sale_items,public.layaways TO authenticated;
+GRANT USAGE ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sales ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sale_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.layaways ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY products_pos_select ON public.products FOR SELECT TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE));
+CREATE POLICY products_admin_insert ON public.products FOR INSERT TO authenticated
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
+CREATE POLICY products_admin_update ON public.products FOR UPDATE TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'))
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
+
+CREATE POLICY sales_pos_select ON public.sales FOR SELECT TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE));
+CREATE POLICY sales_admin_insert ON public.sales FOR INSERT TO authenticated
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
+CREATE POLICY sales_admin_update ON public.sales FOR UPDATE TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'))
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
+
+CREATE POLICY sale_items_pos_select ON public.sale_items FOR SELECT TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE));
+CREATE POLICY sale_items_admin_insert ON public.sale_items FOR INSERT TO authenticated
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
+
+CREATE POLICY layaways_pos_select ON public.layaways FOR SELECT TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE));
+CREATE POLICY layaways_admin_insert ON public.layaways FOR INSERT TO authenticated
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
+CREATE POLICY layaways_admin_update ON public.layaways FOR UPDATE TO authenticated
+  USING (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'))
+  WITH CHECK (EXISTS(SELECT 1 FROM public.pos_authorized_users a
+    WHERE a.user_id=(SELECT auth.uid()) AND a.active IS TRUE AND a.role='admin'));
