@@ -1,0 +1,23 @@
+name: Donatello - permisos Atlas Server
+on:
+  pull_request:
+    paths:
+      - 'api/atlas/**'
+      - 'tests/atlas-server-auth.test.mjs'
+      - '.github/workflows/atlas-server-auth.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  autorizacion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verificar acceso administrador y denegaciones
+        run: node --test tests/atlas-server-auth.test.mjs
