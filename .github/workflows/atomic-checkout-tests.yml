@@ -16,6 +16,7 @@ on:
       - 'tests/sql/layaway_*'
       - 'tests/sql/pos_rls_authorization.sql'
       - 'tests/sql/pos_server_recovery.sql'
+      - 'tests/sql/pos_server_security.sql'
       - 'supabase/migrations/20261106_pos_pending_recovery.sql'
   workflow_dispatch:
 
@@ -169,3 +170,9 @@ jobs:
           test "$(psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT count(*) FROM private.pos_payment_pending")" = "1"
           psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SET ROLE authenticated; SET request.jwt.claim.sub = '$ADMIN_ID'; SELECT public.donatello_checkout_cancel('$pending_id'::uuid); SELECT public.donatello_payment_ack('$pending_id'::uuid);" > /tmp/reserve-cleanup.txt
           test "$(psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT count(*) FROM private.pos_payment_pending")" = "0"
+
+
+      - name: Aislamiento entre administradores y control de ACK
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/pos_server_security.sql | grep -qx 'RECOVERY_SECURITY_OK'
