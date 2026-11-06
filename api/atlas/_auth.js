@@ -54,8 +54,12 @@ export async function requirePosUser(req, res) {
     );
 
     const allowed = allowedResponse.ok ? await allowedResponse.json() : [];
-    if (!Array.isArray(allowed) || allowed.length === 0) {
-      res.status(403).json({ error: "Usuario no autorizado para Atlas." });
+    const administrator = Array.isArray(allowed) && allowed.some(
+      (membership) => membership?.user_id === user.id &&
+        membership?.active === true && membership?.role === "admin"
+    );
+    if (!administrator) {
+      res.status(403).json({ error: "Atlas solo está disponible para administradores autorizados." });
       return null;
     }
 
