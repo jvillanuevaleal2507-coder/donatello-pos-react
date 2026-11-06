@@ -5,6 +5,11 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'src/App.jsx'
+      - 'tests/pos-compatibility.test.mjs'
+      - 'src/pages/**'
+      - 'api/**'
+      - 'server/**'
+      - 'supabase/functions/**'
       - 'src/lib/atomicCheckout.js'
       - 'tests/atomic-checkout.test.mjs'
       - '.github/workflows/atomic-checkout-tests.yml'
@@ -41,6 +46,7 @@ jobs:
       - run: node --test tests/atomic-checkout.test.mjs
       - run: node --test tests/atomic-layaway.test.mjs
       - run: node --test tests/server-pending.test.mjs
+      - run: node --test tests/pos-compatibility.test.mjs
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
         env:
