@@ -94,7 +94,7 @@ test("pantalla vincula la comprobación del recibo a la sesión original",()=>{
   assert.match(src,/userId=\{session\?\.user\?\.id\}/);
   assert.match(src,/checkLayawayPayment\(supabase, pendingLayawayPayment, userId\)/);
   assert.match(src,/cancelLayawayPayment\(supabase, pendingLayawayPayment, userId\)/);
-  assert.match(src,/operationId, layawayId:selected\.id, userId/);
+  assert.match(src,/operationId:params\.p_operation_id,layawayId:params\.p_layaway_id,userId/);
 });
 
 

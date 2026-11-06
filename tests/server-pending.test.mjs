@@ -63,3 +63,17 @@ test("la interfaz reserva antes de enviar y concilia al iniciar sesión",()=>{
   assert.match(source,/recoverPosOperation\(supabase\)/);
   assert.match(source,/acknowledgePosOperation\(supabase/);
 });
+
+
+test("abono y checkout deben reservar antes de hacer la llamada financiera",()=>{
+ const src=readFileSync(new URL("../src/App.jsx",import.meta.url),"utf8");
+ const checkout=src.split("  async function checkout() {")[1]?.split("  async function startScanner() {")[0];
+ const layaway=src.split("  async function liquidateLayaway() {")[1]?.split("  const totalLayawayValue")[0];
+ assert.ok(checkout && layaway);
+ assert.ok(checkout.indexOf("await reservePosOperation(")<checkout.indexOf("await submitAtomicCheckout("));
+ assert.ok(layaway.indexOf("await reservePosOperation(")<layaway.indexOf("await submitLayawayPayment("));
+ assert.match(src,/onClose=\{closeConfirmedCheckoutReceipt\}/);
+ assert.match(src,/onClose=\{closeConfirmedLayawayReceipt\}/);
+ assert.match(src,/setServerPending\(undefined\)/);
+ assert.match(src,/serverPending!==null/);
+});

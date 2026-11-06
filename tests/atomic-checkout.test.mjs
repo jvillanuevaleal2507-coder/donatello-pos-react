@@ -167,7 +167,7 @@ test("UI de checkout no envía consultas de otra cuenta",()=>{
   assert.match(src,/assertPendingCheckoutOwner\(pendingCheckoutId, session\?\.user\?\.id\)/);
   assert.match(src,/checkAtomicCheckoutStatus\(supabase, pendingCheckoutId\.operationId\)/);
   assert.match(src,/cancelAtomicCheckout\(supabase, pendingCheckoutId\.operationId\)/);
-  assert.match(src,/storePendingCheckoutId\(operationId, session\?\.user\?\.id\)/);
+  assert.match(src,/storePendingCheckoutId\(params\.p_operation_id,session\?\.user\?\.id\)/);
 });
 
 
