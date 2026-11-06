@@ -45,3 +45,7 @@ Si tienes una VPN o red publica activa, desconectala para esta prueba.
 
 En Android, el laboratorio HTTP usa Web Crypto getRandomValues()
 para crear identificadores unicos seguros; no utiliza Math.random().
+
+ATLAS verifico automaticamente ambos accesos en GitHub Windows.
+La primera prueba con Docker Desktop en TU computadora y un Android fisico
+aun es necesaria para confirmar firewall privado y funcionamiento visual.

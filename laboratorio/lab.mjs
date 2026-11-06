@@ -33,7 +33,7 @@ function execute(exe,args,{cwd=root,input,quiet=false,allowFailure=false}={}){
 }
 function supabase(args,opts={}){
   // npx executes the official CLI without adding dependencies or changing package files.
-  return execute("npx",["--yes","supabase",...args],{cwd:runner,...opts});
+  return execute("npx",["--yes","supabase@3.0.0",...args],{cwd:runner,...opts});
 }
 function statusEnv(){
   const text=supabase(["status","-o","env"],{quiet:true}).stdout;
@@ -211,7 +211,7 @@ async function start(){
     execute("npm",["ci","--ignore-scripts","--no-audit","--no-fund"],{quiet:true});
   }else output("2/4 Dependencias listas.");
   output("3/4 Iniciando Supabase SOLO en esta PC (sin cuenta remota)...");
-  supabase(["start","-x","studio,storage,realtime,edge-runtime,analytics,imgproxy"],{quiet:true});
+  supabase(["start","-x","studio,storage-api,realtime,edge-runtime,logflare,imgproxy,mailpit,postgres-meta,supavisor,vector"],{quiet:true});
   const keys=statusEnv();
   const dockerNames=execute("docker",["ps","--format","{{.Names}}"],{quiet:true}).stdout
     .split(/\r?\n/).map(x=>x.trim());
@@ -285,9 +285,34 @@ async function smokeDatabase(){
   output("ATLAS_LAB_BOOTSTRAP_OK: Auth + venta + segunda sesion + stock + ACK");
 }
 
+async function selfCheck(){
+  // CI Windows runner exercises both .cmd entrypoints without starting Docker.
+  const required=[
+    "laboratorio/runner/supabase/config.toml",
+    "laboratorio/lab-proxy.mjs",
+    "tests/sql/checkout_fixture.sql",
+    "supabase/migrations/20261105_pos_checkout_idempotency.sql",
+    "supabase/migrations/20261106_pos_layaway_payments.sql",
+    "supabase/migrations/20261106_pos_pending_recovery.sql",
+    "supabase/migrations/20261106_pos_operator_read_guards.sql",
+    "tests/sql/void_sale_production_fixture.sql",
+    "package-lock.json"
+  ];
+  for(const path of required){
+    if(!existsSync(resolve(root,path)))throw Error("Falta archivo de laboratorio: "+path);
+  }
+  const config=file("laboratorio/runner/supabase/config.toml");
+  if(!config.includes('project_id = "donatello-mobilelab"')||
+      !config.includes("port = 58421")||!config.includes("port = 58422"))
+    throw Error("Configuracion de laboratorio incompatible");
+  if(!LOCAL_API.includes("127.0.0.1")||!DB_CONTAINER.includes(PROJECT))
+    throw Error("No se garantiza aislamiento LOCAL");
+  output("ATLAS_WINDOWS_ENTRYPOINTS_OK: archivos, puertos y proyecto local");
+}
+
 const cmd=process.argv[2];
-if(!["start","stop","smoke-db"].includes(cmd))throw Error("Modo permitido: start o stop");
-try{if(cmd==="start")await start();else if(cmd==="stop")await stop();else await smokeDatabase();}
+if(!["start","stop","smoke-db","selfcheck"].includes(cmd))throw Error("Modo no permitido");
+try{if(cmd==="start")await start();else if(cmd==="stop")await stop();else if(cmd==="selfcheck")await selfCheck();else await smokeDatabase();}
 catch(error){
   console.error("\nNO SE MODIFICO PRODUCCION. "+error.message);
   console.error("Puedes usar CERRAR_LABORATORIO.cmd para limpiar el laboratorio.");

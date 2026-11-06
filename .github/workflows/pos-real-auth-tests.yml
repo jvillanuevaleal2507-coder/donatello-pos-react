@@ -28,14 +28,14 @@ jobs:
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.0.0
       - name: Verificar CLI y PostgreSQL
         run: |
           supabase --version
           psql --version
       - name: Arrancar GoTrue, PostgREST y PostgreSQL locales
         working-directory: tests/auth-integration/runner
-        run: supabase start -x studio,storage,realtime,edge-runtime,analytics,imgproxy
+        run: supabase start -x studio,storage-api,realtime,edge-runtime,logflare,imgproxy,mailpit,postgres-meta,supavisor,vector
       - name: Instalar para prueba aislada sin modificar lockfile existente
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Probar sesiones reales y autorizacion por roles
@@ -57,10 +57,10 @@ jobs:
           cache: npm
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.0.0
       - name: Iniciar stack LOCAL del lanzador
         working-directory: laboratorio/runner
-        run: supabase start -x studio,storage,realtime,edge-runtime,analytics,imgproxy
+        run: supabase start -x studio,storage-api,realtime,edge-runtime,logflare,imgproxy,mailpit,postgres-meta,supavisor,vector
       - name: Instalar dependencias con lockfile
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Arranque real, usuario ficticio, cobro y segunda sesion

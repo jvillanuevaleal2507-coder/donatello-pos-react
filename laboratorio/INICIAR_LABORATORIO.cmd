@@ -7,6 +7,10 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
+if /I "%ATLAS_LAB_CI_SELF_CHECK%"=="1" (
+  node "laboratorio\lab.mjs" selfcheck
+  exit /b %errorlevel%
+)
 node "laboratorio\lab.mjs" start
 echo.
 pause

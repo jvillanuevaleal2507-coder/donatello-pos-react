@@ -205,3 +205,28 @@ jobs:
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -q -f tests/sql/void_sale_production_fixture.sql
           psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_void_guard.sql | grep -qx 'LAYAWAY_VOID_GUARD_OK'
+
+  windows_launcher:
+    name: Windows - doble clic y configuracion del laboratorio
+    runs-on: windows-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validar JavaScript del lanzador en Windows
+        shell: pwsh
+        run: |
+          node --check laboratorio/lab.mjs
+          node --check laboratorio/lab-proxy.mjs
+          node --test tests/lab-proxy.test.mjs
+      - name: Ejecutar accesos de Windows sin iniciar Docker
+        shell: cmd
+        env:
+          ATLAS_LAB_CI_SELF_CHECK: '1'
+        run: |
+          call laboratorio\INICIAR_LABORATORIO.cmd
+          if errorlevel 1 exit /b 1
+          call laboratorio\CERRAR_LABORATORIO.cmd
+          if errorlevel 1 exit /b 1
