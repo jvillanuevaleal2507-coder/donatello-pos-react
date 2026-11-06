@@ -1,0 +1,43 @@
+name: Donatello - abonos atomicos (borrador)
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261106_layaway_payment_atomic_draft.sql'
+      - 'tests/sql/layaway_atomic_test.sql'
+      - '.github/workflows/layaway-atomic-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: atlas_layaway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d atlas_layaway_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: test-only-password
+      PGDATABASE: atlas_layaway_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare synthetic schema
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/checkout_fixture.sql
+      - name: Apply draft migration only in disposable database
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261106_layaway_payment_atomic_draft.sql
+      - name: Verify payment, replay, settlement, rollback and cancellation
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_atomic_test.sql | grep -qx 'LAYAWAY_OK'
