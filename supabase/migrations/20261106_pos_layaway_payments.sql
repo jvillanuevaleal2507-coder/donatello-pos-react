@@ -180,3 +180,33 @@ REVOKE ALL ON FUNCTION public.donatello_layaway_payment_once(uuid,bigint,numeric
   FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.donatello_layaway_payment_once(uuid,bigint,numeric)
   TO authenticated;
+
+
+-- A liquidation sale is a financial recognition of items whose stock was
+-- already deducted on creation of the original layaway. The existing
+-- public.void_sale_transaction() restores stock for normal sales; doing that
+-- for a liquidation sale would credit stock twice. Reject that transition in
+-- the database, including via a direct UPDATE, until a dedicated cancellation
+-- flow can correctly reconcile the layaway, money and inventory together.
+CREATE FUNCTION public.pos_block_liquidation_sale_void()
+RETURNS trigger LANGUAGE plpgsql SECURITY INVOKER SET search_path=''
+AS $guard$
+BEGIN
+  IF OLD.status IS DISTINCT FROM 'voided'
+    AND NEW.status = 'voided'
+    AND EXISTS (
+      SELECT 1 FROM public.layaway_payments AS p
+      WHERE p.sale_id = OLD.id AND p.payment_type = 'liquidation'
+    ) THEN
+    RAISE EXCEPTION
+      'No se puede anular directamente una venta proveniente de apartado liquidado'
+      USING ERRCODE = '23514';
+  END IF;
+  RETURN NEW;
+END;
+$guard$;
+REVOKE ALL ON FUNCTION public.pos_block_liquidation_sale_void()
+  FROM PUBLIC,anon,authenticated;
+CREATE TRIGGER pos_block_liquidation_sale_void
+BEFORE UPDATE OF status ON public.sales
+FOR EACH ROW EXECUTE FUNCTION public.pos_block_liquidation_sale_void();

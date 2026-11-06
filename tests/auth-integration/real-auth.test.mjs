@@ -40,6 +40,7 @@ execSql(sqlFile("tests/sql/layaway_fixture.sql"));
 execSql(sqlFile("supabase/migrations/20261106_pos_layaway_payments.sql"));
 execSql(sqlFile("supabase/migrations/20261106_pos_pending_recovery.sql"));
 execSql(sqlFile("supabase/migrations/20261106_pos_operator_read_guards.sql"));
+execSql(sqlFile("tests/sql/void_sale_production_fixture.sql"));
 const admin=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
 const definitions=[
  {name:"owner",role:"admin",active:true},
@@ -150,6 +151,59 @@ test("Segundo administrador no consulta la reserva o recibo del primero",async()
  assert.ifError(pe);
  assert.equal(pending,null);
 });
+test("La anulación normal devuelve stock; una liquidación jamás lo duplica",async()=>{
+ const c=users.owner.client;
+ const {data:beforeSale,error:beforeError}=await c.from("products")
+  .select("stock").eq("id",12).single();
+ assert.ifError(beforeError);
+ const {data:normalSales,error:nError}=await c.from("sales")
+  .select("id,status,sale_items(qty,product_id)").eq("status","completed")
+  .order("id",{ascending:true});
+ assert.ifError(nError);
+ const normal=normalSales.find(s=>s.sale_items.some(i=>i.product_id===12));
+ assert.ok(normal,"Normal sale missing");
+ const qty=normal.sale_items.filter(i=>i.product_id===12).reduce((s,i)=>s+i.qty,0);
+ const {error:voidError}=await c.rpc("void_sale_transaction",{
+   p_sale_id:normal.id,p_reason:"Test synthetic normal void"
+ });
+ assert.ifError(voidError);
+ const {data:afterNormal,error:pn}=await c.from("products")
+  .select("stock").eq("id",12).single();
+ assert.ifError(pn);
+ assert.equal(afterNormal.stock,beforeSale.stock+qty);
+ const operationId="f1234567-1234-4234-8234-123456789003";
+ const {error:resError}=await c.rpc("donatello_payment_reserve",{
+   p_operation_id:operationId,p_kind:"layaway_payment",p_layaway_id:201
+ });
+ assert.ifError(resError);
+ const {data:receipt,error:payError}=await c.rpc("donatello_layaway_payment_once",{
+   p_operation_id:operationId,p_layaway_id:201,p_amount:10
+ });
+ assert.ifError(payError);
+ assert.equal(receipt.type,"liquidation");
+ assert.ok(receipt.sale_id);
+ const {data:beforeReversal,error:br}=await c.from("products")
+  .select("stock").eq("id",12).single();
+ assert.ifError(br);
+ const {error:rejected}=await c.rpc("void_sale_transaction",{
+   p_sale_id:receipt.sale_id,p_reason:"Test must reject liquidation void"
+ });
+ assert.ok(rejected,"Liquidation sale void should be denied");
+ assert.equal(rejected.code,"23514");
+ const {data:afterReversal,error:ar}=await c.from("products")
+  .select("stock").eq("id",12).single();
+ assert.ifError(ar);
+ assert.equal(afterReversal.stock,beforeReversal.stock);
+ const {data:paidSale,error:paidErr}=await c.from("sales")
+  .select("status").eq("id",receipt.sale_id).single();
+ assert.ifError(paidErr);
+ assert.equal(paidSale.status,"completed");
+ const {error:ackError}=await c.rpc("donatello_payment_ack",{
+  p_operation_id:operationId
+ });
+ assert.ifError(ackError);
+});
+
 test("Operador firmado no puede leer costos ni insertar ventas",async()=>{
  const c=users.operator.client;
  for(const [table,cols] of [["products","id,cost"],["sales","id,profit"],
