@@ -123,8 +123,18 @@ test("abono pendiente antiguo se migra a almacenamiento persistente",()=>{
 });
 test("abono bloquea caja si almacenamiento no permite lectura fiable",()=>{
   const bad={getItem:()=>"{invalido"};
-  const denied={getItem:()=>{throw Error("Storage disabled")}};
+  const denied={getItem:()=>{throw Error("Storage disabled")},setItem:()=>{}};
   assert.equal(readPendingLayawayPayment(bad,null).storageUnavailable,true);
   assert.equal(readPendingLayawayPayment(denied,null).storageUnavailable,true);
-  assert.throws(()=>storePendingLayawayPayment(pending,denied,null),/Storage disabled/);
+  assert.throws(()=>storePendingLayawayPayment(pending,denied,null),/pendiente/);
+});
+
+
+test("abono conserva UUID durable aunque ya no exista acceso a la sesión anterior",()=>{
+  const localMap=new Map();
+  const storage={setItem:(k,v)=>localMap.set(k,v),getItem:k=>localMap.get(k)||null,
+    removeItem:k=>localMap.delete(k)};
+  const brokenSession={getItem:()=>{throw Error("session inaccessible")}};
+  storePendingLayawayPayment(pending,storage,null);
+  assert.deepEqual(readPendingLayawayPayment(storage,brokenSession),pending);
 });

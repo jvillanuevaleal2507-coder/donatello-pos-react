@@ -199,9 +199,21 @@ test("checkout migra UUID previo sin perder identidad",()=>{
 });
 test("checkout falla cerrado si el almacenamiento es corrupto o ilegible",()=>{
   const bad={getItem:()=>"{dato-invalido"};
-  const inaccessible={getItem:()=>{throw Error("Blocked")}};
+  const inaccessible={getItem:()=>{throw Error("Blocked")},setItem:()=>{}};
   assert.equal(readPendingCheckoutId(bad,null).storageUnavailable,true);
   assert.equal(readPendingCheckoutId(inaccessible,null).storageUnavailable,true);
   assert.throws(()=>storePendingCheckoutId(ID,"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    inaccessible,null),/Blocked/);
+    inaccessible,null),/pendiente/);
+});
+
+
+test("checkout puede recuperar su UUID durable aun si la sesión antigua es ilegible",()=>{
+  const owner="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const local=new Map();
+  const storage={setItem:(k,v)=>local.set(k,v),getItem:k=>local.get(k)||null,
+    removeItem:k=>local.delete(k)};
+  const unavailableLegacy={getItem:()=>{throw Error("session inaccessible")}};
+  storePendingCheckoutId(ID,owner,storage,null);
+  assert.deepEqual(readPendingCheckoutId(storage,unavailableLegacy),
+    {operationId:ID,userId:owner});
 });

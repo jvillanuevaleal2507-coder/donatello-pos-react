@@ -18,7 +18,7 @@ export function readPendingLayawayPayment(
 ) {
   try {
     const durable=storage?.getItem(STORAGE_KEY);
-    const legacy=legacyStorage?.getItem(STORAGE_KEY);
+    const legacy=durable ? null : legacyStorage?.getItem(STORAGE_KEY);
     const raw=durable || legacy;
     if (!raw) return null;
     let v;
