@@ -8,6 +8,10 @@ on:
       - '.github/workflows/atomic-checkout-tests.yml'
       - 'supabase/migrations/20261105_pos_checkout_idempotency.sql'
       - 'tests/sql/checkout_*'
+      - 'src/lib/atomicLayawayPayments.js'
+      - 'tests/atomic-layaway.test.mjs'
+      - 'supabase/migrations/20261106_pos_layaway_payments.sql'
+      - 'tests/sql/layaway_*'
   workflow_dispatch:
 
 permissions:
@@ -23,6 +27,7 @@ jobs:
         with:
           node-version: '22'
       - run: node --test tests/atomic-checkout.test.mjs
+      - run: node --test tests/atomic-layaway.test.mjs
       - run: npm install --no-package-lock --no-audit --no-fund
       - run: npm run build
         env:
@@ -80,3 +85,30 @@ jobs:
             AND (SELECT count(*) FROM private.pos_checkout_requests WHERE state='completed')=3
             AND (SELECT count(*) FROM private.pos_checkout_requests WHERE state='cancelled')=1
             THEN 'ONCE_OK' ELSE 'DUPLICATE_OR_MISSING' END" | grep -qx 'ONCE_OK'
+
+      - name: Esquema sintetico de abonos
+        run: psql -X -v ON_ERROR_STOP=1 -f tests/sql/layaway_fixture.sql
+      - name: Aplicar migracion atomica de apartados solo al laboratorio
+        run: psql -X -v ON_ERROR_STOP=1 -f supabase/migrations/20261106_pos_layaway_payments.sql
+      - name: Repeticiones, liquidacion, recibos, permisos y rollback
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_payment.sql | grep -qx 'LAYAWAY_OK'
+      - name: Dos solicitudes concurrentes del mismo abono
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_concurrent.sql > /tmp/abono-1.txt &
+          pid1=$!
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/layaway_concurrent.sql > /tmp/abono-2.txt &
+          pid2=$!
+          wait "$pid1"
+          wait "$pid2"
+          cmp /tmp/abono-1.txt /tmp/abono-2.txt
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT CASE WHEN
+            (SELECT count(*) FROM public.sales)=4
+            AND (SELECT status FROM public.layaways WHERE id=202)='paid'
+            AND (SELECT count(*) FROM public.layaway_payments WHERE layaway_id=202)=1
+            AND (SELECT stock FROM public.products WHERE id=12)=7
+            AND (SELECT count(*) FROM private.pos_checkout_requests WHERE state='completed')=6
+            AND (SELECT count(*) FROM private.pos_checkout_requests WHERE state='cancelled')=2
+            THEN 'CONCURRENT_OK' ELSE 'CONCURRENT_FAILED' END" | grep -qx 'CONCURRENT_OK'
