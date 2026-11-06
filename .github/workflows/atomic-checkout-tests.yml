@@ -2,6 +2,8 @@ name: Donatello - checkout atómico
 on:
   pull_request:
     paths:
+      - 'package.json'
+      - 'package-lock.json'
       - 'src/App.jsx'
       - 'src/lib/atomicCheckout.js'
       - 'tests/atomic-checkout.test.mjs'
@@ -37,7 +39,7 @@ jobs:
       - run: node --test tests/atomic-checkout.test.mjs
       - run: node --test tests/atomic-layaway.test.mjs
       - run: node --test tests/server-pending.test.mjs
-      - run: npm install --no-package-lock --no-audit --no-fund
+      - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
         env:
           VITE_SUPABASE_URL: https://lotgmhfqzthhhadavwlu.supabase.co
