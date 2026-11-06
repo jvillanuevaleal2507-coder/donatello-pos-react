@@ -17,6 +17,8 @@ on:
       - 'tests/sql/pos_rls_authorization.sql'
       - 'tests/sql/pos_server_recovery.sql'
       - 'tests/sql/pos_server_security.sql'
+      - 'tests/sql/pos_operator_read_guards.sql'
+      - 'supabase/migrations/20261106_pos_operator_read_guards.sql'
       - 'supabase/migrations/20261106_pos_pending_recovery.sql'
   workflow_dispatch:
 
@@ -176,3 +178,9 @@ jobs:
         run: |
           set -euo pipefail
           psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/pos_server_security.sql | grep -qx 'RECOVERY_SECURITY_OK'
+
+      - name: Bloquear lectura financiera por operadores, conservar admin
+        run: |
+          set -euo pipefail
+          psql -X -v ON_ERROR_STOP=1 -q -f supabase/migrations/20261106_pos_operator_read_guards.sql
+          psql -X -v ON_ERROR_STOP=1 -q -t -A -f tests/sql/pos_operator_read_guards.sql | grep -qx 'OPERATOR_READ_GUARDS_OK'
