@@ -25,7 +25,11 @@ INSERT INTO public.layaways (
 (202,'Cliente sintetico 202',NULL,10,0,10,NULL,'active',
   '[{"product_id":12,"code":"TEST","name":"Producto","qty":1,"cost":3,"price":10,"subtotal":10,"profit":7}]'::jsonb),
 (203,'Cliente sintetico 203',NULL,20,0,20,NULL,'active',
-  '[{"product_id":12,"code":"TEST","name":"Producto","qty":2,"cost":3,"price":10,"subtotal":20,"profit":14}]'::jsonb);
+  '[{"product_id":12,"code":"TEST","name":"Producto","qty":2,"cost":3,"price":10,"subtotal":20,"profit":14}]'::jsonb),
+(204,'Cliente sintetico descuento',NULL,90,20,70,NULL,'active',
+  '[{"product_id":12,"code":"TEST","name":"Producto","qty":2,"cost":10,"price":50,"subtotal":100,"profit":80}]'::jsonb),
+(205,'Cliente sintetico con dos partidas',NULL,90,20,70,NULL,'active',
+  '[{"product_id":12,"code":"TEST-A","name":"Producto A","qty":1,"cost":12,"price":60,"subtotal":60,"profit":48},{"product_id":12,"code":"TEST-B","name":"Producto B","qty":1,"cost":8,"price":40,"subtotal":40,"profit":32}]'::jsonb);
 
 -- Forced journal failure after the RPC updates layaway balance:
 -- PostgreSQL must rollback the balance and omit the idempotency receipt.

@@ -14,6 +14,9 @@ DECLARE
   v_items jsonb; v_item jsonb;
   v_sale_id bigint; v_payment_id bigint; v_payment_at timestamptz;
   v_items_count integer := 0; v_profit numeric := 0; v_receipt jsonb;
+  v_subtotal numeric := 0; v_cost numeric := 0; v_discount numeric := 0;
+  v_line_subtotal numeric; v_line_cost numeric; v_line_discount numeric;
+  v_discount_allocated numeric := 0; v_item_idx integer := 0;
 BEGIN
   IF v_user IS NULL OR NOT EXISTS (
     SELECT 1 FROM public.pos_authorized_users
@@ -80,18 +83,49 @@ BEGIN
         RAISE EXCEPTION 'Cantidad invalida en apartado' USING ERRCODE='22023';
       END IF;
       v_items_count := v_items_count+(v_item->>'qty')::integer;
-      v_profit := v_profit+coalesce((v_item->>'profit')::numeric,0);
+      v_line_subtotal := coalesce(
+        (v_item->>'subtotal')::numeric,
+        coalesce((v_item->>'price')::numeric,0)*(v_item->>'qty')::integer
+      );
+      v_line_cost := coalesce((v_item->>'cost')::numeric,0)*(v_item->>'qty')::integer;
+      IF v_line_subtotal <= 0 OR v_line_cost < 0 THEN
+        RAISE EXCEPTION 'Costo o subtotal invalido en apartado' USING ERRCODE='22023';
+      END IF;
+      v_subtotal := v_subtotal+round(v_line_subtotal,2);
+      v_cost := v_cost+round(v_line_cost,2);
     END LOOP;
+
+    -- La utilidad correcta de un apartado con descuento se calcula a partir
+    -- del total acordado, no de 'item.profit' previo al descuento.
+    IF v_subtotal < v_lay.total OR v_lay.total <= 0 THEN
+      RAISE EXCEPTION 'Total de apartado supera el subtotal de articulos'
+        USING ERRCODE='22023';
+    END IF;
+    v_discount := round(v_subtotal-v_lay.total,2);
+    v_profit := round(v_lay.total-v_cost,2);
 
     INSERT INTO public.sales(
       total,profit,received,change_amount,items_count,subtotal_original,
       discount_percent,discount_amount,status,updated_at
     ) VALUES (
-      v_lay.total,v_profit,v_new_deposit,0,v_items_count,v_lay.total,
-      0,0,'completed',now()
+      v_lay.total,v_profit,v_new_deposit,0,v_items_count,v_subtotal,
+      round(v_discount*100/v_subtotal,4),v_discount,'completed',now()
     ) RETURNING id INTO v_sale_id;
 
     FOR v_item IN SELECT value FROM pg_catalog.jsonb_array_elements(v_items) a(value) LOOP
+      v_item_idx := v_item_idx+1;
+      v_line_subtotal := round(coalesce(
+        (v_item->>'subtotal')::numeric,
+        coalesce((v_item->>'price')::numeric,0)*(v_item->>'qty')::integer
+      ),2);
+      v_line_cost := round(coalesce((v_item->>'cost')::numeric,0)*(v_item->>'qty')::integer,2);
+      -- Distribuir descuento entre partidas; la ultima absorbe redondeo.
+      IF v_item_idx=pg_catalog.jsonb_array_length(v_items) THEN
+        v_line_discount := v_discount-v_discount_allocated;
+      ELSE
+        v_line_discount := round(v_discount*v_line_subtotal/v_subtotal,2);
+        v_discount_allocated := v_discount_allocated+v_line_discount;
+      END IF;
       INSERT INTO public.sale_items(
         sale_id,product_id,code,name,qty,cost,price,subtotal,profit
       ) VALUES (
@@ -99,8 +133,7 @@ BEGIN
         v_item->>'code',v_item->>'name',(v_item->>'qty')::integer,
         coalesce((v_item->>'cost')::numeric,0),
         coalesce((v_item->>'price')::numeric,0),
-        coalesce((v_item->>'subtotal')::numeric,0),
-        coalesce((v_item->>'profit')::numeric,0)
+        v_line_subtotal,round(v_line_subtotal-v_line_cost-v_line_discount,2)
       );
     END LOOP;
   END IF;
