@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId } from "./lib/atomicCheckout.js";
+import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId, assertPendingCheckoutOwner } from "./lib/atomicCheckout.js";
 import { newLayawayPaymentId, readPendingLayawayPayment, storePendingLayawayPayment, clearPendingLayawayPayment, buildLayawayPaymentParams, submitLayawayPayment, checkLayawayPayment, cancelLayawayPayment } from "./lib/atomicLayawayPayments.js";
 import QRCode from "qrcode";
 import { toPng } from "html-to-image";
@@ -620,7 +620,8 @@ function VentasDonatelloPOSApp() {
     checkoutPendingRef.current = true;
     setProcessingCheckout(true);
     try {
-      const result = await checkAtomicCheckoutStatus(supabase, pendingCheckoutId);
+      assertPendingCheckoutOwner(pendingCheckoutId, session?.user?.id);
+      const result = await checkAtomicCheckoutStatus(supabase, pendingCheckoutId.operationId);
       if (result?.state === "cancelled") {
         clearPendingCheckoutId();
         setPendingCheckoutId(null);
@@ -657,7 +658,8 @@ function VentasDonatelloPOSApp() {
     checkoutPendingRef.current = true;
     setProcessingCheckout(true);
     try {
-      const result = await cancelAtomicCheckout(supabase, pendingCheckoutId);
+      assertPendingCheckoutOwner(pendingCheckoutId, session?.user?.id);
+      const result = await cancelAtomicCheckout(supabase, pendingCheckoutId.operationId);
       if (result.state === "cancelled") {
         clearPendingCheckoutId();
         setPendingCheckoutId(null);
@@ -716,9 +718,9 @@ function VentasDonatelloPOSApp() {
         cart, saleMode, discountPercent: discount, received,
         customerName, customerPhone, depositAmount, dueDate, operationId,
       });
-      // Registrar solo el UUID (nunca nombre/teléfono) antes de enviarlo.
-      storePendingCheckoutId(operationId);
-      setPendingCheckoutId(operationId);
+      // Guardar UUID y dueño autorizado (nunca token, nombre, teléfono ni monto).
+      const pending = storePendingCheckoutId(operationId, session?.user?.id);
+      setPendingCheckoutId(pending);
     } catch (error) {
       setScanStatus("No se pudo preparar un cobro seguro: " + error.message); return;
     }
@@ -1331,11 +1333,12 @@ function VentasDonatelloPOSApp() {
                     {pendingCheckoutId && (
                       <>
                         <p role="alert" style={{ marginTop: 12 }}>
-                          Cobro pendiente de confirmación. La caja permanecerá bloqueada
-                          hasta que se compruebe o cancele de forma segura.
+                          {pendingCheckoutId.userId !== session?.user?.id
+                            ? "Este cobro pendiente pertenece a otra cuenta. Entra con la cuenta que lo inició; no hagas un cobro nuevo."
+                            : "Cobro pendiente de confirmación. La caja permanecerá bloqueada hasta que se compruebe o cancele de forma segura."}
                         </p>
                         <Button
-                          disabled={processingCheckout}
+                          disabled={processingCheckout || pendingCheckoutId.userId !== session?.user?.id}
                           onClick={verifyPendingCheckout}
                           variant="secondary"
                           style={{ minHeight: 48, width: "100%", marginTop: 12 }}
@@ -1343,7 +1346,7 @@ function VentasDonatelloPOSApp() {
                           {processingCheckout ? "Comprobando…" : "Comprobar cobro pendiente"}
                         </Button>
                         <Button
-                          disabled={processingCheckout}
+                          disabled={processingCheckout || pendingCheckoutId.userId !== session?.user?.id}
                           onClick={cancelPendingCheckout}
                           variant="secondary"
                           style={{ minHeight: 48, width: "100%", marginTop: 8 }}

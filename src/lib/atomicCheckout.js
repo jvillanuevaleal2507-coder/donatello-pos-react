@@ -18,17 +18,34 @@ export function newCheckoutOperationId(cryptoProvider = globalThis.crypto) {
 }
 export function readPendingCheckoutId(storage = globalThis.sessionStorage) {
   try {
-    const value = storage?.getItem(STORAGE_KEY);
-    return value && UUID_RE.test(value) ? value : null;
+    const raw = storage?.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    // Legacy UUID from earlier previews: retain pending to fail closed,
+    // but do not allow another admin to resolve it without owner identity.
+    if (UUID_RE.test(raw)) return {operationId:requireUuid(raw),userId:null};
+    const value = JSON.parse(raw);
+    if (!UUID_RE.test(String(value?.operationId || ""))) return null;
+    return {
+      operationId:requireUuid(value.operationId),
+      userId:UUID_RE.test(String(value?.userId || "")) ? requireUuid(value.userId) : null,
+    };
   } catch {
     return null;
   }
 }
-export function storePendingCheckoutId(operationId, storage = globalThis.sessionStorage) {
-  const id = requireUuid(operationId);
+export function storePendingCheckoutId(operationId, userId, storage = globalThis.sessionStorage) {
+  const id = requireUuid(operationId), owner = requireUuid(userId);
   if (!storage?.setItem) throw Error("No se puede conservar la operación pendiente");
-  storage.setItem(STORAGE_KEY, id);
-  return id;
+  const record = {operationId:id,userId:owner};
+  storage.setItem(STORAGE_KEY, JSON.stringify(record));
+  return record;
+}
+export function assertPendingCheckoutOwner(pending, userId) {
+  if (!pending || !UUID_RE.test(String(pending.operationId || "")) ||
+      !UUID_RE.test(String(userId || "")) ||
+      String(pending.userId || "").toLowerCase() !== String(userId || "").toLowerCase()) {
+    throw Error("Este cobro pendiente pertenece a otra cuenta: entra con la cuenta original");
+  }
 }
 export function clearPendingCheckoutId(storage = globalThis.sessionStorage) {
   storage?.removeItem(STORAGE_KEY);

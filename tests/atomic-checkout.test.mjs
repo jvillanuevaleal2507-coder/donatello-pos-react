@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import {
   buildAtomicCheckoutParams, submitAtomicCheckout,
   checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId,
-  storePendingCheckoutId, readPendingCheckoutId, clearPendingCheckoutId,
+  storePendingCheckoutId, readPendingCheckoutId, clearPendingCheckoutId, assertPendingCheckoutOwner,
 } from "../src/lib/atomicCheckout.js";
 const ID = "ad889d9e-b395-4a96-a178-e3cec00db661";
 const item = { id: 12, qty: 2, price: 1300, cost: 200, name: "Silla" };
@@ -16,8 +16,9 @@ test("genera y persiste UUID seguro sin guardar datos del cliente", () => {
   assert.equal(newCheckoutOperationId({randomUUID:()=>ID}),ID);
   const values = new Map();
   const storage = {setItem:(k,v)=>values.set(k,v),getItem:k=>values.get(k),removeItem:k=>values.delete(k)};
-  storePendingCheckoutId(ID, storage);
-  assert.equal(readPendingCheckoutId(storage),ID);
+  const OWNER="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  storePendingCheckoutId(ID, OWNER, storage);
+  assert.deepEqual(readPendingCheckoutId(storage),{operationId:ID,userId:OWNER});
   assert.equal(values.size,1);
   assert.ok(!JSON.stringify([...values]).includes("Silla"));
   clearPendingCheckoutId(storage);
@@ -146,4 +147,25 @@ test("SQL reserva de forma permanente UUID cancelados, sin borrar ventas", () =>
   assert.match(sql,/VALUES \(v_user,p_operation_id,'cancelled',NULL,NULL\)/);
   assert.match(sql,/IF v_state='completed' THEN/);
   assert.doesNotMatch(sql,/DELETE FROM private\.pos_checkout_requests/);
+});
+
+
+test("el usuario de otra cuenta no puede consultar ni cancelar el checkout pendiente",()=>{
+  const A="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const B="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const store=new Map();
+  const storage={setItem:(k,v)=>store.set(k,v),getItem:k=>store.get(k),removeItem:k=>store.delete(k)};
+  const pending=storePendingCheckoutId(ID,A,storage);
+  assert.doesNotThrow(()=>assertPendingCheckoutOwner(pending,A));
+  assert.throws(()=>assertPendingCheckoutOwner(pending,B),/otra cuenta/);
+  const legacy=readPendingCheckoutId({getItem:()=>ID});
+  assert.deepEqual(legacy,{operationId:ID,userId:null});
+  assert.throws(()=>assertPendingCheckoutOwner(legacy,A),/otra cuenta/);
+});
+test("UI de checkout no envía consultas de otra cuenta",()=>{
+  const src=readFileSync(new URL("../src/App.jsx",import.meta.url),"utf8");
+  assert.match(src,/assertPendingCheckoutOwner\(pendingCheckoutId, session\?\.user\?\.id\)/);
+  assert.match(src,/checkAtomicCheckoutStatus\(supabase, pendingCheckoutId\.operationId\)/);
+  assert.match(src,/cancelAtomicCheckout\(supabase, pendingCheckoutId\.operationId\)/);
+  assert.match(src,/storePendingCheckoutId\(operationId, session\?\.user\?\.id\)/);
 });
