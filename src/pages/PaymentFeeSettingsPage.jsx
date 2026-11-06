@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { PAYMENT_FEE_DEFAULTS, validatePaymentFeeConfig, cardProcessingFee, publicPriceIncludingCardFee } from "../utils/paymentFee.js";
+import { PAYMENT_FEE_DEFAULTS, validatePaymentFeeConfig, cardProcessingFee, commercialPublicPriceIncludingCardFee } from "../utils/paymentFee.js";
 
 const supabase = createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY);
 const mxn = (value) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(value) || 0);
@@ -44,7 +44,7 @@ export default function PaymentFeeSettingsPage() {
   }
 
   const valid = validatePaymentFeeConfig(form) && form.provider.trim().length > 0 && form.provider.trim().length <= 80;
-  const price = valid ? publicPriceIncludingCardFee(target, form) : 0;
+  const price = valid ? commercialPublicPriceIncludingCardFee(target, form) : 0;
   const fee = valid ? cardProcessingFee(price, form) : 0;
 
   async function save() {
@@ -122,8 +122,8 @@ export default function PaymentFeeSettingsPage() {
       </div>
 
       <div style={sectionStyle}>
-        <h3>Simulador de precio público</h3>
-        <p className="muted">Puedes probarlo aunque el módulo esté desactivado. Es una simulación, no modifica productos.</p>
+        <h3>Simulador de precio público redondeado</h3>
+        <p className="muted">Puedes probarlo aunque el módulo esté desactivado. Redondeamos hacia arriba a $10, $50 o $100 según el precio, conservando el neto. No modifica productos.</p>
         <label style={{ display: "block", maxWidth: 300, marginTop: 14 }}>Precio neto que deseas conservar (MXN)
           <input style={inputStyle} type="number" min="0" step="0.01" value={target} onChange={(e) => setTarget(e.target.value)} />
         </label>

@@ -52,3 +52,23 @@ export function publicPriceIncludingCardFee(targetNetPrice, config) {
   }
   return publicPrice;
 }
+
+/**
+ * Precio único comercial para efectivo o tarjeta: conserva el neto objetivo
+ * bajo la tarifa configurada, sin publicar centavos o importes irregulares.
+ *  $0-$999.99: múltiplos de $10; $1,000-$2,999.99: $50; desde $3,000: $100.
+ * Redondeo siempre hacia arriba, nunca redondear hacia abajo una comisión.
+ */
+export function commercialPublicPriceIncludingCardFee(targetNetPrice, config) {
+  const minimum = publicPriceIncludingCardFee(targetNetPrice, config);
+  if (minimum === 0) return 0;
+  const step = minimum < 1000 ? 10 : minimum < 3000 ? 50 : 100;
+  let commercial = Math.ceil((minimum - 1e-9) / step) * step;
+  for (let attempt = 0; attempt < 5 && commercial - cardProcessingFee(commercial, config) < Number(targetNetPrice) - 0.00001; attempt += 1) {
+    commercial += step;
+  }
+  if (commercial - cardProcessingFee(commercial, config) < Number(targetNetPrice) - 0.00001) {
+    throw new Error("No se puede conservar el neto al redondear el precio");
+  }
+  return commercial;
+}

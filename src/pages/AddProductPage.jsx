@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import DonatelloAtlas from "../components/DonatelloAtlas";
 import { saveAtlasIntelligence } from "../atlas/intelligenceService";
-import { cardProcessingFee, publicPriceIncludingCardFee } from "../utils/paymentFee.js";
+import { cardProcessingFee, commercialPublicPriceIncludingCardFee } from "../utils/paymentFee.js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -259,7 +259,7 @@ export default function AddProductPage({ products, loadProducts }) {
   const cardFeeActive = paymentSettings?.enabled === true;
   // El precio ingresado es el objetivo neto. Al activarse, el precio que se
   // publica incluye la comisión; nunca se suma como recargo al cobrar.
-  const publicPrice = cardFeeActive ? publicPriceIncludingCardFee(price, paymentSettings) : price;
+  const publicPrice = cardFeeActive ? commercialPublicPriceIncludingCardFee(price, paymentSettings) : price;
   const estimatedCardFee = cardFeeActive ? cardProcessingFee(publicPrice, paymentSettings) : 0;
   const profit = publicPrice - totalCostMxn - estimatedCardFee;
   const margin = publicPrice > 0 ? (profit / publicPrice) * 100 : 0;
