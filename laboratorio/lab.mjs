@@ -231,9 +231,63 @@ async function stop(){
     output("No se pudo detener automaticamente Supabase: revisa Docker Desktop.");
   else output("Laboratorio cerrado. Los datos de prueba se descartaron (sin respaldos).");
 }
+
+async function smokeDatabase(){
+  // The same bootstrap code used on Windows, tested against throwaway Docker.
+  // This command is deliberately unavailable on user machines.
+  if(process.env.GITHUB_ACTIONS!=="true"||process.platform!=="linux")
+    throw Error("Prueba de arranque disponible solo en GitHub Actions");
+  const keys=statusEnv();
+  const names=execute("docker",["ps","--format","{{.Names}}"],{quiet:true}).stdout
+    .split(/\r?\n/).map(x=>x.trim());
+  if(!names.includes(DB_CONTAINER))throw Error("No se encontro el contenedor local esperado");
+  const created=initDatabase();
+  if(!created)throw Error("El laboratorio de CI no comenzo limpio");
+  await seedAuth(keys,created);
+  const {createClient}=await import("@supabase/supabase-js");
+  const login=async()=>{
+    const client=createClient(keys.API_URL,keys.ANON_KEY,{
+      auth:{persistSession:false,autoRefreshToken:false}
+    });
+    const {error}=await client.auth.signInWithPassword({
+      email:EMAIL,password:PASSWORD});
+    if(error)throw Error("Error autenticando cuenta sintetica: "+error.message);
+    return client;
+  };
+  const deviceA=await login();
+  const op="75c8b782-e253-4c94-898f-8b723973cc21";
+  const {data:reserved,error:reserveError}=await deviceA.rpc("donatello_payment_reserve",{
+    p_operation_id:op,p_kind:"checkout",p_layaway_id:null});
+  if(reserveError||reserved?.state!=="reserved")
+    throw Error("Reserva rechazada en el laboratorio: "+reserveError?.message);
+  const {data:receipt,error:checkoutError}=await deviceA.rpc("donatello_checkout_once",{
+    p_operation_id:op,p_mode:"sale",
+    p_items:[{id:17,qty:1,expected_price:100}],
+    p_discount_percent:0,p_received:100,p_customer_name:null,
+    p_customer_phone:null,p_deposit:0,p_due_date:null
+  });
+  if(checkoutError||receipt?.type!=="sale"||Number(receipt?.total)!==100)
+    throw Error("Cobro de prueba fallido: "+checkoutError?.message);
+  const deviceB=await login();
+  const {data:recovered,error:recoveryError}=await deviceB.rpc("donatello_payment_recover");
+  if(recoveryError||recovered?.operation_id!==op||recovered?.state!=="completed")
+    throw Error("La segunda sesion no recupero el cobro: "+recoveryError?.message);
+  const {data:stock,error:stockError}=await deviceB.from("products")
+    .select("stock").eq("id",17).single();
+  if(stockError||Number(stock?.stock)!==19)
+    throw Error("Inventario sintetico inconsistente");
+  const {error:ackError}=await deviceB.rpc("donatello_payment_ack",{
+    p_operation_id:op});
+  if(ackError)throw Error("No se pudo liberar recibo ficticio: "+ackError.message);
+  const {data:cleared,error:clearError}=await deviceA.rpc("donatello_payment_recover");
+  if(clearError||cleared!==null)
+    throw Error("La reserva no se libero tras el ACK");
+  output("ATLAS_LAB_BOOTSTRAP_OK: Auth + venta + segunda sesion + stock + ACK");
+}
+
 const cmd=process.argv[2];
-if(!["start","stop"].includes(cmd))throw Error("Modo permitido: start o stop");
-try{if(cmd==="start")await start();else await stop();}
+if(!["start","stop","smoke-db"].includes(cmd))throw Error("Modo permitido: start o stop");
+try{if(cmd==="start")await start();else if(cmd==="stop")await stop();else await smokeDatabase();}
 catch(error){
   console.error("\nNO SE MODIFICO PRODUCCION. "+error.message);
   console.error("Puedes usar CERRAR_LABORATORIO.cmd para limpiar el laboratorio.");

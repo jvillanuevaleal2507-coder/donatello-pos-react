@@ -5,6 +5,7 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'tests/auth-integration/**'
+      - 'laboratorio/**'
       - '.github/workflows/pos-real-auth-tests.yml'
       - 'tests/sql/checkout_fixture.sql'
       - 'tests/sql/layaway_fixture.sql'
@@ -43,3 +44,28 @@ jobs:
         if: always()
         working-directory: tests/auth-integration/runner
         run: supabase stop || true
+
+  mobile_lab_bootstrap:
+    name: Laboratorio Android - preparar BD y cobro sintetico
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Iniciar stack LOCAL del lanzador
+        working-directory: laboratorio/runner
+        run: supabase start -x studio,storage,realtime,edge-runtime,analytics,imgproxy
+      - name: Instalar dependencias con lockfile
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Arranque real, usuario ficticio, cobro y segunda sesion
+        run: node laboratorio/lab.mjs smoke-db
+      - name: Cerrar stack descartable
+        if: always()
+        working-directory: laboratorio/runner
+        run: supabase stop --no-backup || true
