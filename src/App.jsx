@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId } from "./lib/atomicCheckout.js";
 import QRCode from "qrcode";
 import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
@@ -158,6 +159,9 @@ function VentasDonatelloPOSApp() {
   const [products, setProducts] = useState(initialProducts);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [cart, setCart] = useState([]);
+  const [processingCheckout, setProcessingCheckout] = useState(false);
+  const [pendingCheckoutId, setPendingCheckoutId] = useState(() => readPendingCheckoutId());
+  const checkoutPendingRef = useRef(false);
   const [tab, setTab] = useState("sale");
   const [manualCode, setManualCode] = useState("");
   const [received, setReceived] = useState("");
@@ -610,217 +614,143 @@ function VentasDonatelloPOSApp() {
     setScanStatus("Carrito vacío");
   }
 
+  async function verifyPendingCheckout() {
+    if (checkoutPendingRef.current || !pendingCheckoutId) return;
+    checkoutPendingRef.current = true;
+    setProcessingCheckout(true);
+    try {
+      const result = await checkAtomicCheckoutStatus(supabase, pendingCheckoutId);
+      if (result?.state === "cancelled") {
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus("Intento cancelado en el servidor. Puedes iniciar otro cobro.");
+      } else if (result) {
+        setLastReceipt(result);
+        clearCart();
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus(result.type === "layaway"
+          ? "Apartado confirmado #" + result.id + " · " + money(result.total)
+          : "Venta confirmada #" + result.id + " · " + money(result.total));
+        await Promise.allSettled([loadProducts(), loadSales(), loadLayaways()]);
+      } else {
+        // NULL no garantiza que una petición retrasada no llegue después.
+        // Bloqueamos cobros nuevos hasta cancelación terminal del mismo UUID.
+        setScanStatus("Todavía no aparece el cobro. Para intentarlo de nuevo, primero usa «Cancelar intento de forma segura». NO vuelvas a cobrar antes.");
+      }
+    } catch (error) {
+      setScanStatus("No se pudo confirmar el cobro: " + error.message +
+        ". El intento sigue bloqueado hasta comprobarlo o cancelarlo.");
+    } finally {
+      checkoutPendingRef.current = false;
+      setProcessingCheckout(false);
+    }
+  }
+
+  async function cancelPendingCheckout() {
+    if (checkoutPendingRef.current || !pendingCheckoutId) return;
+    if (!window.confirm(
+      "Esta acción comprueba el estado del cobro. Si ya se registró, mostrará el comprobante; "+
+      "de lo contrario impedirá que una petición retrasada cobre después. ¿Continuar?"
+    )) return;
+    checkoutPendingRef.current = true;
+    setProcessingCheckout(true);
+    try {
+      const result = await cancelAtomicCheckout(supabase, pendingCheckoutId);
+      if (result.state === "cancelled") {
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus("Intento cancelado de forma segura. No se registró un cobro para ese identificador.");
+      } else {
+        setLastReceipt(result);
+        clearCart();
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus("El cobro ya estaba confirmado (#" + result.id +
+          "). Se recuperó el comprobante; no se cobró otra vez.");
+        await Promise.allSettled([loadProducts(), loadSales(), loadLayaways()]);
+      }
+    } catch (error) {
+      // Respuesta ambigua = UUID conservado para permitir comprobar de nuevo.
+      setScanStatus("Cancelación sin confirmar: " + error.message +
+        ". No vuelvas a cobrar hasta comprobarlo.");
+    } finally {
+      checkoutPendingRef.current = false;
+      setProcessingCheckout(false);
+    }
+  }
+
   async function checkout() {
-    if (cart.length === 0) return;
-
-    const cleanDiscount = Number(discountPercent || 0);
-
-    if (!Number.isFinite(cleanDiscount) || cleanDiscount < 0 || cleanDiscount > 100) {
-      alert("El descuento debe estar entre 0% y 100%.");
-      return;
+    if (checkoutPendingRef.current || pendingCheckoutId || cart.length === 0) return;
+    const discount = Number(discountPercent || 0);
+    if (!Number.isFinite(discount) || discount < 0 || discount >= 100 ||
+        !Number.isFinite(totalFinal) || totalFinal <= 0) {
+      setScanStatus("Descuento o total inválido"); return;
     }
-
-    if (!Number.isFinite(totalFinal) || totalFinal <= 0) {
-      alert("El total final debe ser mayor a $0. Revisa el descuento capturado.");
-      return;
-    }
-
     if (saleMode === "sale") {
-      const receivedNumber = Number(received || 0);
-      const projectedChange = receivedNumber - totalFinal;
-      const unusualChangeLimit = Math.max(5000, totalFinal * 2);
-
-      if (projectedChange > unusualChangeLimit) {
-        const confirmed = window.confirm(
-          `⚠️ Revisa el monto recibido.\n\nTotal: ${money(totalFinal)}\nRecibido: ${money(receivedNumber)}\nCambio: ${money(projectedChange)}\n\n¿Deseas registrar la venta de todas formas?`
-        );
-
-        if (!confirmed) return;
+      const amount = Number(received || 0);
+      if (!Number.isFinite(amount) || amount < totalFinal) {
+        setScanStatus("Monto recibido insuficiente"); return;
       }
+      const projectedChange = amount - totalFinal;
+      if (projectedChange > Math.max(5000, totalFinal * 2) &&
+          !window.confirm("Revisa el cambio: " + money(projectedChange) +
+            ". ¿Deseas registrar la venta de todas formas?")) return;
     }
-
-    if (saleMode === "sale" && Number(received || 0) < totalFinal) {
-      setScanStatus("Monto recibido insuficiente");
-      return;
+    if (saleMode === "layaway" && (!customerName.trim() ||
+        !Number.isFinite(Number(depositAmount)) ||
+        Number(depositAmount) <= 0 || Number(depositAmount) > totalFinal)) {
+      setScanStatus("Revisa el nombre y el anticipo del apartado"); return;
     }
-
-    if (saleMode === "layaway") {
-      if (!customerName.trim()) {
-        alert("Agrega el nombre del cliente para el apartado.");
-        return;
-      }
-
-      if (Number(depositAmount || 0) <= 0) {
-        alert("Agrega un anticipo válido para el apartado.");
-        return;
-      }
-
-      if (Number(depositAmount || 0) > totalFinal) {
-        alert("El anticipo no puede ser mayor al total.");
-        return;
-      }
-    }
-
     for (const item of cart) {
       const current = products.find((p) => p.id === item.id);
       if (!current || Number(current.stock || 0) < Number(item.qty || 0)) {
-        setScanStatus(`Stock insuficiente para ${item.name}`);
-        return;
+        setScanStatus("Stock insuficiente: " + item.name); return;
       }
     }
-
-    const saleItems = cart.map((item) => ({
-      product_id: item.id,
-      code: item.code,
-      name: item.name,
-      qty: item.qty,
-      cost: Number(item.cost || 0),
-      price: Number(item.price || 0),
-      subtotal: Number(item.price || 0) * item.qty,
-      profit: (Number(item.price || 0) - Number(item.cost || 0)) * item.qty,
-    }));
-
-    if (saleMode === "layaway") {
-      const deposit = Number(depositAmount || 0);
-      const balance = totalFinal - deposit;
-
-      const layawayPayload = {
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        total: totalFinal,
-        deposit,
-        balance,
-        due_date: dueDate,
-        status: "active",
-        items: saleItems,
-        notes:
-          "El apartado se mantiene vigente hasta la fecha acordada. Posterior a ese plazo, el anticipo podrá utilizarse como saldo a favor en otra compra.",
-      };
-
-      const { data: layawayData, error: layawayError } = await supabase
-        .from("layaways")
-        .insert([layawayPayload])
-        .select("id")
-        .single();
-
-      if (layawayError) {
-        setScanStatus(`Error guardando apartado: ${layawayError.message}`);
-        return;
-      }
-
-      for (const item of cart) {
-        const current = products.find((p) => p.id === item.id);
-        const newStock = Number(current.stock || 0) - Number(item.qty || 0);
-        const { error } = await supabase
-          .from("products")
-          .update({ stock: newStock })
-          .eq("id", item.id);
-
-        if (error) {
-          setScanStatus(`Error actualizando stock: ${error.message}`);
-          return;
-        }
-      }
-
-      const receipt = {
-        id: layawayData.id,
-        type: "layaway",
-        sale_date: new Date().toISOString(),
-        customer_name: customerName.trim(),
-        customer_phone: customerPhone.trim(),
-        subtotal_original: subtotal,
-        discount_percent: Number(discountPercent || 0),
-        discount_amount: discountAmount,
-        total: totalFinal,
-        profit: adjustedProfit,
-        received: deposit,
-        change_amount: 0,
-        deposit,
-        balance,
-        due_date: dueDate,
-        items_count: itemsCount,
-        sale_items: saleItems,
-      };
-
+    let params;
+    try {
+      const operationId = newCheckoutOperationId();
+      params = buildAtomicCheckoutParams({
+        cart, saleMode, discountPercent: discount, received,
+        customerName, customerPhone, depositAmount, dueDate, operationId,
+      });
+      // Registrar solo el UUID (nunca nombre/teléfono) antes de enviarlo.
+      storePendingCheckoutId(operationId);
+      setPendingCheckoutId(operationId);
+    } catch (error) {
+      setScanStatus("No se pudo preparar un cobro seguro: " + error.message); return;
+    }
+    checkoutPendingRef.current = true;
+    setProcessingCheckout(true);
+    try {
+      const receipt = await submitAtomicCheckout(supabase, params);
       setLastReceipt(receipt);
-      setScanStatus(`Apartado registrado: ${money(deposit)} | Saldo: ${money(balance)}`);
+      clearPendingCheckoutId();
+      setPendingCheckoutId(null);
       clearCart();
-      await loadLayaways();
-      await loadProducts();
-      await loadSales();
-      return;
-    }
-
-const salePayload = {
-      total: totalFinal,
-      profit: adjustedProfit,
-      subtotal_original: subtotal,
-      discount_percent: Number(discountPercent || 0),
-      discount_amount: discountAmount,
-      received: Number(received || 0),
-      change_amount: change,
-      items_count: itemsCount,
-      status: "completed",
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data: saleData, error: saleError } = await supabase
-      .from("sales")
-      .insert([salePayload])
-      .select("id")
-      .single();
-
-    if (saleError) {
-      setScanStatus(`Error guardando venta: ${saleError.message}`);
-      return;
-    }
-
-    const saleItemsPayload = saleItems.map((item) => ({
-      ...item,
-      sale_id: saleData.id,
-    }));
-
-    const { error: itemsError } = await supabase.from("sale_items").insert(saleItemsPayload);
-
-    if (itemsError) {
-      setScanStatus(`Venta creada, pero falló el detalle: ${itemsError.message}`);
-      return;
-    }
-
-    for (const item of cart) {
-      const current = products.find((p) => p.id === item.id);
-      const newStock = Number(current.stock || 0) - Number(item.qty || 0);
-      const { error } = await supabase
-        .from("products")
-        .update({ stock: newStock })
-        .eq("id", item.id);
-
-      if (error) {
-        setScanStatus(`Error actualizando stock: ${error.message}`);
-        return;
+      const label = receipt.type === "layaway"
+        ? "Apartado registrado: " + money(receipt.deposit) +
+          " | Saldo: " + money(receipt.balance)
+        : "Venta cobrada: " + money(receipt.total) +
+          " | Cambio: " + money(receipt.change_amount);
+      setScanStatus(label);
+      const refresh = await Promise.allSettled([
+        loadProducts(), loadSales(),
+        ...(receipt.type === "layaway" ? [loadLayaways()] : []),
+      ]);
+      if (refresh.some((item) => item.status === "rejected")) {
+        setScanStatus(label + " · Actualiza el historial de ser necesario.");
       }
+    } catch (error) {
+      // Una caída de red puede ocurrir después del COMMIT. No reintentar:
+      // el usuario debe consultar el estado del MISMO UUID antes de otro cobro.
+      setScanStatus("Cobro sin confirmar: " + error.message +
+        ". Usa «Comprobar cobro»; NO vuelvas a cobrar antes de verificar.");
+    } finally {
+      checkoutPendingRef.current = false;
+      setProcessingCheckout(false);
     }
-
-    const receipt = {
-      id: saleData.id,
-      type: "sale",
-      sale_date: new Date().toISOString(),
-      subtotal_original: subtotal,
-      discount_percent: Number(discountPercent || 0),
-      discount_amount: discountAmount,
-      total: totalFinal,
-      profit: adjustedProfit,
-      received: Number(received || 0),
-      change_amount: change,
-      items_count: itemsCount,
-      sale_items: saleItemsPayload,
-    };
-
-    setLastReceipt(receipt);
-    setScanStatus(`Venta cobrada: ${money(totalFinal)} | Cambio: ${money(change)}`);
-    clearCart();
-    await loadProducts();
-    await loadSales();
   }
 
   async function startScanner() {
@@ -1386,6 +1316,8 @@ const salePayload = {
 
                     <Button
                       disabled={
+                        processingCheckout ||
+                        pendingCheckoutId !== null ||
                         cart.length === 0 ||
                         (saleMode === "sale" && Number(received || 0) < totalFinal) ||
                         (saleMode === "layaway" && Number(depositAmount || 0) <= 0)
@@ -1393,8 +1325,32 @@ const salePayload = {
                       onClick={checkout}
                       style={{ minHeight: 58, fontSize: "1.15rem", width: "100%" }}
                     >
-                      {saleMode === "layaway" ? "Registrar apartado" : "Cobrar venta"}
+                      {processingCheckout ? "Procesando..." : saleMode === "layaway" ? "Registrar apartado" : "Cobrar venta"}
                     </Button>
+                    {pendingCheckoutId && (
+                      <>
+                        <p role="alert" style={{ marginTop: 12 }}>
+                          Cobro pendiente de confirmación. La caja permanecerá bloqueada
+                          hasta que se compruebe o cancele de forma segura.
+                        </p>
+                        <Button
+                          disabled={processingCheckout}
+                          onClick={verifyPendingCheckout}
+                          variant="secondary"
+                          style={{ minHeight: 48, width: "100%", marginTop: 12 }}
+                        >
+                          {processingCheckout ? "Comprobando…" : "Comprobar cobro pendiente"}
+                        </Button>
+                        <Button
+                          disabled={processingCheckout}
+                          onClick={cancelPendingCheckout}
+                          variant="secondary"
+                          style={{ minHeight: 48, width: "100%", marginTop: 8 }}
+                        >
+                          {processingCheckout ? "Procesando…" : "Cancelar intento de forma segura"}
+                        </Button>
+                      </>
+                    )}
                   </Card>
                 </div>
               </div>
