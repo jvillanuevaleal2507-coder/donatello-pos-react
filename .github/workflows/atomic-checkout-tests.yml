@@ -146,15 +146,19 @@ jobs:
           p2=$!
           wait "$p1"; s1=$?
           wait "$p2"; s2=$?
+          printf 'Reserva A: exit=%s\\n' "$s1"
+          cat /tmp/reserve-a.txt
+          printf 'Reserva B: exit=%s\\n' "$s2"
+          cat /tmp/reserve-b.txt
           if [ "$s1" -eq "$s2" ]; then
             echo "Unexpected matching reservation outcomes"
             exit 1
           fi
           if [ "$s1" -eq 0 ]; then
-            grep -qx "$UUID_A" /tmp/reserve-a.txt
+            grep -q "$UUID_A" /tmp/reserve-a.txt
             grep -q "Existe otra operacion" /tmp/reserve-b.txt
           else
-            grep -qx "$UUID_B" /tmp/reserve-b.txt
+            grep -q "$UUID_B" /tmp/reserve-b.txt
             grep -q "Existe otra operacion" /tmp/reserve-a.txt
           fi
           pending_id=$(psql -X -v ON_ERROR_STOP=1 -q -t -A -c "SELECT operation_id FROM private.pos_payment_pending WHERE user_id='$ADMIN_ID'")
