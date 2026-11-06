@@ -18,6 +18,7 @@ const LOCAL_API="http://127.0.0.1:58421";
 const EMAIL="atlas-admin@laboratorio.invalid";
 const PASSWORD="DonatelloLAB-2026!";
 const VITE_PORT=4173;
+const LAN_API_PORT=58423;
 
 function output(msg){process.stdout.write(msg+"\n");}
 function execute(exe,args,{cwd=root,input,quiet=false,allowFailure=false}={}){
@@ -125,53 +126,75 @@ function privateIp(){
 function stopSite(){
   if(!existsSync(pidFile))return;
   const raw=readFileSync(pidFile,"utf8").trim();
-  const pid=Number(raw);
-  if(Number.isSafeInteger(pid)&&pid>0){
-    try{execute("taskkill",["/PID",String(pid),"/T","/F"],{quiet:true,allowFailure:true});}
-    catch{/* process could be gone */}
+  let pids=[];
+  try {
+    const parsed=JSON.parse(raw);
+    pids=typeof parsed==="number"?[parsed]:Object.values(parsed);
+  }catch{pids=[Number(raw)];}
+  for(const pid of pids){
+    if(Number.isSafeInteger(pid)&&pid>0){
+      try{execute("taskkill",["/PID",String(pid),"/T","/F"],
+        {quiet:true,allowFailure:true});}
+      catch{/* process might already be gone */}
+    }
   }
   rmSync(pidFile,{force:true});
 }
 async function startSite(keys){
   const addresses=privateIp();
-  if(!addresses.length)throw Error("Conecta esta computadora al Wi-Fi privado y vuelve a iniciar.");
+  if(!addresses.length)throw Error("Conecta esta computadora al Wi-Fi privado y vuelve a iniciar");
   const ip=addresses[0].ip;
   stopSite();
   const outputFd=openSync(logFile,"w");
-  const child=spawn("cmd.exe",["/d","/c","npm","run","dev","--","--host","0.0.0.0",
+  const proxy=spawn(process.execPath,["laboratorio/lab-proxy.mjs",ip,String(LAN_API_PORT)],{
+    cwd:root,detached:true,windowsHide:true,
+    stdio:["ignore",outputFd,outputFd]
+  });
+  if(!proxy.pid){
+    closeSync(outputFd);
+    throw Error("No se pudo iniciar el API de la red privada");
+  }
+  const site=spawn("cmd.exe",["/d","/c","npm","run","dev","--","--host",ip,
      "--port",String(VITE_PORT),"--strictPort"],{
     cwd:root,detached:true,windowsHide:true,
     stdio:["ignore",outputFd,outputFd],
-    env:{...process.env,VITE_SUPABASE_URL:LOCAL_API.replace("127.0.0.1",ip),
+    env:{...process.env,VITE_SUPABASE_URL:"http://"+ip+":"+LAN_API_PORT,
          VITE_SUPABASE_ANON_KEY:keys.ANON_KEY,VITE_ATLAS_LAB:"true"}
   });
   closeSync(outputFd);
-  if(!child.pid)throw Error("No se pudo iniciar el servidor web local");
-  writeFileSync(pidFile,String(child.pid),"utf8");
-  child.unref();
-  let ready=false;
-  for(let i=0;i<18;i++){
-    await new Promise(done=>setTimeout(done,650));
-    try{
-      const res=await fetch("http://127.0.0.1:"+VITE_PORT+"/",{signal:AbortSignal.timeout(1800)});
-      if(res.ok){ready=true;break;}
-    }catch{/* startup */}
+  writeFileSync(pidFile,JSON.stringify({proxy:proxy.pid,web:site.pid}),"utf8");
+  proxy.unref();site.unref();
+  if(!site.pid){
+    stopSite();
+    throw Error("No se pudo iniciar la pagina de prueba");
   }
-  if(!ready)throw Error("La pagina no arranco. Revisa "+logFile);
+  let ready=false;
+  for(let i=0;i<22;i++){
+    await new Promise(done=>setTimeout(done,600));
+    try{
+      const [web,api]=await Promise.all([
+        fetch("http://"+ip+":"+VITE_PORT+"/",{signal:AbortSignal.timeout(1700)}),
+        fetch("http://"+ip+":"+LAN_API_PORT+"/__atlas_lab_health",{
+          signal:AbortSignal.timeout(1700)})
+      ]);
+      if(web.ok&&api.ok&&(await api.json()).production===false){ready=true;break;}
+    }catch{/* Services starting */}
+  }
+  if(!ready){
+    stopSite();
+    throw Error("La pagina o el API local no iniciaron; revisa Docker y el Wi-Fi privado");
+  }
   output("");
   output("========== DONATELLO: LABORATORIO ==========");
-  output("URL EN EL CELULAR: http://"+ip+":"+VITE_PORT+"/");
-  if(addresses.length>1){
-    for(const alt of addresses.slice(1,3))
-      output("Alternativa de red: http://"+alt.ip+":"+VITE_PORT+"/");
-  }
+  output("URL EN ANDROID: http://"+ip+":"+VITE_PORT+"/");
   output("Correo: "+EMAIL);
   output("Contrasena: "+PASSWORD);
   output("===========================================");
-  output("Celular y PC: MISMO Wi-Fi privado. Sin datos reales.");
+  output("PC y Android: MISMO Wi-Fi privado. Sin datos reales.");
   output("Si Windows pide permiso de red, permitir solo redes PRIVADAS.");
-  output("Para terminar, usa CERRAR_LABORATORIO.cmd.");
-  try{spawn("cmd.exe",["/c","start","","http://127.0.0.1:"+VITE_PORT+"/"],{
+  output("El escaner QR puede estar deshabilitado por HTTP: usa producto manual.");
+  output("Para terminar, doble clic en CERRAR_LABORATORIO.cmd.");
+  try{spawn("cmd.exe",["/c","start","","http://"+ip+":"+VITE_PORT+"/"],{
     detached:true,windowsHide:true,stdio:"ignore"}).unref();}catch{/* manual browser */}
 }
 async function start(){

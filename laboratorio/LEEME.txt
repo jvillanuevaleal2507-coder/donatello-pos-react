@@ -38,3 +38,7 @@ motores SQL/Auth del laboratorio ya se probaron en Linux CI con datos ficticios.
 
 En Android por HTTP local, el escaner QR/camara puede no estar disponible;
 para probar cobros, selecciona el producto manualmente.
+
+El API de prueba se sirve al Android en el puerto 58423 de la red privada,
+solo para Auth/REST. Ninguna llave de service_role sale al navegador.
+Si tienes una VPN o red publica activa, desconectala para esta prueba.
