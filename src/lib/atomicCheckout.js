@@ -87,5 +87,19 @@ export async function checkAtomicCheckoutStatus(supabase, operationId) {
     p_operation_id: requireUuid(operationId),
   });
   if (error) throw Error(error.message || "No se pudo consultar el estado");
-  return data === null ? null : validateCheckoutReceipt(data, data.type);
+  if (data === null) return null;
+  if (data?.state === "cancelled") return { state: "cancelled" };
+  return validateCheckoutReceipt(data, data.type);
+}
+
+
+// Cancelación terminal: si el cobro ya se realizó, se devuelve su comprobante.
+// Si no, una lápida del UUID impide que una petición retrasada cobre después.
+export async function cancelAtomicCheckout(supabase, operationId) {
+  const { data, error } = await supabase.rpc("donatello_checkout_cancel", {
+    p_operation_id: requireUuid(operationId),
+  });
+  if (error) throw Error(error.message || "No se pudo cancelar el intento");
+  if (data?.state === "cancelled") return { state: "cancelled" };
+  return validateCheckoutReceipt(data, data?.type);
 }

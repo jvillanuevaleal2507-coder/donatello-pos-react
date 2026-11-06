@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
   buildAtomicCheckoutParams, submitAtomicCheckout,
-  checkAtomicCheckoutStatus, newCheckoutOperationId,
+  checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId,
   storePendingCheckoutId, readPendingCheckoutId, clearPendingCheckoutId,
 } from "../src/lib/atomicCheckout.js";
 const ID = "ad889d9e-b395-4a96-a178-e3cec00db661";
@@ -105,4 +105,45 @@ test("migración aplica guardas SQL y transacción serial por identificador", ()
   assert.match(sql,/REVOKE ALL ON TABLE private\.pos_checkout_requests/);
   assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.donatello_checkout_status/);
   assert.match(sql,/GRANT EXECUTE ON FUNCTION public\.donatello_checkout_once/);
+});
+
+
+test("estado cancelado y cancelación terminal no ejecutan cobro nuevo", async () => {
+  const called = [];
+  const supabase={rpc:async (name,args)=>{
+    called.push(name);
+    assert.deepEqual(args,{p_operation_id:ID});
+    return {data:{state:"cancelled"},error:null};
+  }};
+  assert.deepEqual(await checkAtomicCheckoutStatus(supabase,ID),{state:"cancelled"});
+  assert.deepEqual(await cancelAtomicCheckout(supabase,ID),{state:"cancelled"});
+  assert.deepEqual(called,["donatello_checkout_status","donatello_checkout_cancel"]);
+});
+test("cancelar después de un cobro devuelve el comprobante original", async () => {
+  const supabase={rpc:async (name,args)=>{
+    assert.equal(name,"donatello_checkout_cancel");
+    assert.deepEqual(args,{p_operation_id:ID});
+    return {data:{id:47,type:"sale",total:2600,sale_items:[]},error:null};
+  }};
+  const r=await cancelAtomicCheckout(supabase,ID);
+  assert.equal(r.id,47);
+});
+test("resultado NULL NO desbloquea el POS ni borra UUID", () => {
+  const src=readFileSync(new URL("../src/App.jsx",import.meta.url),"utf8");
+  const check=src.split("  async function verifyPendingCheckout() {")[1]?.split("  async function cancelPendingCheckout() {")[0];
+  assert.ok(check);
+  const emptyBranch=check.split("      } else {")[1]?.split("    } catch")[0];
+  assert.ok(emptyBranch);
+  assert.doesNotMatch(emptyBranch,/clearPendingCheckoutId/);
+  assert.doesNotMatch(emptyBranch,/setPendingCheckoutId\(null\)/);
+  assert.match(emptyBranch,/NO vuelvas a cobrar/);
+  assert.match(src,/onClick=\{cancelPendingCheckout\}/);
+});
+test("SQL reserva de forma permanente UUID cancelados, sin borrar ventas", () => {
+  const sql=readFileSync(new URL("../supabase/migrations/20261105_pos_checkout_idempotency.sql",import.meta.url),"utf8");
+  assert.match(sql,/CREATE FUNCTION public\.donatello_checkout_cancel/);
+  assert.match(sql,/IF v_old_state='cancelled' THEN/);
+  assert.match(sql,/VALUES \(v_user,p_operation_id,'cancelled',NULL,NULL\)/);
+  assert.match(sql,/IF v_state='completed' THEN/);
+  assert.doesNotMatch(sql,/DELETE FROM private\.pos_checkout_requests/);
 });

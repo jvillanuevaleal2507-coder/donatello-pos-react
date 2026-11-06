@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId } from "./lib/atomicCheckout.js";
+import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId } from "./lib/atomicCheckout.js";
 import QRCode from "qrcode";
 import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
@@ -619,24 +619,61 @@ function VentasDonatelloPOSApp() {
     checkoutPendingRef.current = true;
     setProcessingCheckout(true);
     try {
-      // El RPC espera la finalización del cobro original antes de responder.
-      const receipt = await checkAtomicCheckoutStatus(supabase, pendingCheckoutId);
-      if (receipt) {
-        setLastReceipt(receipt);
+      const result = await checkAtomicCheckoutStatus(supabase, pendingCheckoutId);
+      if (result?.state === "cancelled") {
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus("Intento cancelado en el servidor. Puedes iniciar otro cobro.");
+      } else if (result) {
+        setLastReceipt(result);
         clearCart();
-        setScanStatus(receipt.type === "layaway"
-          ? "Apartado confirmado #" + receipt.id + " · " + money(receipt.total)
-          : "Venta confirmada #" + receipt.id + " · " + money(receipt.total));
-        await Promise.allSettled([loadProducts(),loadSales(),loadLayaways()]);
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus(result.type === "layaway"
+          ? "Apartado confirmado #" + result.id + " · " + money(result.total)
+          : "Venta confirmada #" + result.id + " · " + money(result.total));
+        await Promise.allSettled([loadProducts(), loadSales(), loadLayaways()]);
       } else {
-        setScanStatus("El servidor confirmó que no registró ese cobro. Puedes intentarlo de nuevo.");
+        // NULL no garantiza que una petición retrasada no llegue después.
+        // Bloqueamos cobros nuevos hasta cancelación terminal del mismo UUID.
+        setScanStatus("Todavía no aparece el cobro. Para intentarlo de nuevo, primero usa «Cancelar intento de forma segura». NO vuelvas a cobrar antes.");
       }
-      clearPendingCheckoutId();
-      setPendingCheckoutId(null);
     } catch (error) {
-      // Mantener el identificador pendiente si tampoco se pudo confirmar el estado.
-      setScanStatus("Sigue sin confirmarse la operación: " + error.message +
-        ". No vuelvas a cobrar; comprueba su estado.");
+      setScanStatus("No se pudo confirmar el cobro: " + error.message +
+        ". El intento sigue bloqueado hasta comprobarlo o cancelarlo.");
+    } finally {
+      checkoutPendingRef.current = false;
+      setProcessingCheckout(false);
+    }
+  }
+
+  async function cancelPendingCheckout() {
+    if (checkoutPendingRef.current || !pendingCheckoutId) return;
+    if (!window.confirm(
+      "Esta acción comprueba el estado del cobro. Si ya se registró, mostrará el comprobante; "+
+      "de lo contrario impedirá que una petición retrasada cobre después. ¿Continuar?"
+    )) return;
+    checkoutPendingRef.current = true;
+    setProcessingCheckout(true);
+    try {
+      const result = await cancelAtomicCheckout(supabase, pendingCheckoutId);
+      if (result.state === "cancelled") {
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus("Intento cancelado de forma segura. No se registró un cobro para ese identificador.");
+      } else {
+        setLastReceipt(result);
+        clearCart();
+        clearPendingCheckoutId();
+        setPendingCheckoutId(null);
+        setScanStatus("El cobro ya estaba confirmado (#" + result.id +
+          "). Se recuperó el comprobante; no se cobró otra vez.");
+        await Promise.allSettled([loadProducts(), loadSales(), loadLayaways()]);
+      }
+    } catch (error) {
+      // Respuesta ambigua = UUID conservado para permitir comprobar de nuevo.
+      setScanStatus("Cancelación sin confirmar: " + error.message +
+        ". No vuelvas a cobrar hasta comprobarlo.");
     } finally {
       checkoutPendingRef.current = false;
       setProcessingCheckout(false);
@@ -1291,14 +1328,28 @@ function VentasDonatelloPOSApp() {
                       {processingCheckout ? "Procesando..." : saleMode === "layaway" ? "Registrar apartado" : "Cobrar venta"}
                     </Button>
                     {pendingCheckoutId && (
-                      <Button
-                        disabled={processingCheckout}
-                        onClick={verifyPendingCheckout}
-                        variant="secondary"
-                        style={{ minHeight: 48, width: "100%", marginTop: 12 }}
-                      >
-                        {processingCheckout ? "Comprobando…" : "Comprobar cobro pendiente"}
-                      </Button>
+                      <>
+                        <p role="alert" style={{ marginTop: 12 }}>
+                          Cobro pendiente de confirmación. La caja permanecerá bloqueada
+                          hasta que se compruebe o cancele de forma segura.
+                        </p>
+                        <Button
+                          disabled={processingCheckout}
+                          onClick={verifyPendingCheckout}
+                          variant="secondary"
+                          style={{ minHeight: 48, width: "100%", marginTop: 12 }}
+                        >
+                          {processingCheckout ? "Comprobando…" : "Comprobar cobro pendiente"}
+                        </Button>
+                        <Button
+                          disabled={processingCheckout}
+                          onClick={cancelPendingCheckout}
+                          variant="secondary"
+                          style={{ minHeight: 48, width: "100%", marginTop: 8 }}
+                        >
+                          {processingCheckout ? "Procesando…" : "Cancelar intento de forma segura"}
+                        </Button>
+                      </>
                     )}
                   </Card>
                 </div>
