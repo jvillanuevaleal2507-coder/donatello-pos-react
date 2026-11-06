@@ -77,5 +77,6 @@ jobs:
             AND (SELECT count(*) FROM public.sales)=2
             AND (SELECT count(*) FROM public.layaways)=1
             AND (SELECT stock FROM public.products WHERE id=12)=7
-            AND (SELECT count(*) FROM private.pos_checkout_requests)=3
+            AND (SELECT count(*) FROM private.pos_checkout_requests WHERE state='completed')=3
+            AND (SELECT count(*) FROM private.pos_checkout_requests WHERE state='cancelled')=1
             THEN 'ONCE_OK' ELSE 'DUPLICATE_OR_MISSING' END" | grep -qx 'ONCE_OK'

@@ -140,5 +140,7 @@ RESET ROLE;
 SELECT CASE WHEN
   has_function_privilege('anon','public.donatello_checkout_once(uuid,text,jsonb,numeric,numeric,text,text,numeric,date)','EXECUTE') = false
   AND has_function_privilege('anon','public.donatello_checkout_status(uuid)','EXECUTE') = false
+  AND has_function_privilege('anon','public.donatello_checkout_cancel(uuid)','EXECUTE') = false
+  AND has_function_privilege('authenticated','public.donatello_checkout_cancel(uuid)','EXECUTE') = true
   AND has_schema_privilege('authenticated','private','USAGE') = false
 THEN 'GRANTS_OK' ELSE pg_catalog.concat('GRANTS_BAD') END;
