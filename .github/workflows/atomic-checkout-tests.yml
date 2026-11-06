@@ -9,6 +9,8 @@ on:
       - 'supabase/migrations/20261105_pos_checkout_idempotency.sql'
       - 'tests/sql/checkout_*'
       - 'src/lib/atomicLayawayPayments.js'
+      - 'src/lib/serverPendingOperations.js'
+      - 'tests/server-pending.test.mjs'
       - 'tests/atomic-layaway.test.mjs'
       - 'supabase/migrations/20261106_pos_layaway_payments.sql'
       - 'tests/sql/layaway_*'
@@ -31,6 +33,7 @@ jobs:
           node-version: '22'
       - run: node --test tests/atomic-checkout.test.mjs
       - run: node --test tests/atomic-layaway.test.mjs
+      - run: node --test tests/server-pending.test.mjs
       - run: npm install --no-package-lock --no-audit --no-fund
       - run: npm run build
         env:

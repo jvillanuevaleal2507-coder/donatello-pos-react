@@ -66,10 +66,11 @@ BEGIN
     RAISE EXCEPTION 'Late cancelled UUID charged' USING ERRCODE='P0002';
   EXCEPTION WHEN SQLSTATE '22023' THEN NULL; END;
 
-  PERFORM public.donatello_payment_reserve(payment,'layaway_payment');
+  PERFORM public.donatello_payment_reserve(payment,'layaway_payment',201);
   receipt:=public.donatello_layaway_payment_once(payment,201,10);
   got:=public.donatello_payment_recover();
-  IF got->>'kind'<>'layaway_payment' OR got->>'state'<>'completed'
+  IF got->>'kind'<>'layaway_payment' OR (got->>'layaway_id')::bigint<>201
+     OR got->>'state'<>'completed'
       OR got->'receipt' IS DISTINCT FROM receipt OR
       receipt->>'type'<>'liquidation' THEN
     RAISE EXCEPTION 'Payment receipt not recoverable after browser reset'; END IF;
@@ -118,7 +119,7 @@ END;
 $unauth$;
 RESET ROLE;
 SELECT CASE WHEN
-  has_function_privilege('authenticated','public.donatello_payment_reserve(uuid,text)','EXECUTE')
+  has_function_privilege('authenticated','public.donatello_payment_reserve(uuid,text,bigint)','EXECUTE')
   AND has_function_privilege('authenticated','public.donatello_payment_recover()','EXECUTE')
   AND has_function_privilege('authenticated','public.donatello_payment_ack(uuid)','EXECUTE')
   AND NOT has_function_privilege('anon','public.donatello_payment_recover()','EXECUTE')
