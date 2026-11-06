@@ -25,9 +25,9 @@ export function clearPendingLayawayPaymentId(storage=globalThis.sessionStorage) 
 export function buildLayawayPaymentParams({operationId:op,layawayId,amount,expectedBalance}) {
   const id=Number(layawayId),value=Number(amount),balance=Number(expectedBalance);
   if(!Number.isSafeInteger(id)||id<=0)throw Error("Apartado inválido");
-  if(!Number.isFinite(value)||value<=0||value>100000000||Math.round(value*100)!==value*100)
+  if(!Number.isFinite(value)||value<=0||value>100000000||Math.abs(Math.round(value*100)-value*100)>1e-7)
     throw Error("Abono inválido: usa pesos y centavos");
-  if(!Number.isFinite(balance)||balance<=0||balance>100000000||Math.round(balance*100)!==balance*100)
+  if(!Number.isFinite(balance)||balance<=0||balance>100000000||Math.abs(Math.round(balance*100)-balance*100)>1e-7)
     throw Error("Saldo inválido");
   if(value>balance)throw Error("El abono excede el saldo");
   return {
