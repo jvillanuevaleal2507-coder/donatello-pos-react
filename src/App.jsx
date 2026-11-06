@@ -1,3 +1,8 @@
+import {
+  makeLayawayOperationId, readPendingLayawayPayment, storePendingLayawayPayment,
+  clearPendingLayawayPayment, buildLayawayPaymentParams, payLayawayOnce,
+  checkLayawayPaymentStatus, cancelLayawayPayment,
+} from "./lib/atomicLayawayPayment.js";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "qrcode";
@@ -2918,6 +2923,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
   const [payment, setPayment] = useState("");
   const [loadingLayaways, setLoadingLayaways] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState(() => readPendingLayawayPayment());
   const [paymentReceipt, setPaymentReceipt] = useState(null);
   const [recentPayments, setRecentPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(false);
@@ -2953,38 +2959,6 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     }
   }
 
-  async function savePaymentHistory(receiptData, saleId = null) {
-    const payload = {
-      layaway_id: receiptData.id,
-      payment_amount: Number(receiptData.payment_amount || 0),
-      previous_balance: Number(receiptData.previous_balance || 0),
-      new_balance: Number(receiptData.balance || 0),
-      previous_deposit: Number(receiptData.previous_deposit || 0),
-      new_deposit: Number(receiptData.total_deposit || 0),
-      payment_type: receiptData.type === "liquidation" ? "liquidation" : "payment",
-      sale_id: saleId,
-      customer_name: receiptData.customer_name || "",
-      customer_phone: receiptData.customer_phone || "",
-      total: Number(receiptData.total || 0),
-      due_date: receiptData.due_date || null,
-      items: receiptData.items || [],
-    };
-
-    const { data, error } = await supabase
-      .from("layaway_payments")
-      .insert([payload])
-      .select("id, created_at")
-      .single();
-
-    if (error) {
-      console.error("Error guardando historial de abono:", error);
-      alert(`El pago se guardó, pero no se pudo guardar el historial del recibo: ${error.message}`);
-      return null;
-    }
-
-    return data;
-  }
-
   function openPaymentReceiptFromHistory(payment) {
     setPaymentReceipt({
       id: payment.layaway_id,
@@ -3015,164 +2989,100 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
     refreshLayaways();
   }, []);
 
-  async function liquidateLayaway() {
-    if (processingPayment) return;
-
-    if (!selected) {
-      alert("No hay apartado seleccionado.");
-      return;
-    }
-
-    const amount = Number(payment || 0);
-
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alert("Ingresa un monto válido.");
-      return;
-    }
-
-    const currentBalance = Number(selected.balance || 0);
-    const previousDeposit = Number(selected.deposit || 0);
-
-    if (amount > currentBalance) {
-      alert("El pago no puede ser mayor al saldo.");
-      return;
-    }
-
-    const newBalance = Math.max(currentBalance - amount, 0);
-    const newDeposit = previousDeposit + amount;
-    const newStatus = newBalance <= 0 ? "paid" : "active";
-    const paymentReceiptData = {
-      id: selected.id,
-      type: newStatus === "paid" ? "liquidation" : "payment",
-      payment_date: new Date().toISOString(),
-      customer_name: selected.customer_name,
-      customer_phone: selected.customer_phone,
-      total: Number(selected.total || 0),
-      previous_deposit: previousDeposit,
-      payment_amount: amount,
-      total_deposit: newDeposit,
-      previous_balance: currentBalance,
-      balance: newBalance,
-      due_date: selected.due_date,
-      items: Array.isArray(selected.items) ? selected.items : [],
-    };
-
+  async function finishConfirmedLayawayPayment(receipt) {
+    // El servidor confirmó las escrituras. No se repite el mismo pago.
+    clearPendingLayawayPayment();
+    setPendingPayment(null);
+    setPaymentReceipt(receipt);
+    setSelected(null);
+    setPayment("");
     try {
-      setProcessingPayment(true);
-
-      if (newStatus === "paid") {
-        const items = Array.isArray(selected.items) ? selected.items : [];
-        const total = Number(selected.total || 0);
-        const totalProfit = items.reduce(
-          (sum, item) => sum + Number(item.profit || 0),
-          0
-        );
-        const itemsCount = items.reduce(
-          (sum, item) => sum + Number(item.qty || 0),
-          0
-        );
-
-        const salePayload = {
-          total,
-          profit: totalProfit,
-          received: newDeposit,
-          change_amount: 0,
-          items_count: itemsCount,
-          subtotal_original: total,
-          discount_percent: 0,
-          discount_amount: 0,
-          status: "completed",
-          updated_at: new Date().toISOString(),
-        };
-
-        const { data: saleData, error: saleError } = await supabase
-          .from("sales")
-          .insert([salePayload])
-          .select("id")
-          .single();
-
-        if (saleError) {
-          alert(`Error creando venta final: ${saleError.message}`);
-          return;
-        }
-
-        const saleItems = items.map((item) => ({
-          sale_id: saleData.id,
-          product_id: item.product_id || null,
-          code: item.code,
-          name: item.name,
-          qty: Number(item.qty || 0),
-          cost: Number(item.cost || 0),
-          price: Number(item.price || 0),
-          subtotal: Number(item.subtotal || 0),
-          profit: Number(item.profit || 0),
-        }));
-
-        if (saleItems.length > 0) {
-          const { error: itemsError } = await supabase
-            .from("sale_items")
-            .insert(saleItems);
-
-          if (itemsError) {
-            alert(`Venta creada, pero falló el detalle: ${itemsError.message}`);
-            return;
-          }
-        }
-
-        const { error } = await supabase
-          .from("layaways")
-          .update({
-            balance: 0,
-            deposit: newDeposit,
-            status: "paid",
-            notes: `Apartado liquidado y registrado como venta #${saleData.id}`,
-          })
-          .eq("id", selected.id);
-
-        if (error) {
-          alert(`Venta creada, pero falló actualizar apartado: ${error.message}`);
-          return;
-        }
-
-        const savedPayment = await savePaymentHistory(paymentReceiptData, saleData.id);
-        setPaymentReceipt({
-          ...paymentReceiptData,
-          sale_id: saleData.id,
-          payment_id: savedPayment?.id,
-          payment_date: savedPayment?.created_at || paymentReceiptData.payment_date,
-        });
-        alert(`Apartado liquidado correctamente. Venta #${saleData.id} creada en historial.`);
-      } else {
-        const { error } = await supabase
-          .from("layaways")
-          .update({
-            balance: newBalance,
-            deposit: newDeposit,
-            status: "active",
-          })
-          .eq("id", selected.id);
-
-        if (error) {
-          alert(`Error actualizando apartado: ${error.message}`);
-          return;
-        }
-
-        const savedPayment = await savePaymentHistory(paymentReceiptData);
-        setPaymentReceipt({
-          ...paymentReceiptData,
-          payment_id: savedPayment?.id,
-          payment_date: savedPayment?.created_at || paymentReceiptData.payment_date,
-        });
-        alert("Pago registrado correctamente.");
-      }
-
-      setSelected(null);
-      setPayment("");
       await refreshLayaways();
       await loadSales();
+    } catch (refreshError) {
+      console.error("Pago confirmado; falló actualizar la vista", refreshError);
+      alert("Pago confirmado. Si el historial no se actualizó, utiliza Actualizar.");
+    }
+  }
+
+  async function liquidateLayaway() {
+    if (processingPayment || pendingPayment) {
+      alert("Hay un intento pendiente. Comprueba o cancela ese intento antes de continuar.");
+      return;
+    }
+    if (!selected) { alert("No hay apartado seleccionado."); return; }
+    let params;
+    try {
+      const nextPending = {
+        operationId: makeLayawayOperationId(),
+        layawayId: Number(selected.id),
+      };
+      params = buildLayawayPaymentParams({ ...nextPending, amount: payment });
+      // Guardar ANTES de enviar la petición: un timeout no autoriza otro abono.
+      storePendingLayawayPayment(nextPending);
+      setPendingPayment(nextPending);
     } catch (error) {
-      console.error("Error inesperado liquidando apartado:", error);
-      alert(`Error inesperado: ${error.message || error}`);
+      alert(error.message || "No pudo prepararse el abono");
+      return;
+    }
+    setProcessingPayment(true);
+    try {
+      const receipt = await payLayawayOnce(supabase, params);
+      await finishConfirmedLayawayPayment(receipt);
+      alert(receipt.type === "liquidation"
+        ? "Apartado liquidado. Venta #" + receipt.sale_id + " registrada."
+        : "Abono y comprobante registrados correctamente.");
+    } catch (error) {
+      console.error("Resultado de abono pendiente de conciliación:", error);
+      alert("No se pudo confirmar el resultado: " + (error.message || error) +
+        ". No vuelvas a cobrar. Usa Comprobar pago pendiente o Cancelar intento de forma segura.");
+    } finally {
+      setProcessingPayment(false);
+    }
+  }
+
+  async function verifyPendingLayawayPayment() {
+    if (!pendingPayment || processingPayment) return;
+    setProcessingPayment(true);
+    try {
+      const receipt = await checkLayawayPaymentStatus(supabase, pendingPayment);
+      if (receipt === null) {
+        alert("No hay confirmación aún. El intento sigue reservado: NO vuelvas a cobrar. " +
+          "Puedes esperar y comprobar o cancelar este UUID de forma segura.");
+      } else if (receipt.state === "cancelled") {
+        clearPendingLayawayPayment();
+        setPendingPayment(null);
+        alert("El intento quedó cancelado. Puedes registrar un abono nuevo.");
+      } else {
+        await finishConfirmedLayawayPayment(receipt);
+        alert("El pago ya había sido registrado; recuperamos el comprobante.");
+      }
+    } catch (error) {
+      alert("No se puede comprobar el pago: " + error.message +
+        ". Conserva el intento pendiente y no realices un segundo cobro.");
+    } finally {
+      setProcessingPayment(false);
+    }
+  }
+
+  async function cancelPendingLayawayPayment() {
+    if (!pendingPayment || processingPayment) return;
+    if (!window.confirm("¿Cancelar el intento pendiente de forma segura? " +
+      "Si el servidor ya procesó el pago, aparecerá su comprobante; NO se revierte.")) return;
+    setProcessingPayment(true);
+    try {
+      const receipt = await cancelLayawayPayment(supabase, pendingPayment);
+      if (receipt.state === "cancelled") {
+        clearPendingLayawayPayment();
+        setPendingPayment(null);
+        alert("Intento cancelado en el servidor. Una petición tardía ya no puede cobrar.");
+      } else {
+        await finishConfirmedLayawayPayment(receipt);
+        alert("El abono ya estaba confirmado; se recuperó el comprobante original.");
+      }
+    } catch (error) {
+      alert("No se completó la cancelación segura: " + error.message +
+        ". El pago continúa bloqueado hasta consultar su estado.");
     } finally {
       setProcessingPayment(false);
     }
@@ -3204,6 +3114,24 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
           {loadingLayaways ? "Actualizando..." : "↻ Actualizar"}
         </Button>
       </div>
+
+      {pendingPayment && (
+        <Card className="layaway-pending-payment">
+          <strong>Pago pendiente de comprobación · Apartado #{pendingPayment.layawayId}</strong>
+          <p className="muted">
+            Hay una solicitud cuyo resultado puede ser incierto. Por seguridad no se permite
+            registrar otro abono hasta confirmar el comprobante o cancelar el intento en el servidor.
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Button onClick={verifyPendingLayawayPayment} disabled={processingPayment}>
+              Comprobar pago pendiente
+            </Button>
+            <Button variant="secondary" onClick={cancelPendingLayawayPayment} disabled={processingPayment}>
+              Cancelar intento de forma segura
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <div className="layaway-kpi-grid">
         <Card className="layaway-kpi">
@@ -3301,6 +3229,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
                     setSelected(item);
                     setPayment(String(item.balance || ""));
                   }}
+                  disabled={Boolean(pendingPayment) || processingPayment}
                 >
                   Liquidar / Abonar
                 </Button>
@@ -3453,7 +3382,7 @@ function LayawaysSection({ layaways, loadLayaways, loadSales }) {
 
                 <Button
                   onClick={liquidateLayaway}
-                  disabled={processingPayment}
+                  disabled={processingPayment || Boolean(pendingPayment)}
                 >
                   {processingPayment ? "Procesando..." : "Confirmar pago"}
                 </Button>
