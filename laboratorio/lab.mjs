@@ -12,6 +12,7 @@ const root=resolve(folder,"..");
 const runner=resolve(folder,"runner");
 const pidFile=resolve(folder,".atlas-mobile-lab.pid");
 const logFile=resolve(folder,".atlas-mobile-lab.log");
+const qrFile=resolve(folder,".atlas-open.html");
 const PROJECT="donatello-mobilelab";
 const DB_CONTAINER="supabase_db_"+PROJECT;
 const LOCAL_API="http://127.0.0.1:58421";
@@ -124,6 +125,7 @@ function privateIp(){
   return candidates;
 }
 function stopSite(){
+  rmSync(qrFile,{force:true});
   if(!existsSync(pidFile))return;
   const raw=readFileSync(pidFile,"utf8").trim();
   let pids=[];
@@ -194,8 +196,36 @@ async function startSite(keys){
   output("Si Windows pide permiso de red, permitir solo redes PRIVADAS.");
   output("El escaner QR puede estar deshabilitado por HTTP: usa producto manual.");
   output("Para terminar, doble clic en CERRAR_LABORATORIO.cmd.");
-  try{spawn("cmd.exe",["/c","start","","http://"+ip+":"+VITE_PORT+"/"],{
-    detached:true,windowsHide:true,stdio:"ignore"}).unref();}catch{/* manual browser */}
+  // Local QR image. No remote QR generation or production credentials.
+  try {
+    const {default:QRCode}=await import("qrcode");
+    const localUrl="http://"+ip+":"+VITE_PORT+"/";
+    const data=await QRCode.toDataURL(localUrl,{width:360,margin:2});
+    const html=[
+      '<!doctype html><html lang="es"><head><meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width">',
+      '<title>ATLAS - Laboratorio Donatello</title></head>',
+      '<body style="font:16px system-ui;background:#f9f6ed;color:#25231e;text-align:center;padding:26px">',
+      '<main style="max-width:560px;margin:auto">',
+      '<h1>Donatello · LABORATORIO</h1>',
+      '<p><strong>SOLO DATOS FICTICIOS · NO PRODUCCION</strong></p>',
+      '<p>Escanea con tu Android conectado al mismo Wi-Fi privado:</p>',
+      '<img src="'+data+'" alt="QR para abrir el laboratorio" width="320" height="320">',
+      '<p><a href="'+localUrl+'">'+localUrl+'</a></p>',
+      '<p>Usuario ficticio: <strong>'+EMAIL+'</strong></p>',
+      '<p>Contrasena ficticia: <strong>'+PASSWORD+'</strong></p>',
+      '<p>Al terminar, doble clic en CERRAR_LABORATORIO.cmd</p>',
+      '</main></body></html>'
+    ].join("");
+    writeFileSync(qrFile,html,"utf8");
+    const escaped=qrFile.replaceAll("'","''");
+    const opened=execute("powershell.exe",["-NoProfile","-NonInteractive",
+      "-Command","Start-Process -FilePath '"+escaped+"'"],{
+      quiet:true,allowFailure:true});
+    if(opened.status!==0)output("No se abrio el QR automaticamente. Usa la URL mostrada arriba.");
+  }catch(error){
+    output("El QR no se pudo abrir. Usa la URL indicada. "+error.message);
+  }
 }
 async function start(){
   if(process.platform!=="win32")throw Error("Este lanzador esta preparado para Windows");

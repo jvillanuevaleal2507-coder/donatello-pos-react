@@ -49,3 +49,9 @@ para crear identificadores unicos seguros; no utiliza Math.random().
 ATLAS verifico automaticamente ambos accesos en GitHub Windows.
 La primera prueba con Docker Desktop en TU computadora y un Android fisico
 aun es necesaria para confirmar firewall privado y funcionamiento visual.
+
+PASO DE ANDROID SIMPLIFICADO:
+El programa abre una pagina con QR grande; solo escanea el QR desde Android.
+El QR contiene exclusivamente la direccion LOCAL de la computadora.
+Si no abre el QR, usa la URL que muestra la ventana.
+No tienes que ejecutar SQL ni contratar un proyecto en la nube.
