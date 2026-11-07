@@ -73,4 +73,5 @@ SELECT 'active_layaway_consistency' AS check_name,
    OR abs(total-deposit-balance)>0.01
  ))=0 THEN 'PASS' ELSE 'NO_GO' END AS status,
  count(*) FILTER(WHERE status='active') AS active_layaways,
- count(*) FILTER(WHERE status='paid') AS paid_layaways;
+ count(*) FILTER(WHERE status='paid') AS paid_layaways
+FROM checks;
