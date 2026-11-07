@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { buildAtomicCheckoutParams, submitAtomicCheckout, checkAtomicCheckoutStatus, cancelAtomicCheckout, newCheckoutOperationId, readPendingCheckoutId, storePendingCheckoutId, clearPendingCheckoutId, assertPendingCheckoutOwner } from "./lib/atomicCheckout.js";
 import { newLayawayPaymentId, readPendingLayawayPayment, storePendingLayawayPayment, clearPendingLayawayPayment, buildLayawayPaymentParams, submitLayawayPayment, checkLayawayPayment, cancelLayawayPayment } from "./lib/atomicLayawayPayments.js";
 import { reservePosOperation, recoverPosOperation, acknowledgePosOperation } from "./lib/serverPendingOperations.js";
+import { readCashierDraft, saveCashierDraft, forgetCashierDraft } from "./lib/cashierDraft.js";
 import QRCode from "qrcode";
 import { toPng } from "html-to-image";
 import { BrowserRouter, Routes, Route, Link, useLocation } from "react-router-dom";
@@ -180,6 +181,7 @@ function VentasDonatelloPOSApp() {
   const [session, setSession] = useState(null);
   const authOwnerRef = useRef(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [draftReadyOwner, setDraftReadyOwner] = useState(null);
   const [insightsPermission, setInsightsPermission] = useState(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -295,6 +297,10 @@ function VentasDonatelloPOSApp() {
         authOwnerRef.current !== nextUserId);
       const signedOut = event === "SIGNED_OUT";
       if (signedOut || switchedAccount) {
+        // Protect drafts by account. SDK-initiated sign-outs can occur during
+        // connectivity loss; only explicit signOut() deletes the saved draft.
+        setDraftReadyOwner(null);
+        if (switchedAccount) forgetCashierDraft();
         // Clear only when Supabase confirms sign-out or account ownership changes.
         // A transient null session during reconnect must not erase a draft.
         setProducts([]);
@@ -326,6 +332,34 @@ function VentasDonatelloPOSApp() {
     void Promise.allSettled([loadProducts(), loadSales(), loadLayaways()]);
   }, [session?.user?.id]);
 
+  useEffect(() => {
+    const userId=session?.user?.id;
+    // Never resurrect a cart before server reconciliation: a pending payment
+    // could have committed during network loss. There is no automatic retry.
+    if (!userId || loadingProducts || !products.length ||
+        serverPending !== null || pendingCheckoutId || draftReadyOwner===userId) return;
+    const draft=readCashierDraft(userId, products);
+    if (draft?.cart?.length) {
+      setCart(draft.cart);
+      setReceived(draft.received);
+      setDiscountPercent(draft.discountPercent);
+      setSaleMode(draft.saleMode);
+      setDepositAmount(draft.depositAmount);
+      setScanStatus("Carrito recuperado tras la desconexión. Revisa los importes antes de cobrar.");
+    }
+    setDraftReadyOwner(userId);
+  }, [session?.user?.id, loadingProducts, products, serverPending,
+      pendingCheckoutId, draftReadyOwner]);
+
+  useEffect(() => {
+    const userId=session?.user?.id;
+    if (!userId || draftReadyOwner!==userId) return;
+    if (!cart.length) forgetCashierDraft();
+    else saveCashierDraft({userId, cart, received, discountPercent,
+      saleMode, depositAmount});
+  }, [session?.user?.id, draftReadyOwner, cart, received,
+      discountPercent, saleMode, depositAmount]);
+
   async function refreshServerPending(userId=session?.user?.id) {
     if (!userId) {
       setServerPending(undefined);
@@ -339,6 +373,11 @@ function VentasDonatelloPOSApp() {
         // Server recovers operation ID after localStorage loss or device swap.
         setPendingCheckoutId({operationId:result.operationId,userId});
         if(result.state==="completed" && result.receipt) {
+          // The server is authoritative: never restore an already sold cart.
+          forgetCashierDraft();
+          setDraftReadyOwner(null);
+          setCart([]);
+          setReceived("");
           setLastReceipt(result.receipt);
         }
       }
@@ -365,6 +404,10 @@ function VentasDonatelloPOSApp() {
       if(result?.kind==="checkout") {
         setPendingCheckoutId({operationId:result.operationId,userId});
         if(result.state==="completed" && result.receipt) {
+          forgetCashierDraft();
+          setDraftReadyOwner(null);
+          setCart([]);
+          setReceived("");
           setLastReceipt(result.receipt);
         }
       }
@@ -676,6 +719,7 @@ function VentasDonatelloPOSApp() {
   }
 
   function clearCart() {
+    forgetCashierDraft();
     setCart([]);
     setReceived("");
     setDiscountPercent(0);
