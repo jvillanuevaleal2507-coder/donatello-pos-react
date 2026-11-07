@@ -47,6 +47,32 @@ function statusEnv(){
     throw Error("BLOQUEADO: la URL no corresponde al laboratorio LOCAL");
   return kv;
 }
+// The Supabase CLI can report "started" while its HTTP Auth gateway is still
+// reconnecting after Docker Desktop resumes. Probe ONLY the fixed loopback API;
+// never reinterpret this as permission to call any remote Supabase project.
+async function waitForLocalAuth(){
+  const endpoint=LOCAL_API+"/auth/v1/health";
+  let last="sin respuesta HTTP";
+  output("Verificando que Auth local responda antes de iniciar sesion...");
+  for(let attempt=1;attempt<=18;attempt++){
+    try{
+      const response=await fetch(endpoint,{signal:AbortSignal.timeout(1800),
+        headers:{"cache-control":"no-store"}});
+      if(response.ok){
+        output("Auth local disponible.");
+        return;
+      }
+      last="HTTP "+response.status;
+    }catch(error){
+      last=error?.cause?.code || error?.code || error?.message || "conexion rechazada";
+    }
+    if(attempt<18)await new Promise(resolve=>setTimeout(resolve,900));
+  }
+  throw Error("Auth local no responde en "+LOCAL_API+" ("+last+
+    "). Comprueba Docker Desktop o ejecuta: curl.exe "+endpoint+
+    ". No se ejecutaron cobros.");
+}
+
 function dockerSql(sql){
   return execute("docker",["exec","-i",DB_CONTAINER,"psql","-X","-v","ON_ERROR_STOP=1",
      "-U","postgres","-d","postgres","-t","-A"],{input:sql,quiet:true}).stdout.trim();
@@ -255,6 +281,7 @@ async function start(){
     .split(/\r?\n/).map(x=>x.trim());
   if(!dockerNames.includes(DB_CONTAINER))
     throw Error("Contenedor esperado no encontrado; no se ejecutara SQL en otra base.");
+  await waitForLocalAuth();
   const newDb=initDatabase();
   await seedAuth(keys,newDb);
   output("4/4 Publicando la pantalla SOLO en tu red local...");
@@ -350,6 +377,7 @@ async function selfCheck(){
   const forbiddenDevRunner=['"run"','"dev"','"--"'].join(",");
   if(!launcher.includes('"run","preview"') ||
       !launcher.includes('execute("npm",["run","build"]') ||
+      !launcher.includes("await waitForLocalAuth()") ||
       launcher.includes(forbiddenDevRunner))
     throw Error("Laboratorio Android debe usar Vite preview, nunca HMR");
   output("ATLAS_WINDOWS_ENTRYPOINTS_OK: archivos, puertos, preview sin HMR y proyecto local");
