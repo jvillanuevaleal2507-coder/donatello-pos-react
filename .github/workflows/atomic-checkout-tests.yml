@@ -215,7 +215,13 @@ jobs:
           set -euo pipefail
           report="$(psql -X -v ON_ERROR_STOP=1 -q -t -A -F '|' -f tests/sql/pos_release_postflight_readonly.sql)"
           printf '%s\n' "$report"
-          if printf '%s\n' "$report" | grep -q '|NO_GO
+          if printf '%s\n' "$report" | grep -q '|NO_GO$'; then
+            echo 'POSTFLIGHT_NO_GO'
+            exit 1
+          fi
+          test "$(printf '%s\n' "$report" | grep -c '|PASS$')" -eq 6
+          echo 'POSTFLIGHT_6_6_PASS'
+
   windows_launcher:
     name: Windows - doble clic y configuracion del laboratorio
     runs-on: windows-latest
