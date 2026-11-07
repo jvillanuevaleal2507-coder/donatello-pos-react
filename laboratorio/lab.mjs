@@ -22,9 +22,9 @@ const VITE_PORT=4173;
 const LAN_API_PORT=58423;
 
 function output(msg){process.stdout.write(msg+"\n");}
-function execute(exe,args,{cwd=root,input,quiet=false,allowFailure=false}={}){
+function execute(exe,args,{cwd=root,input,quiet=false,allowFailure=false,env=process.env}={}){
   const shell=process.platform==="win32" && (exe==="npm"||exe==="npx");
-  const result=spawnSync(exe,args,{cwd,input,encoding:"utf8",shell,windowsHide:true,maxBuffer:10*1024*1024});
+  const result=spawnSync(exe,args,{cwd,input,env,encoding:"utf8",shell,windowsHide:true,maxBuffer:10*1024*1024});
   if(result.error||(!allowFailure&&result.status!==0)){
     const details=(result.stderr||result.stdout||String(result.error)||"").trim().slice(-1400);
     throw Error(exe+" no pudo completar la operacion. "+details);
@@ -147,6 +147,16 @@ async function startSite(keys){
   if(!addresses.length)throw Error("Conecta esta computadora al Wi-Fi privado y vuelve a iniciar");
   const ip=addresses[0].ip;
   stopSite();
+  // Build once with the explicitly local Supabase endpoint. Unlike Vite dev,
+  // preview has no HMR WebSocket that can reload an Android page after Wi-Fi
+  // reconnects and silently discard an in-memory POS draft.
+  const labEnv={...process.env,
+    VITE_SUPABASE_URL:"http://"+ip+":"+LAN_API_PORT,
+    VITE_SUPABASE_ANON_KEY:keys.ANON_KEY,
+    VITE_ATLAS_LAB:"true"
+  };
+  output("Compilando POS local sin recargas automáticas de desarrollo...");
+  execute("npm",["run","build"],{env:labEnv,quiet:true});
   const outputFd=openSync(logFile,"w");
   const proxy=spawn(process.execPath,["laboratorio/lab-proxy.mjs",ip,String(LAN_API_PORT)],{
     cwd:root,detached:true,windowsHide:true,
@@ -156,12 +166,10 @@ async function startSite(keys){
     closeSync(outputFd);
     throw Error("No se pudo iniciar el API de la red privada");
   }
-  const site=spawn("cmd.exe",["/d","/c","npm","run","dev","--","--host",ip,
+  const site=spawn("cmd.exe",["/d","/c","npm","run","preview","--","--host",ip,
      "--port",String(VITE_PORT),"--strictPort"],{
     cwd:root,detached:true,windowsHide:true,
-    stdio:["ignore",outputFd,outputFd],
-    env:{...process.env,VITE_SUPABASE_URL:"http://"+ip+":"+LAN_API_PORT,
-         VITE_SUPABASE_ANON_KEY:keys.ANON_KEY,VITE_ATLAS_LAB:"true"}
+    stdio:["ignore",outputFd,outputFd],env:labEnv
   });
   closeSync(outputFd);
   writeFileSync(pidFile,JSON.stringify({proxy:proxy.pid,web:site.pid}),"utf8");
@@ -337,7 +345,13 @@ async function selfCheck(){
     throw Error("Configuracion de laboratorio incompatible");
   if(!LOCAL_API.includes("127.0.0.1")||!DB_CONTAINER.includes(PROJECT))
     throw Error("No se garantiza aislamiento LOCAL");
-  output("ATLAS_WINDOWS_ENTRYPOINTS_OK: archivos, puertos y proyecto local");
+  // A dev server would auto-reload on Wi-Fi recovery, invalidating the POS test.
+  const launcher=file("laboratorio/lab.mjs");
+  if(!launcher.includes('"run","preview"') ||
+      !launcher.includes('execute("npm",["run","build"]') ||
+      launcher.includes('"run","dev","--"'))
+    throw Error("Laboratorio Android debe usar Vite preview, nunca HMR");
+  output("ATLAS_WINDOWS_ENTRYPOINTS_OK: archivos, puertos, preview sin HMR y proyecto local");
 }
 
 const cmd=process.argv[2];
