@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+// CI runs this file explicitly; include the cashier-draft regression suite.
+import "./cashier-draft.test.mjs";
 import { readFileSync } from "node:fs";
 import {
   buildAtomicCheckoutParams, submitAtomicCheckout,
