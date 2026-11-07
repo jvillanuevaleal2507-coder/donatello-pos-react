@@ -6028,9 +6028,17 @@ body {
   }
 
   .nav-section-label,
-  .nav-tools-label,
-  .sidebar-signout {
+  .nav-tools-label {
     display: none;
+  }
+
+  /* Keep logout reachable on real Android screens, even when navigation
+     becomes horizontal. Never require clearing browser data to switch users. */
+  .sidebar-signout {
+    display: flex;
+    width: 100%;
+    min-height: 42px;
+    margin-top: 8px;
   }
 
   .donatello-nav-link {
