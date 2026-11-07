@@ -178,6 +178,7 @@ function VentasDonatelloPOSApp() {
   const [loadingSales, setLoadingSales] = useState(false);
   const [lastReceipt, setLastReceipt] = useState(null);
   const [session, setSession] = useState(null);
+  const authOwnerRef = useRef(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [insightsPermission, setInsightsPermission] = useState(null);
   const [email, setEmail] = useState("");
@@ -283,38 +284,19 @@ function VentasDonatelloPOSApp() {
 
   useEffect(() => {
     let mounted = true;
-
-    async function initAuth() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      setSession(session || null);
-
-      if (session) {
-        await loadProducts();
-        await loadSales();
-        await loadLayaways();
-      }
-
-      setAuthLoading(false);
-    }
-
-    initAuth();
-
+    // No await/API calls inside onAuthStateChange: Supabase can deadlock when
+    // an auth notification awaits a query made through the same client.
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session || null);
-      setAuthLoading(false);
-
-      if (session) {
-        await loadProducts();
-        await loadSales();
-        await loadLayaways();
-      } else {
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return;
+      const nextUserId = nextSession?.user?.id || null;
+      const switchedAccount = Boolean(authOwnerRef.current && nextUserId &&
+        authOwnerRef.current !== nextUserId);
+      const signedOut = event === "SIGNED_OUT";
+      if (signedOut || switchedAccount) {
+        // Clear only when Supabase confirms sign-out or account ownership changes.
+        // A transient null session during reconnect must not erase a draft.
         setProducts([]);
         setSales([]);
         setCart([]);
@@ -325,6 +307,11 @@ function VentasDonatelloPOSApp() {
         setCustomerPhone("");
         setDepositAmount("");
       }
+      authOwnerRef.current = signedOut ? null : (nextUserId || authOwnerRef.current);
+      // With an unverifiable session, hide protected UI; financial RPCs are
+      // independently guarded in PostgreSQL.
+      setSession(nextSession || null);
+      setAuthLoading(false);
     });
 
     return () => {
@@ -332,6 +319,12 @@ function VentasDonatelloPOSApp() {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    // Load outside the auth callback; avoid refresh-time reentrancy.
+    if (!session?.user?.id) return;
+    void Promise.allSettled([loadProducts(), loadSales(), loadLayaways()]);
+  }, [session?.user?.id]);
 
   async function refreshServerPending(userId=session?.user?.id) {
     if (!userId) {
