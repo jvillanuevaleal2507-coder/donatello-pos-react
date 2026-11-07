@@ -1,0 +1,19 @@
+project_id = "donatello-mobilelab"
+[api]
+enabled = true
+port = 58421
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+[db]
+port = 58422
+shadow_port = 58420
+major_version = 17
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:4173"
+jwt_expiry = 3600
+enable_signup = true
+[auth.email]
+enable_signup = true
+enable_confirmations = false

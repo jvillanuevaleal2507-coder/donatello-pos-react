@@ -2,6 +2,8 @@ name: Donatello - Comisión tarjeta (pruebas)
 on:
   pull_request:
     paths:
+      - 'package.json'
+      - 'package-lock.json'
       - 'src/utils/paymentFee.js'
       - 'src/pages/PaymentFeeSettingsPage.jsx'
       - 'src/pages/AddProductPage.jsx'
@@ -23,5 +25,5 @@ jobs:
       # El lockfile anterior al módulo ya está desincronizado con package.json.
       # Ejecutamos las pruebas puras primero sin requerir instalación.
       - run: node --test tests/paymentFee.test.mjs
-      - run: npm install --no-package-lock --no-audit --no-fund
+      - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run build
