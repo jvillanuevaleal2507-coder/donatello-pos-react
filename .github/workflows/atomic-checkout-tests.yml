@@ -13,6 +13,8 @@ on:
       - 'server/**'
       - 'supabase/functions/**'
       - 'src/lib/atomicCheckout.js'
+      - 'src/lib/cashierDraft.js'
+      - 'tests/cashier-draft.test.mjs'
       - 'tests/atomic-checkout.test.mjs'
       - '.github/workflows/atomic-checkout-tests.yml'
       - 'supabase/migrations/20261105_pos_checkout_idempotency.sql'
