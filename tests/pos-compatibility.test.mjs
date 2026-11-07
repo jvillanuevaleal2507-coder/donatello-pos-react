@@ -75,3 +75,17 @@ test("El preflight productivo contiene consultas SELECT, nunca operaciones mutab
   }
   assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
 });
+
+test("El postflight productivo verifica seis invariantes sin alterar datos",()=>{
+  const sql=readFileSync(join(root,"tests/sql/pos_release_postflight_readonly.sql"),"utf8")
+    .replace(/--[^\n]*/g,"")
+    .replace(/\/\*[\s\S]*?\*\//g,"");
+  assert.equal(sql.split(";").filter(part=>part.trim()).length,1,
+    "Postflight must be one read-only SQL statement");
+  for(const name of ["private_ledger_and_pending","new_financial_rpcs",
+    "old_checkout_revoked","financial_inserts_revoked",
+    "admin_only_financial_reads","ledger_and_liquidation_triggers"]) {
+    assert.ok(sql.includes("'"+name+"'"),"Missing postflight control: "+name);
+  }
+  assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
+});
