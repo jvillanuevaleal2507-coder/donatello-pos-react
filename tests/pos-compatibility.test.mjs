@@ -64,5 +64,14 @@ test("El preflight productivo contiene consultas SELECT, nunca operaciones mutab
   assert.match(sql,/\bSELECT\b/i);
   assert.match(sql,/\bto_regclass\s*\(/i);
   assert.match(sql,/\bactive_layaway_consistency\b/i);
+  // One SQL result containing every checkpoint; an API that displays only the
+  // last SELECT must never hide earlier failed checks.
+  assert.equal(sql.split(";").filter(part=>part.trim()).length,1,
+    "Preflight must be exactly one SQL statement");
+  for(const name of ["schema_columns","pre_release_ledger_absent",
+    "legacy_checkout_present","anonymous_cost_denied",
+    "admin_only_operational_roles","active_layaway_consistency"]) {
+    assert.ok(sql.includes("'"+name+"'"),"Missing preflight control: "+name);
+  }
   assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
 });
