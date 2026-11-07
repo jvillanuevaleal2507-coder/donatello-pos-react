@@ -347,9 +347,10 @@ async function selfCheck(){
     throw Error("No se garantiza aislamiento LOCAL");
   // A dev server would auto-reload on Wi-Fi recovery, invalidating the POS test.
   const launcher=file("laboratorio/lab.mjs");
+  const forbiddenDevRunner=['"run"','"dev"','"--"'].join(",");
   if(!launcher.includes('"run","preview"') ||
       !launcher.includes('execute("npm",["run","build"]') ||
-      launcher.includes('"run","dev","--"'))
+      launcher.includes(forbiddenDevRunner))
     throw Error("Laboratorio Android debe usar Vite preview, nunca HMR");
   output("ATLAS_WINDOWS_ENTRYPOINTS_OK: archivos, puertos, preview sin HMR y proyecto local");
 }
