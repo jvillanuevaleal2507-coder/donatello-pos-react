@@ -26,6 +26,7 @@ on:
       - 'supabase/migrations/20261106_pos_layaway_payments.sql'
       - 'tests/sql/layaway_*'
       - 'tests/sql/pos_rls_authorization.sql'
+      - 'tests/sql/pos_release_preflight_readonly.sql'
       - 'tests/sql/pos_server_recovery.sql'
       - 'tests/sql/pos_server_security.sql'
       - 'tests/sql/pos_operator_read_guards.sql'
