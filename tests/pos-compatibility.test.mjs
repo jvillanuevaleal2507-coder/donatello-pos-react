@@ -54,3 +54,15 @@ test("Las protecciones y RPC idempotentes no pueden desaparecer de la PR",()=>{
   assert.match(recovery,/CREATE FUNCTION public\.donatello_payment_recover\s*\(/);
   assert.match(recovery,/CREATE FUNCTION public\.donatello_payment_ack\s*\(/);
 });
+
+// Operational safety gate: the production preflight is metadata/reporting
+// only. This suite must reject accidental schema/data mutations in the file.
+test("El preflight productivo contiene consultas SELECT, nunca operaciones mutables",()=>{
+  const sql=readFileSync(join(root,"tests/sql/pos_release_preflight_readonly.sql"),"utf8")
+    .replace(/--[^\n]*/g,"")
+    .replace(/\/\*[\s\S]*?\*\//g,"");
+  assert.match(sql,/\bSELECT\b/i);
+  assert.match(sql,/\bto_regclass\s*\(/i);
+  assert.match(sql,/\bactive_layaway_consistency\b/i);
+  assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
+});
