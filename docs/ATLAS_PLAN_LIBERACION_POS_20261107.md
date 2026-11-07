@@ -47,6 +47,8 @@ Con el POS en ventana de mantenimiento y una persona responsable controlando los
 
 ### C. Controles obligatorios después del SQL y antes del dominio
 
+- Ejecutar **`tests/sql/pos_release_postflight_readonly.sql`** con conexión a la base correspondiente: exige **6/6 `PASS`** antes de volver a habilitar el cobro. El reporte verifica ledger/pendientes privados con RLS, RPC nuevas, bloqueo del RPC anterior, denegación de INSERT financiero directo, políticas RESTRICTIVE para administradores y ambos triggers. Si aparece `NO_GO`, detener el corte y no publicar el frontend. Se ha validado este reporte en PostgreSQL 17 desechable mediante GitHub Actions (`POSTFLIGHT_6_6_PASS`); **no se ha ejecutado en producción**, porque allí aún faltan las migraciones.
+
 - Existen las dos tablas privadas con RLS, sin permisos directos para `anon` ni `authenticated`.
 - Nuevas RPC disponibles y `anon` sin EXECUTE; las comprobaciones de `auth.uid()`, `role='admin'` y `active=true` siguen en el código publicado.
 - `authenticated` dejó de poder llamar al checkout legado, y dejó de poder INSERT directo en `sales`, `sale_items`, `layaways`, `layaway_payments`.
@@ -80,7 +82,8 @@ Con el POS en ventana de mantenimiento y una persona responsable controlando los
 
 ## 6. Fuentes de operación verificables
 
-- Preflight SQL de solo lectura: `tests/sql/pos_release_preflight_readonly.sql`. La validación del 7 nov 2026 devolvió **52/52 columnas**, 5 apartados pagados y 0 activos; se vuelve a consultar inmediatamente antes de un eventual corte.
+- Preflight SQL de solo lectura: `tests/sql/pos_release_preflight_readonly.sql`. La validación del 7 nov 2026 devolvió **6/6 PASS**: 52/52 columnas, 5 apartados pagados y 0 activos, catalogo anon sin costos, 1 administrador activo y 0 operadores. Volver a consultar inmediatamente antes de un eventual corte.
+- Postflight SQL de solo lectura: `tests/sql/pos_release_postflight_readonly.sql`. **6/6 PASS en PostgreSQL 17 desechable**, luego de aplicar las cuatro migraciones. Solo se ejecutará en producción con la liberación autorizada y antes de reabrir caja; no sustituye validar las RPC desde GoTrue/PostgREST en producción.
 - Supabase Knowledge Base: https://supabase.com/kb/troubleshooting/refresh-postgrest-schema (recarga de caché tras funciones nuevas; **NO ejecutada**).
 - Panel Vercel: `donatello-pos-react` / `pos.ventasdonatello.com`, despliegue productivo desde `main`.
 
