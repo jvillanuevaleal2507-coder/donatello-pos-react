@@ -87,5 +87,8 @@ test("El postflight productivo verifica seis invariantes sin alterar datos",()=>
     "admin_only_financial_reads","ledger_and_liquidation_triggers"]) {
     assert.ok(sql.includes("'"+name+"'"),"Missing postflight control: "+name);
   }
-  assert.doesNotMatch(sql,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
+  // The literal privilege name 'EXECUTE' is a read-only SQL argument.
+  // Ignore string literals when scanning for mutable SQL keywords.
+  const codeOnly=sql.replace(/'(?:''|[^'])*'/g,"''");
+  assert.doesNotMatch(codeOnly,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
 });
