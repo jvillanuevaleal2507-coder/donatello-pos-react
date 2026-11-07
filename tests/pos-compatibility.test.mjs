@@ -92,3 +92,22 @@ test("El postflight productivo verifica seis invariantes sin alterar datos",()=>
   const codeOnly=sql.replace(/'(?:''|[^'])*'/g,"''");
   assert.doesNotMatch(codeOnly,/\b(?:INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|TRUNCATE|GRANT|REVOKE|NOTIFY|DO|CALL|COPY|EXECUTE|VACUUM|REINDEX|REFRESH|SET|RESET)\b/i);
 });
+
+
+test("Embedded Signup v4 de Donatello usa configuración y modo coexistencia sin extras heredados",()=>{
+  const page=readFileSync(join(root,"src/pages/DonatelloWhatsAppBotPage.jsx"),"utf8");
+  assert.match(page,/META_APP_ID\s*=\s*"2173704550192119"/);
+  assert.match(page,/META_CONFIG_ID\s*=\s*"2133113274004543"/);
+  const login=page.slice(page.indexOf('window.FB.login('),page.indexOf('\n  async function toggle()'));
+  assert.ok(login.startsWith('window.FB.login('),"Missing login integration");
+  assert.match(login,/response_type:\s*"code"/);
+  assert.match(login,/version:\s*"v4"/);
+  assert.match(login,/featureType:\s*"whatsapp_business_app_onboarding"/);
+  // Meta v4 uses the login configuration for assets/permissions; do not send
+  // legacy v2/v3 sessionInfoVersion or the redundant features: null key.
+  const withoutComments=login.replace(/\/\/[^\n]*/g,"");
+  assert.doesNotMatch(withoutComments,/\bsessionInfoVersion\s*:/);
+  assert.doesNotMatch(withoutComments,/\bfeatures\s*:/);
+  assert.match(page,/setBusy\("connect"\)/);
+  assert.match(page,/El bot permanece apagado/);
+});
