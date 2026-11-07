@@ -122,11 +122,13 @@ export default function DonatelloWhatsAppBotPage() {
         config_id: META_CONFIG_ID,
         response_type: "code",
         override_default_response_type: true,
+        // Embedded Signup v4: productos, activos y permisos se configuran
+        // en Facebook Login for Business (META_CONFIG_ID).
+        // Conservar explícito Coexistence para seguir usando WhatsApp Business.
+        // No enviar campos heredados de v2/v3 (sessionInfoVersion/features).
         extras: {
-          sessionInfoVersion: "3",
           version: "v4",
           featureType: "whatsapp_business_app_onboarding",
-          features: null,
         },
       },
     );
